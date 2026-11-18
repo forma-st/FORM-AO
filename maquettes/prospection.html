@@ -329,12 +329,12 @@ file:[
  {id:2,pid:2,a:'s.lemaire@cliniquehp.example',obj:'Évacuation horizontale : 3 questions',quand:'19/11/2026 09:41',boite:0,st:'Programmé'},
  {id:3,pid:6,a:'j.petit@bergeshotels.example',obj:'Accueil sécurité de vos nouveaux salariés',quand:'26/11/2026 10:12',boite:1,st:'En pause (absence)'}
 ],
-mailTest:true, crmMode:'autonome',
+mailTest:true, crmMode:'autonome', v3:true,
 chat:[], nextId:100
 };}
 
 let S;
-const KEY='prospection-maquette-v2';
+const KEY='prospection-maquette-v3';
 try{ S = JSON.parse(localStorage.getItem(KEY)) }catch(e){}
 if(!S || !S.prospects) S = seed();
 const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify(S)) }catch(e){} };
@@ -965,11 +965,18 @@ function crm(){
   const p=byId(ui.pid)||S.prospects[0], s=score(p), b=besoin(p);
   return head('Intégration CRM','Le CRM reste maître des clients et des opportunités ; l\'agent est maître des prospects jusqu\'à leur qualification.') + `
   <div class="card"><div class="row between"><h2>Source des clients et de l'historique</h2>
-    <div class="tabs" style="margin:0;border:0">${[['autonome','Mode autonome (test)'],['crm_interne','CRM interne']].map(([k,l])=>`<button data-act="crmmode" data-k="${k}" class="${S.crmMode===k?'on':''}">${l}</button>`).join('')}</div></div>
+    <div class="tabs" style="margin:0;border:0">${[['autonome','Mode autonome (test)'],['crm_api','CRM interne (API)']].map(([k,l])=>`<button data-act="crmmode" data-k="${k}" class="${S.crmMode===k?'on':''}">${l}</button>`).join('')}</div></div>
     ${S.crmMode==='autonome'
       ? `<p style="margin:0">L'agent utilise ses <b>propres tables</b> : comptes clients et <a href="#historique">historique des formations</a> alimentés par import. Rien n'est écrit ailleurs. La commande <code>migrer_vers_crm</code> reversera tout dans le CRM le moment venu.</p>`
-      : `<p style="margin:0">L'agent lit et écrit <b>directement dans le CRM interne</b> par la passerelle <code>crm_interne.py</code> : clients, formations réalisées, opportunités, activités, oppositions. Même projet Django (option A) ou API interne (option B) : les écrans ne changent pas.</p>`}
-    <p class="small muted" style="margin:8px 0 0">Réglage <code>PROSPECTION_CRM = "${S.crmMode}"</code> · clé commune : SIREN · l'application AO fournit acheteurs, attributions, catalogue et références.</p></div>
+      : `<p style="margin:0">L'agent lit et écrit dans le CRM <b>par son API interne</b> (passerelle <code>crm_api.py</code>) : clients, formations réalisées, opportunités, activités, oppositions. Webhooks signés dans les deux sens ; si le CRM ne répond pas, les écritures attendent dans une file et l'agent continue de fonctionner. Les écrans ne changent pas.</p>`}
+    <p class="small muted" style="margin:8px 0 0">Réglage <code>PROSPECTION_CRM = "${S.crmMode}"</code> · clé commune : SIREN · l'application AO fournit acheteurs, attributions, catalogue et références par son API.</p></div>
+  <div class="card"><h2>Trois applications séparées</h2>
+    <div class="grid g3" style="align-items:stretch">
+      <div class="kpi"><span class="l">Application AO (Veille AO)</span><b>Profil, catalogue, références, AO, attributions, DECP</b><span class="small muted">API AO en lecture · reçoit les acheteurs suivis</span></div>
+      <div class="kpi" style="border-color:var(--accent)"><span class="l">Agent de prospection</span><b>Prospects, score, signaux, séquences, messagerie, tâches</b><span class="small muted">Test : dans le projet AO · cible : dans le CRM</span></div>
+      <div class="kpi"><span class="l">CRM interne (séparé)</span><b>Clients, contacts, opportunités, formations réalisées</b><span class="small muted">API CRM en lecture et écriture · webhooks</span></div>
+    </div>
+    <p class="small muted" style="margin:8px 0 0">Clé commune : SIREN. Jeton par application, webhooks signés et rejouables sans doublon, liste d'opposition synchronisée dans les deux sens.</p></div>
   <div class="grid g2">
     <div class="card"><h2>Aperçu du panneau intégré (niveau 3)</h2>
       <div class="crm"><div class="h">CRM interne › Comptes › ${esc(p.nom)}</div><div style="padding:12px" class="grid g2e">
@@ -1065,7 +1072,7 @@ document.addEventListener('click',e=>{
     case 'bulkseq': { const sid=$('#bulk-seq').value; let n=0; ui.sel.forEach(i=>{ if(inscrire(byId(i),sid)) n++; }); ui.sel.clear(); save(); render(); toast(`${n} prospect${n>1?'s':''} inscrit${n>1?'s':''}.`); break; }
     case 'bulkcrm': ui.sel.forEach(i=>{ const pp=byId(i); pp.statut='Transmis au CRM'; crmLog('prospect.qualifie',pp.nom); }); toast(`${ui.sel.size} prospect(s) envoyé(s) au CRM.`); ui.sel.clear(); save(); render(); break;
     case 'bulkclear': ui.sel.clear(); render(); break;
-    case 'crmmode': S.crmMode=k; save(); render(); toast(k==='autonome'?'Mode autonome : tables locales du module.':'Mode CRM interne : clients et historique lus dans le CRM.'); break;
+    case 'crmmode': S.crmMode=k; save(); render(); toast(k==='autonome'?'Mode autonome : tables locales du module.':'Mode CRM interne : clients et historique lus par l\'API du CRM.'); break;
     case 'relance': case 'relances': { const list=a==='relance'?[S.historique.find(h=>h.id===+id)]:S.historique.filter(h=>echeance(h).etat!=='ok'&&!h.relance); list.forEach(h=>{ h.relance=true; addTask('appel',h.pid||0,`Relance ${h.prest} : ${h.nom} (${h.n} stagiaire${h.n>1?'s':''}, échéance ${fmt(echeance(h).d)})`,0); }); save(); render(); toast(`${list.length} relance${list.length>1?'s':''} créée${list.length>1?'s':''} dans les tâches.`); break; }
     case 'addhist': { const nom=$('#h-nom').value.trim(); if(!nom){toast('Indiquez le compte.');break;} const pp=S.prospects.find(x=>x.nom.toLowerCase()===nom.toLowerCase()); S.historique.push({id:++S.nextId,nom,pid:pp?pp.id:0,prest:$('#h-prest').value,date:$('#h-date').value||'2026-11-10',n:+$('#h-n').value||1,formateur:'—',src:'Saisie'}); save(); render(); toast('Session enregistrée, échéance calculée.'); break; }
     case 'flush': { let n=0; S.file.forEach(m=>{ if(m.st==='Programmé'){ m.st=S.mailTest?'Envoyé (redirigé test)':'Envoyé'; n++; const pp=byId(m.pid); if(pp) addHist(pp,`E-mail envoyé${S.mailTest?' (mode test, redirigé)':''} : ${m.obj}`); } }); S.boites[0].auj+=n; save(); render(); toast(`${n} message${n>1?'s':''} ${S.mailTest?'redirigé'+(n>1?'s':'')+' vers l\'adresse de test':'envoyé'+(n>1?'s':'')}.`); break; }

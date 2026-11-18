@@ -1,8 +1,10 @@
-# Agent d'aide à la prospection — Cahier des charges (v0.2)
+# Agent d'aide à la prospection — Cahier des charges (v0.3)
 
 Module **interne** de FORMA'ST, testé d'abord seul, puis intégré en tout ou partie au **CRM interne** (développé avec Claude Code) et à l'**application AO** (Veille AO, ce dépôt).
 
 > **v0.2 (18/11/2026)** : le CRM est un outil interne, l'intégration se fait donc directement (3.14) ; ajout du module de messagerie (3.16) et d'une base « historique des formations » en attendant la connexion au CRM (3.17).
+>
+> **v0.3** : le CRM est une application **séparée** de l'outil AO. Les échanges passent par des API internes ; architecture, emplacement de l'agent et contrats d'API précisés en 3.14.2.
 
 Maquette fonctionnelle : [`maquettes/prospection.html`](maquettes/prospection.html) (données fictives).
 
@@ -13,7 +15,7 @@ Maquette fonctionnelle : [`maquettes/prospection.html`](maquettes/prospection.ht
 | Cibles | Privé (PME et ETI multi-sites en priorité, grands comptes) et public (collectivités, établissements de santé, bailleurs) |
 | Zone | Nationale, avec un poids plus fort pour l'Île-de-France et les zones déjà couvertes par les formateurs |
 | Utilisateurs | 2 à 5 personnes (dirigeant, commercial, assistante) |
-| Intégration | CRM interne et application AO, développés avec Claude Code : intégration directe, sans connecteur tiers |
+| Intégration | CRM interne et application AO, développés avec Claude Code, **séparés** : échanges par API internes, sans connecteur tiers |
 | Mode de test | Module autonome (sa propre base), puis branchement au CRM par une simple bascule de configuration |
 | Objectif chiffré proposé | 8 à 12 rendez-vous qualifiés par mois après 3 mois, pour moins de 2 h de travail commercial par jour |
 
@@ -282,14 +284,14 @@ Fonctionnement : l'IA dispose d'**outils** (recherche de prospects, lecture de f
 
 ### 3.14 Intégration au CRM interne et à l'application AO
 
-Le CRM et l'application AO sont des outils internes développés avec Claude Code. Il n'y a donc **pas de connecteur tiers** à écrire : l'agent est conçu comme un **module Django réutilisable** (`prospection/`) qui fonctionne seul pendant les tests, puis se branche sur le CRM.
+Le CRM et l'application AO sont des outils internes développés avec Claude Code. Ce sont deux applications **séparées**. Il n'y a pas de connecteur tiers à écrire, mais deux API internes à exposer. L'agent est un **module Django portable** (`prospection/`) : il fonctionne seul pendant les tests, puis se branche sur le CRM, et ne parle à l'application AO et au CRM que par deux passerelles.
 
 #### 3.14.1 Deux modes, une seule bascule
 
 | Mode | Usage | Où sont les comptes clients et l'historique |
 |---|---|---|
 | **Autonome** (`PROSPECTION_CRM = "autonome"`) | Phase de test, démonstration | Tables locales du module : `Compte` (statut client) et `HistoriqueFormation` (3.17), alimentées par import |
-| **CRM interne** (`PROSPECTION_CRM = "crm_interne"`) | Production | Lus directement dans le CRM (même base ou API interne, voir 3.14.2) |
+| **CRM interne** (`PROSPECTION_CRM = "crm_api"`) | Production | Lus dans le CRM par son API interne (3.14.2) |
 
 Tout le code de l'agent passe par une seule interface, `prospection/crm/base.py` :
 
@@ -304,16 +306,62 @@ class PasserelleCRM(Protocol):
     def est_oppose(self, valeur) -> bool: ...
 ```
 
-Deux implémentations : `autonome.py` (tables locales) et `crm_interne.py`. Passer de l'une à l'autre ne change ni les écrans ni les automatisations. Une commande `migrer_vers_crm` reverse les comptes, contacts, activités et l'historique saisis pendant le test.
+Deux implémentations : `autonome.py` (tables locales) et `crm_api.py` (appels HTTP à l'API du CRM). Passer de l'une à l'autre ne change ni les écrans ni les automatisations. Une commande `migrer_vers_crm` reverse les comptes, contacts, activités et l'historique saisis pendant le test.
 
-#### 3.14.2 Branchement technique (à choisir avec l'architecture du CRM)
+#### 3.14.2 Architecture retenue : trois applications, deux API
 
-| Option | Quand la choisir | Contenu |
-|---|---|---|
-| **A — Même projet Django** (recommandée si possible) | Le CRM, l'application AO et l'agent peuvent partager un serveur et une base | Le CRM, `veille` et `prospection` sont des applications d'un même projet ; l'agent lit et écrit les modèles du CRM directement ; un seul identifiant de connexion ; transactions communes |
-| **B — Applications séparées** | Le CRM a son propre serveur ou sa propre base | API REST interne entre les applications (jeton par application) + webhooks ; même interface `PasserelleCRM`, implémentée par appels HTTP |
+```
+┌───────────────────────┐   API AO (lecture)    ┌──────────────────────────┐   API CRM (lecture/écriture)  ┌──────────────────────┐
+│  Application AO       │ ───────────────────▶  │  Agent de prospection    │ ◀──────────────────────────▶ │  CRM interne         │
+│  (Veille AO, ce dépôt)│ ◀─── acheteurs suivis │  (module prospection/)   │      webhooks signés          │  (application séparée)│
+│  profil, catalogue,   │      ao.resultat      │  prospects, score,       │                               │  clients, contacts,  │
+│  références, AO,      │                       │  signaux, séquences,     │                               │  opportunités,       │
+│  attributions, DECP   │                       │  messagerie, tâches      │                               │  formations réalisées│
+└───────────────────────┘                       └──────────────────────────┘                               └──────────────────────┘
+```
 
-Dans les deux cas : **SIREN comme clé commune** entre CRM, application AO et agent ; utilisateurs et droits du CRM réutilisés ; l'agent ne duplique jamais un client du CRM.
+**Emplacement de l'agent** (recommandation) :
+
+| Phase | Où tourne l'agent | Accès à l'application AO | Accès au CRM |
+|---|---|---|---|
+| Test (P1–P3) | Application `prospection` **dans le projet AO** (ce dépôt) : rien à toucher côté CRM, données AO lues directement | Passerelle `ao/local.py` (modèles Django) | Passerelle `autonome` (tables locales), puis `crm_api` dès que l'API du CRM existe |
+| Cible (P4) | **Dans le CRM**, là où travaillent les commerciaux (ou laissé dans le projet AO si le CRM préfère consommer ses API) | Passerelle `ao/api.py` (API AO) | Accès direct aux modèles du CRM |
+
+Le code de l'agent ne change pas d'une phase à l'autre : on remplace la passerelle et on lance `migrer_vers_crm`. Ce choix final se fera au vu du test, sans coût de réécriture.
+
+**API à exposer par l'application AO** (lecture seule, sauf mention) :
+
+| Point d'accès | Contenu |
+|---|---|
+| `GET /api/ao/profil` | Identité, habilitations, points forts, zone (profil FORMA'ST) |
+| `GET /api/ao/catalogue` | Prestations, durées, groupes, prix intra et inter |
+| `GET /api/ao/references` | Références citables, par secteur |
+| `GET /api/ao/bibliotheque` | Blocs de contenu réutilisables |
+| `GET /api/ao/acheteurs?depuis=` | Acheteurs publics ayant publié dans notre périmètre, avec leurs avis |
+| `GET /api/ao/attributions?cpv=&depuis=` | Avis d'attribution et DECP : titulaire, montant, date de fin estimée |
+| `POST /api/ao/acheteurs-suivis` | (écriture) L'agent signale un acheteur qualifié à suivre de près |
+| Webhook `ao.resultat` | Un AO passe à Gagné / Perdu / Sans suite |
+
+**API attendue du CRM** (à développer côté CRM, contrat proposé) :
+
+| Point d'accès | Contenu |
+|---|---|
+| `GET /api/comptes?siren=` · `POST /api/comptes` · `PATCH /api/comptes/{id}` | Recherche par SIREN, création au RDV fixé, mise à jour |
+| `GET/POST /api/contacts` | Contacts rattachés à un compte |
+| `POST /api/opportunites` · `GET /api/opportunites/{id}` | Création avec besoin estimé et brief ; suivi du statut |
+| `POST /api/activites` | E-mails, appels, notes, avec lien vers la fiche de l'agent |
+| `GET /api/formations?siren=&echeance_avant=` | Formations réalisées (alimente les recyclages, 3.17) |
+| `GET/POST /api/oppositions` | Liste d'opposition commune |
+| Webhooks | `client.cree`, `opportunite.gagnee`, `opportunite.perdue`, `formation.realisee`, `opposition.enregistree` |
+
+**Règles communes** :
+- **SIREN** (et SIRET pour l'établissement) comme clé commune aux trois applications ; le CRM doit le porter sur ses comptes.
+- Authentification par **jeton par application** (droits limités au strict nécessaire), HTTPS, et si les applications sont sur le même serveur, écoute sur le réseau local uniquement.
+- **Webhooks signés** (HMAC SHA-256 d'un secret partagé, horodatage, rejet au-delà de 5 minutes) et **idempotents** (identifiant d'événement, rejouable sans doublon).
+- **Mode dégradé** : si le CRM ne répond pas, l'agent continue (prospection, rédaction, tâches) ; les écritures attendent dans une file sortante avec nouvelles tentatives ; les clients du CRM sont mis en cache (rafraîchi toutes les 15 minutes).
+- **Opposition** : copie locale toujours à jour dans l'agent et synchronisée dans les deux sens ; un envoi n'est jamais autorisé sur une liste d'opposition non synchronisée depuis plus d'une heure.
+- **Versionnage** des API (`/api/v1/…`) pour faire évoluer le CRM sans casser l'agent.
+- **Utilisateurs** : comptes distincts pendant le test ; à terme, connexion unique entre les trois applications (le CRM comme référence des utilisateurs).
 
 #### 3.14.3 Ce que le CRM gagne (intégration « tout ou partie »)
 
@@ -346,9 +394,10 @@ L'application AO fournit déjà : les acheteurs publics actifs, les avis d'attri
 | Activités (e-mails, appels, notes) | Agent | Visibles dans la chronologie du CRM |
 | Formations réalisées | CRM (ou `HistoriqueFormation` en mode autonome) | Lues par l'agent pour les recyclages |
 | Opposition | Agent et CRM | Une seule liste partagée, effet immédiat |
-| Avis de marché, attributions | Application AO | Lus par l'agent |
+| Avis de marché, attributions | Application AO | Lus par l'agent (API AO) |
+| Profil, catalogue, références, bibliothèque | Application AO | Lus par l'agent et, au besoin, par le CRM (API AO) |
 
-**Événements internes** (signaux Django en option A, webhooks en option B) émis : `prospect.cree`, `prospect.qualifie`, `prospect.score_change`, `reponse.recue`, `rdv.fixe`, `opposition.enregistree`. Reçus : `client.cree`, `opportunite.gagnee`, `opportunite.perdue`, `formation.realisee`, `ao.resultat`.
+**Événements** (webhooks signés entre applications) émis par l'agent : `prospect.cree`, `prospect.qualifie`, `prospect.score_change`, `reponse.recue`, `rdv.fixe`, `opposition.enregistree`. Reçus : `client.cree`, `opportunite.gagnee`, `opportunite.perdue`, `formation.realisee`, `ao.resultat`.
 
 ### 3.15 Possibilités complémentaires (non demandées, recommandées)
 
@@ -451,9 +500,12 @@ Les tables existantes `Entreprise`, `Prestation`, `Formateur`, `Reference` et `A
 
 ## 6. Architecture technique
 
+Pendant le test, dans le projet AO (ce dépôt) :
+
 ```
-config/                       réglages (inchangés, + app prospection)
+config/                       réglages (+ app prospection, + API AO)
 veille/                       existant : profil, catalogue, AO, client IA, e-mails
+  api/                        API AO en lecture (3.14.2), utilisée par l'agent puis par le CRM
 prospection/
   models.py                   tables du §5
   services/
@@ -469,10 +521,13 @@ prospection/
     classement.py             classement des réponses (modèle économique)
     automatisations.py        moteur Quand → Si → Alors, simulation, journal
     assistant.py              dialogue avec outils, confirmation des écritures
-    crm/                      base.py (interface PasserelleCRM), autonome.py (tables locales), crm_interne.py (CRM maison)
+    passerelles/
+      crm/                    base.py (PasserelleCRM), autonome.py (tables locales), crm_api.py (API du CRM)
+      ao/                     base.py (PasserelleAO), local.py (modèles veille), api.py (API AO)
+    file_sortante.py          écritures vers le CRM en attente, nouvelles tentatives, idempotence
     messagerie/               boîtes, file d'envoi, Graph / SMTP / IMAP, relève, santé des boîtes (3.16)
     rgpd.py                   opposition, purge, export, registre
-  api/                        API REST (Django REST Framework) + webhooks
+  api/                        API de l'agent (Django REST Framework) + réception des webhooks signés
   management/commands/        prospection_horaire, prospection_quotidienne, importer, purger_rgpd
   templates/prospection/      écrans du §7
 ```
@@ -509,10 +564,10 @@ prospection/
 
 | Phase | Contenu | Charge |
 |---|---|---|
-| **P1 — MVP « base utile »** (4 semaines) | Module autonome ; import S1 avec dédoublonnage et rapprochement SIRENE, historique des formations (3.17) et recyclages, acheteurs de l'application AO S4, profil idéal, besoin estimé, score (adéquation + accessibilité), fiche, brief et messages IA (copier-coller), tâches, opposition | 15–20 j |
+| **P1 — MVP « base utile »** (4 semaines) | Module autonome dans le projet AO, passerelle AO locale ; import S1 avec dédoublonnage et rapprochement SIRENE, historique des formations (3.17) et recyclages, acheteurs de l'application AO S4, profil idéal, besoin estimé, score (adéquation + accessibilité), fiche, brief et messages IA (copier-coller), tâches, opposition | 15–20 j |
 | **P2 — « contacter »** (4 semaines) | Module de messagerie (3.16) avec mode test, séquences e-mail + tâches LinkedIn et appels, relève et classement des réponses, 6 premières automatisations, tableau de bord, RGPD complet, enrichissement S11 (option), PostgreSQL | 15–20 j |
 | **P3 — « signaux »** (4 semaines) | BODACC, France Travail, Géorisques, annuaire public, DECP et radar, veille web, score d'intention, assistant conversationnel, recettes 3 à 14 | 15–20 j |
-| **P4 — « intégré »** | Passerelle `crm_interne` et reprise des données du test, panneau dans la fiche compte du CRM, briques intégrées au choix (3.14.3), calendrier et prise de RDV, mode session d'appels, recalibrage du score, simulateur web, extension navigateur (après avis juridique), Teams | 15–25 j |
+| **P4 — « intégré »** | API AO, passerelle `crm_api` (dès que l'API du CRM existe, possible plus tôt), reprise des données du test, choix de l'emplacement final de l'agent, panneau dans la fiche compte du CRM, briques intégrées au choix (3.14.3), calendrier et prise de RDV, mode session d'appels, recalibrage du score, simulateur web, extension navigateur (après avis juridique), Teams | 15–25 j |
 
 ---
 
@@ -547,14 +602,16 @@ prospection/
 
 ## 11. Questions ouvertes
 
-Réglées (v0.2) : CRM interne développé avec Claude Code (intégration directe) ; Microsoft 365 et sous-domaine d'envoi acceptés, réglages plus tard ; historique des formations lu dans le CRM, ou base « historique » locale en attendant.
+Réglées : CRM interne développé avec Claude Code, **séparé de l'application AO** (échanges par API, 3.14.2) ; Microsoft 365 et sous-domaine d'envoi acceptés, réglages plus tard ; historique des formations lu dans le CRM, ou base « historique » locale en attendant.
 
-1. **Architecture du CRM** : même projet Django que l'application AO (option A) ou application séparée (option B) ? Quel est son modèle de compte (clé SIREN présente ?) et où sont stockées les formations réalisées ?
-2. Bases fournies disponibles aujourd'hui (fichiers, origine, date d'achat, consentements) ?
-3. Historique des formations existant (tableur, factures, émargements) pour amorcer la table 3.17 ?
-4. Licence **Sales Navigator** en place ou envisagée ?
-5. Départements et segments prioritaires, capacité des formateurs par zone.
-6. Budget mensuel acceptable pour l'enrichissement des contacts.
-7. Qui valide les messages, et à quel rythme (mode de validation par défaut) ?
-8. Validation juridique : extension navigateur LinkedIn, démarchage téléphonique des entrepreneurs individuels, pixels de suivi d'ouverture.
-9. Objectif chiffré de RDV et de CA à retenir.
+1. **CRM** : technologie (Django ?), hébergement (même serveur que l'application AO ?), présence du SIREN sur les comptes, modèle des formations réalisées, et calendrier de son API (le contrat proposé en 3.14.2 peut lui servir de base).
+2. **Emplacement final de l'agent** : dans le CRM (recommandé) ou maintenu à côté de l'application AO ? À trancher après le test.
+3. Qui reste maître du **profil, du catalogue et des références** à terme : l'application AO (proposé) ou le CRM ?
+4. Bases fournies disponibles aujourd'hui (fichiers, origine, date d'achat, consentements) ?
+5. Historique des formations existant (tableur, factures, émargements) pour amorcer la table 3.17 ?
+6. Licence **Sales Navigator** en place ou envisagée ?
+7. Départements et segments prioritaires, capacité des formateurs par zone.
+8. Budget mensuel acceptable pour l'enrichissement des contacts.
+9. Qui valide les messages, et à quel rythme (mode de validation par défaut) ?
+10. Validation juridique : extension navigateur LinkedIn, démarchage téléphonique des entrepreneurs individuels, pixels de suivi d'ouverture.
+11. Objectif chiffré de RDV et de CA à retenir.
