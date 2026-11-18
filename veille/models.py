@@ -14,6 +14,13 @@ class Entreprise(models.Model):
     nom_commercial = models.CharField(max_length=200, blank=True)
     forme_juridique = models.CharField(max_length=50, blank=True)
     siret = models.CharField(max_length=14, blank=True)
+    tva_intracommunautaire = models.CharField("N° TVA intracommunautaire", max_length=20, blank=True)
+    code_naf = models.CharField("Code NAF", max_length=10, blank=True)
+    date_creation = models.DateField("Date de création", null=True, blank=True)
+    capital = models.DecimalField("Capital social (€)", max_digits=12, decimal_places=2, null=True, blank=True)
+    etablissements = models.TextField(
+        "Autres établissements", blank=True, help_text="Un établissement par ligne : adresse (SIRET)"
+    )
     numero_declaration_activite = models.CharField(
         "N° de déclaration d'activité (OF)", max_length=30, blank=True
     )
@@ -33,6 +40,10 @@ class Entreprise(models.Model):
     autres_certifications = models.TextField(blank=True)
 
     effectif = models.PositiveIntegerField(null=True, blank=True)
+    tranche_effectif = models.CharField(
+        "Tranche d'effectif (INSEE)", max_length=50, blank=True, help_text="Repli si l'effectif exact n'est pas saisi"
+    )
+    maj_annuaire_le = models.DateTimeField("Dernière mise à jour depuis l'annuaire", null=True, blank=True)
     ca_n1 = models.DecimalField("CA N-1 (€ HT)", max_digits=12, decimal_places=2, null=True, blank=True)
     ca_n2 = models.DecimalField("CA N-2 (€ HT)", max_digits=12, decimal_places=2, null=True, blank=True)
     ca_n3 = models.DecimalField("CA N-3 (€ HT)", max_digits=12, decimal_places=2, null=True, blank=True)

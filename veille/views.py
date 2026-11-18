@@ -174,18 +174,21 @@ class PieceForm(forms.ModelForm):
 
 @login_required
 def coffre_fort(request):
+    suivant = request.GET.get("suivant", "")
+    if not suivant.startswith("/") or suivant.startswith("//"):
+        suivant = ""
     if request.method == "POST":
         form = PieceForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
-            messages.success(request, "Pièce ajoutée au coffre-fort.")
-            return redirect("coffre_fort")
+            messages.success(request, "Pièce ajoutée au coffre-fort : elle sera jointe aux prochains dossiers.")
+            return redirect(suivant or "coffre_fort")
     else:
-        form = PieceForm()
+        form = PieceForm(initial={"type": request.GET.get("type", "")})
     pieces = PieceAdministrative.objects.all().order_by("type", "-date_expiration")
     presentes = set(pieces.exclude(fichier="").values_list("type", flat=True))
     manquantes = [lib for t, lib in documents.PIECES_ATTENDUES if t not in presentes]
-    return render(request, "veille/coffre_fort.html", {"pieces": pieces, "form": form, "manquantes": manquantes})
+    return render(request, "veille/coffre_fort.html", {"pieces": pieces, "form": form, "manquantes": manquantes, "suivant": suivant})
 
 
 @login_required
@@ -279,6 +282,7 @@ def reponse(request, pk):
             "form_memoire": MemoireForm(),
             "en_cours": en_cours,
             "generateurs": [(k, documents.GENERATEURS[k][0]) for k in documents.generateurs_pour(a)],
+            "profil_manquants": [c["libelle"] for c in annuaire.completude(_Entreprise.get()) if c["obligatoire"] and not c["rempli"]],
         },
     )
 
@@ -324,3 +328,51 @@ def fichier_protege(request, chemin):
     if racine not in cible.parents or not cible.is_file():
         raise Http404
     return FileResponse(cible.open("rb"), as_attachment=False, filename=cible.name)
+
+
+# ---------------------------------------------------------------------------
+# Profil entreprise : compléter, mettre à jour depuis l'annuaire
+# ---------------------------------------------------------------------------
+
+from .models import Entreprise as _Entreprise  # noqa: E402
+from .services import annuaire  # noqa: E402
+
+
+class ProfilForm(forms.ModelForm):
+    class Meta:
+        model = _Entreprise
+        fields = [
+            "email", "telephone", "site_web", "capital", "effectif", "ca_n1", "ca_n2", "ca_n3",
+            "qualiopi_expiration", "habilitation_inrs_sst_expiration", "etablissements",
+        ]
+        widgets = {
+            "qualiopi_expiration": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "habilitation_inrs_sst_expiration": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "etablissements": forms.Textarea(attrs={"rows": 2}),
+        }
+
+
+@login_required
+def profil(request):
+    e = _Entreprise.get()
+    if not e:
+        messages.error(request, "Profil entreprise absent : lancez « manage.py charger_profil ».")
+        return redirect("tableau")
+    if request.method == "POST" and request.POST.get("action") == "annuaire":
+        try:
+            modifies = annuaire.mettre_a_jour(e)
+            messages.success(
+                request,
+                f"Fiche mise à jour depuis l'annuaire officiel ({', '.join(modifies)})." if modifies
+                else "Fiche déjà à jour avec l'annuaire officiel.",
+            )
+        except Exception as ex:  # réseau, SIREN introuvable…
+            messages.error(request, f"Mise à jour impossible : {ex}")
+        return redirect("profil")
+    form = ProfilForm(request.POST or None, instance=e)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Profil enregistré : les prochains documents générés l'intègrent automatiquement.")
+        suivant = request.GET.get("suivant", "")
+        return redirect(suivant if suivant.startswith("/") and not suivant.startswith("//") else "profil")
+    return render(request, "veille/profil.html", {"e": e, "form": form, "completude": annuaire.completude(e)})

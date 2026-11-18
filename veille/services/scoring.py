@@ -115,8 +115,8 @@ def profil_entreprise() -> str:
         if e.autres_certifications:
             certifs.append(e.autres_certifications)
         lignes.append(f"Certifications et habilitations : {', '.join(certifs) or 'aucune renseignée'}")
-        if e.effectif:
-            lignes.append(f"Effectif : {e.effectif}")
+        if e.effectif or e.tranche_effectif:
+            lignes.append(f"Effectif : {e.effectif or e.tranche_effectif}")
         if e.ca_n1:
             lignes.append(f"CA dernier exercice : {e.ca_n1:.0f} € HT")
         if e.presentation:

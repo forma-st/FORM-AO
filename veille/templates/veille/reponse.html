@@ -94,8 +94,10 @@
   <ul>{% for cle, nom in generateurs %}<li><a href="{% url 'document_genere' a.pk cle %}">{{ nom }}</a></li>{% endfor %}</ul>
   <p><a class="bouton" href="{% url 'dossier_zip' a.pk %}">Télécharger le dossier complet (ZIP)</a></p>
   <p class="doux">Le ZIP contient DC1, DC2, la déclaration sur l'honneur, la présentation, les pièces valides du coffre-fort, le dernier mémoire et une check-list.</p>
+  {% if profil_manquants %}<p class="doux">Profil incomplet ({{ profil_manquants|join:", " }}) : ces champs sortent « [À COMPLÉTER] ». <a href="{% url 'profil' %}?suivant={{ request.path|urlencode }}">Compléter le profil</a></p>{% endif %}
   <h2>Pièces administratives à la date limite</h2>
-  <ul>{% for c in controles %}<li class="etat-{{ c.statut }}">{{ c.libelle }} <span class="doux">– {{ c.detail }}</span></li>{% endfor %}</ul>
+  <p class="doux">Le dossier se génère même sans pièces : elles sont listées comme manquantes dans la check-list. Ajoutez-les quand vous les avez.</p>
+  <ul>{% for c in controles %}<li class="etat-{{ c.statut }}">{{ c.libelle }} <span class="doux">– {{ c.detail }}</span>{% if c.statut != "ok" %} · <a href="{% url 'coffre_fort' %}?type={{ c.type }}&suivant={{ request.path|urlencode }}">ajouter</a>{% endif %}</li>{% endfor %}</ul>
   <p><a href="{% url 'coffre_fort' %}">Gérer le coffre-fort →</a></p>
 </div>
 

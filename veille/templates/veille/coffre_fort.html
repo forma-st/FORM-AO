@@ -21,7 +21,7 @@
 </table>
 <h2>Ajouter une pièce</h2>
 <div class="carte">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.as_p }}<button type="submit">Ajouter</button></form>
+<form method="post" enctype="multipart/form-data" action="{% url 'coffre_fort' %}{% if suivant %}?suivant={{ suivant|urlencode }}{% endif %}">{% csrf_token %}{{ form.as_p }}<button type="submit">Ajouter</button></form>
 <p class="doux">Durées usuelles : Kbis moins de 3 mois, attestation URSSAF 6 mois, attestation fiscale : année en cours.</p>
 </div>
 {% endblock %}

@@ -4,5 +4,4 @@ __pycache__/
 db.sqlite3
 media/
 .env
-# Données internes (prix, CV) : ne pas publier
-data/
+# data/seed_formast.json est versionné volontairement (dépôt privé)

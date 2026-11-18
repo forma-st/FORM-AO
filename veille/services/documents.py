@@ -43,6 +43,22 @@ def _adresse(e: Entreprise) -> str:
     return " ".join(x for x in [e.adresse, e.code_postal, e.ville] if x)
 
 
+def _effectif(e: Entreprise) -> str:
+    return str(e.effectif) if e.effectif else (f"{e.tranche_effectif} (INSEE)" if e.tranche_effectif else "")
+
+
+def _capital(e: Entreprise) -> str:
+    return _montant_brut(e.capital) if e.capital else ""
+
+
+def _montant_brut(v) -> str:
+    return f"{v:,.0f} €".replace(",", " ")
+
+
+def _etablissements(e: Entreprise) -> str:
+    return "\n".join(l.strip() for l in (e.etablissements or "").splitlines() if l.strip())
+
+
 def _ref_avis(a: AvisMarche) -> str:
     ref = f"{a.get_source_display()} n° {a.source_id}" if a.source in ("BOAMP", "TED") else ""
     return ref or "Consultation directe"
@@ -170,11 +186,14 @@ def dc2(a: AvisMarche) -> bytes:
         doc,
         [
             ("Nom commercial et dénomination sociale", e.nom_commercial or e.raison_sociale),
-            ("Forme juridique", e.forme_juridique),
+            ("Forme juridique et capital", " – capital de ".join(x for x in [e.forme_juridique, _capital(e)] if x)),
             ("Adresse du siège social", _adresse(e)),
+            ("Autres établissements", _etablissements(e) or "Néant"),
             ("Adresse électronique", e.email),
             ("Téléphone", e.telephone),
             ("N° SIRET", e.siret),
+            ("N° TVA intracommunautaire", e.tva_intracommunautaire),
+            ("Code NAF", e.code_naf),
             ("N° de déclaration d'activité (organisme de formation)", e.numero_declaration_activite),
             ("Représentant habilité à engager le candidat", f"{e.representant_nom}, {e.representant_qualite}"),
             ("Le candidat est une micro, petite ou moyenne entreprise", "Oui"),
@@ -205,7 +224,7 @@ def dc2(a: AvisMarche) -> bytes:
     dx.tableau_cles(
         doc,
         [
-            ("Effectif", str(e.effectif) if e.effectif else ""),
+            ("Effectif", _effectif(e)),
             ("Certifications et habilitations", _certifs(e)),
             ("Zone d'intervention", e.zone_intervention),
         ],
@@ -246,9 +265,11 @@ def dc2(a: AvisMarche) -> bytes:
 def _certifs(e: Entreprise) -> str:
     c = []
     if e.qualiopi:
-        c.append("Certification Qualiopi (actions de formation)")
+        fin = f", valable jusqu'au {e.qualiopi_expiration:%d/%m/%Y}" if e.qualiopi_expiration else ""
+        c.append(f"Certification Qualiopi (actions de formation){fin}")
     if e.habilitation_inrs_sst:
-        c.append("Habilitation INRS pour la formation Sauveteur Secouriste du Travail")
+        fin = f", valable jusqu'au {e.habilitation_inrs_sst_expiration:%d/%m/%Y}" if e.habilitation_inrs_sst_expiration else ""
+        c.append(f"Habilitation INRS pour la formation Sauveteur Secouriste du Travail{fin}")
     if e.numero_declaration_activite:
         c.append(f"Organisme de formation déclaré (n° {e.numero_declaration_activite})")
     return " ; ".join(c)
@@ -313,8 +334,10 @@ def presentation(a: AvisMarche | None = None) -> bytes:
         doc,
         [
             ("Raison sociale", f"{e.raison_sociale} ({e.forme_juridique})"),
+            ("Création", f"{e.date_creation:%Y}" if e.date_creation else ""),
             ("Siège", _adresse(e)),
             ("SIRET", e.siret),
+            ("Effectif", _effectif(e)),
             ("Déclaration d'activité", e.numero_declaration_activite),
             ("Certifications", _certifs(e)),
             ("Représentant", f"{e.representant_nom}, {e.representant_qualite}"),
@@ -368,7 +391,7 @@ def aide_dume(a: AvisMarche) -> bytes:
         doc,
         [
             ("Nom", e.raison_sociale),
-            ("SIRET / TVA", f"{e.siret}"),
+            ("SIRET / TVA", " / ".join(x for x in [e.siret, e.tva_intracommunautaire] if x)),
             ("Adresse", _adresse(e)),
             ("Contact", " – ".join(x for x in [e.representant_nom, e.email, e.telephone] if x)),
             ("Micro, petite ou moyenne entreprise", "Oui"),
@@ -388,7 +411,7 @@ def aide_dume(a: AvisMarche) -> bytes:
         [
             ("Chiffre d'affaires annuel (3 derniers exercices)",
              " / ".join(_montant(x) or A_COMPLETER for x in [e.ca_n1, e.ca_n2, e.ca_n3])),
-            ("Effectif", str(e.effectif) if e.effectif else ""),
+            ("Effectif", _effectif(e)),
             ("Certificats de qualité", _certifs(e)),
             ("Références", "; ".join(f"{r.client} ({r.objet})" for r in Reference.objects.filter(citable=True))),
         ],

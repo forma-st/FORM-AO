@@ -23,11 +23,12 @@ admin.site.site_title = "Veille AO"
 class EntrepriseAdmin(admin.ModelAdmin):
     fieldsets = [
         ("Identité", {"fields": ["raison_sociale", "nom_commercial", "forme_juridique", "siret",
+                                  "tva_intracommunautaire", "code_naf", "date_creation", "capital", "etablissements",
                                   "numero_declaration_activite", "adresse", "code_postal", "ville",
                                   "representant_nom", "representant_qualite", "email", "telephone", "site_web"]}),
         ("Certifications", {"fields": ["qualiopi", "qualiopi_expiration", "habilitation_inrs_sst",
                                         "habilitation_inrs_sst_expiration", "autres_certifications"]}),
-        ("Chiffres", {"fields": ["effectif", "ca_n1", "ca_n2", "ca_n3"]}),
+        ("Chiffres", {"fields": ["effectif", "tranche_effectif", "ca_n1", "ca_n2", "ca_n3"]}),
         ("Positionnement", {"fields": ["zone_intervention", "presentation", "points_forts"]}),
     ]
 

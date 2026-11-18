@@ -504,3 +504,86 @@ class VuesPhase23Tests(TestCase):
         lancer.assert_called_once()
         self.assertEqual(AnalyseDCE.objects.get(avis=self.a).statut, "EN_COURS")
         self.assertContains(self.client.get(f"/avis/{self.a.pk}/reponse/"), 'http-equiv="refresh"')
+
+
+# ---------------------------------------------------------------------------
+# Profil : annuaire, complétude, ajout ultérieur des pièces
+# ---------------------------------------------------------------------------
+
+from .services import annuaire  # noqa: E402
+
+REPONSE_ANNUAIRE = {
+    "results": [
+        {
+            "siren": "899526305",
+            "nom_complet": "FORMA'ST",
+            "nom_raison_sociale": "FORMA'ST",
+            "nature_juridique": "5499",
+            "activite_principale": "85.59A",
+            "date_creation": "2021-05-10",
+            "tranche_effectif_salarie": "02",
+            "siege": {
+                "siret": "89952630500011",
+                "adresse": "31 RUE DE L'ISLE-ADAM 95540 MERY-SUR-OISE",
+                "code_postal": "95540",
+                "libelle_commune": "MERY-SUR-OISE",
+            },
+            "dirigeants": [{"nom": "TABART", "prenoms": "STEVEN TIMOTHY", "qualite": "Gérant", "type_dirigeant": "personne physique"}],
+            "complements": {"est_qualiopi": True, "liste_id_organisme_formation": ["11950722095"]},
+        }
+    ]
+}
+
+
+@override_settings(MEDIA_ROOT=MEDIA_TEST)
+class ProfilTests(TestCase):
+    def setUp(self):
+        self.e = Entreprise.objects.create(raison_sociale="X", siret="89952630500011", ville="Méry-sur-Oise", email="ao@forma-st.fr")
+
+    def test_tva(self):
+        self.assertEqual(annuaire.tva_intracommunautaire("899526305"), "FR30899526305")
+
+    def test_mise_a_jour_annuaire_sans_ecraser(self):
+        with mock.patch("veille.services.annuaire.get_json", return_value=REPONSE_ANNUAIRE):
+            modifies = annuaire.mettre_a_jour(self.e)
+        self.e.refresh_from_db()
+        self.assertEqual(self.e.raison_sociale, "FORMA'ST")
+        self.assertEqual(self.e.forme_juridique, "SARL")
+        self.assertEqual(self.e.adresse, "31 rue de l'Isle-Adam")
+        self.assertEqual(self.e.ville, "Méry-sur-Oise")  # accent conservé
+        self.assertEqual(self.e.representant_nom, "Steven Timothy Tabart")
+        self.assertEqual(self.e.tranche_effectif, "3 à 5 salariés")
+        self.assertEqual(self.e.email, "ao@forma-st.fr")  # saisi à la main : conservé
+        self.assertNotIn("ville", modifies)
+
+    def test_info_ajoutee_apparait_dans_les_documents(self):
+        a = avis(objet="Formations SST", acheteur="Ville")
+        a.save()
+        self.assertIn("[À COMPLÉTER]", _texte_docx(documents.dc2(a)))
+        self.e.ca_n1, self.e.ca_n2, self.e.ca_n3 = 250000, 180000, 120000
+        self.e.capital = 5000
+        self.e.forme_juridique = "SARL"
+        self.e.save()
+        texte = _texte_docx(documents.dc2(a))
+        self.assertIn("250 000 € HT", texte)
+        self.assertIn("SARL – capital de 5 000 €", texte)
+
+    def test_page_profil_et_ajout_piece_depuis_la_reponse(self):
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "x"))
+        a = avis(objet="Formations SST", acheteur="Ville")
+        a.save()
+        self.assertContains(self.client.get("/profil/"), "Complétude des documents")
+        r = self.client.post("/profil/?suivant=/avis/%d/reponse/" % a.pk, {"email": "ao@forma-st.fr", "telephone": "01 02 03 04 05", "ca_n1": "250000"})
+        self.assertRedirects(r, f"/avis/{a.pk}/reponse/", fetch_redirect_response=False)
+        self.assertEqual(Entreprise.get().telephone, "01 02 03 04 05")
+        page = self.client.get(f"/avis/{a.pk}/reponse/").content.decode()
+        self.assertIn("?type=KBIS", page)
+        r = self.client.get("/coffre-fort/?type=KBIS")
+        self.assertContains(r, 'value="KBIS" selected')
+        r = self.client.post(f"/coffre-fort/?suivant=/avis/{a.pk}/reponse/",
+                             {"type": "KBIS", "fichier": SimpleUploadedFile("kbis.pdf", b"%PDF")})
+        self.assertRedirects(r, f"/avis/{a.pk}/reponse/", fetch_redirect_response=False)
+        self.assertEqual({c.type: c.statut for c in documents.controler_pieces(a)}["KBIS"], "ok")
+        # redirection externe refusée
+        r = self.client.post("/profil/?suivant=//evil.example", {"email": "ao@forma-st.fr"})
+        self.assertRedirects(r, "/profil/", fetch_redirect_response=False)

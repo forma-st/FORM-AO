@@ -82,12 +82,20 @@ cp .env.example .env
 .venv/bin/python manage.py createsuperuser
 ```
 
-Le fichier `data/seed_formast.json` contient des données internes (prix, CV) : il n'est volontairement **pas versionné** (voir `.gitignore`). Gardez-en une copie.
+Le fichier `data/seed_formast.json` contient des données internes (prix, CV, bibliothèque de contenus). Il est versionné parce que le dépôt est **privé** : ne rendez jamais ce dépôt public.
 
-À faire ensuite dans *Paramètres* (`/admin`) :
-1. **Profils de veille** : renseigner les **destinataires** des e-mails (sinon aucun digest n'est envoyé).
-2. **Entreprise** : compléter le code postal, le N° de déclaration d'activité, le CA, l'effectif et les dates d'expiration Qualiopi et INRS.
-3. **Pièces administratives** : déposer Kbis, attestation URSSAF, attestation fiscale, RC Pro et Qualiopi, avec leurs dates d'expiration.
+À faire ensuite dans l'application :
+1. **Profil** (menu *Profil*) : compléter e-mail, téléphone, chiffre d'affaires, capital et dates d'expiration. Le bouton « Mettre à jour depuis l'annuaire officiel » rafraîchit l'identité légale (adresse, dirigeant, NAF, TVA, déclaration d'activité). Les documents se régénèrent à chaque téléchargement, donc toute information ajoutée apparaît aussitôt.
+2. **Profils de veille** : renseigner les **destinataires** des e-mails (sinon aucun digest n'est envoyé).
+3. **Coffre-fort** : déposer Kbis, attestation URSSAF, attestation fiscale, RC Pro et Qualiopi, avec leurs dates d'expiration. Ce n'est pas bloquant : sans pièces, le dossier se génère et la check-list les signale manquantes. Chaque pièce manquante a un lien « ajouter » sur la page de réponse.
+
+## Clé API Anthropic
+
+L'application lit la clé dans la variable `ANTHROPIC_API_KEY`. Elle peut venir du fichier `.env` ou de l'environnement du serveur.
+- **Serveur de production** : dans `.env`, ajouter la ligne `ANTHROPIC_API_KEY=sk-ant-…`, puis redémarrer l'application.
+- **Session cloud Claude Code** (pour les tests) : ajouter une variable d'environnement `ANTHROPIC_API_KEY` dans les réglages de l'environnement. Elle est lisible par toute personne et toute commande qui utilise cet environnement.
+
+Sans clé, l'outil fonctionne quand même : le score se fait par règles, mais l'analyse du DCE et le mémoire restent indisponibles.
 
 ## Utilisation
 

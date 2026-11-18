@@ -1,0 +1,31 @@
+{% extends "veille/base.html" %}
+{% block titre %}Profil FORMA'ST{% endblock %}
+{% block contenu %}
+<h1>Profil {{ e }}</h1>
+<p class="doux">Toutes les pièces (DC1, DC2, présentation, DUME, mémoire) sont générées à partir de ce profil au moment du téléchargement : une information ajoutée ici apparaît automatiquement dans les prochains documents.</p>
+<div class="grille">
+<div>
+  <div class="carte">
+    <h2 style="margin-top:0">Informations à compléter</h2>
+    <form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Enregistrer</button></form>
+  </div>
+</div>
+<div>
+  <div class="carte">
+    <h2 style="margin-top:0">Identité légale</h2>
+    <p>{{ e.raison_sociale }} – {{ e.forme_juridique }}<br>{{ e.adresse }}, {{ e.code_postal }} {{ e.ville }}<br>
+    SIRET {{ e.siret }} · TVA {{ e.tva_intracommunautaire|default:"—" }} · NAF {{ e.code_naf|default:"—" }}<br>
+    Déclaration d'activité {{ e.numero_declaration_activite|default:"—" }} · {% if e.qualiopi %}Qualiopi{% endif %}{% if e.habilitation_inrs_sst %} · INRS SST{% endif %}<br>
+    {{ e.representant_nom }}, {{ e.representant_qualite }}{% if e.tranche_effectif %} · {{ e.tranche_effectif }}{% endif %}</p>
+    <form method="post">{% csrf_token %}<button name="action" value="annuaire" class="secondaire">Mettre à jour depuis l'annuaire officiel</button></form>
+    <p class="doux">{% if e.maj_annuaire_le %}Dernière mise à jour le {{ e.maj_annuaire_le|date:"d/m/Y H:i" }}.{% endif %} Source : annuaire des entreprises (INSEE / RNE). Les champs saisis à la main ne sont jamais effacés.</p>
+  </div>
+  <div class="carte">
+    <h2 style="margin-top:0">Complétude des documents</h2>
+    <ul>{% for c in completude %}<li class="{% if c.rempli %}etat-ok{% elif c.obligatoire %}etat-manquante{% else %}etat-a_verifier{% endif %}">{% if c.rempli %}✓{% else %}✗{% endif %} {{ c.libelle }}{% if not c.obligatoire %} <span class="doux">(facultatif)</span>{% endif %}</li>{% endfor %}</ul>
+    <p class="doux">Tant qu'une information manque, elle apparaît surlignée « [À COMPLÉTER] » dans les documents.</p>
+    <p><a href="{% url 'admin:veille_entreprise_change' e.pk %}">Tous les champs (présentation, points forts…) →</a></p>
+  </div>
+</div>
+</div>
+{% endblock %}

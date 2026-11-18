@@ -1,0 +1,293 @@
+{
+  "_avertissement": "Données internes confidentielles (prix, CV). Ne pas publier. Profil unique FORMA'ST, utilisé pour toutes les réponses (y compris Picard). Identité légale : annuaire officiel des entreprises (INSEE), novembre 2026.",
+  "entreprise": {
+    "raison_sociale": "FORMA'ST",
+    "nom_commercial": "FORMA'ST",
+    "siret": "89952630500011",
+    "adresse": "31 rue de l'Isle-Adam",
+    "code_postal": "95540",
+    "ville": "Méry-sur-Oise",
+    "representant_nom": "Steven Timothy Tabart",
+    "representant_qualite": "Gérant",
+    "qualiopi": true,
+    "habilitation_inrs_sst": true,
+    "zone_intervention": "National (toute France), en intra sur site client ou dans des salles louées",
+    "presentation": "FORMA'ST est un organisme de formation (créé en 2021, déclaration d'activité n° 11950722095, certifié Qualiopi) spécialisé en santé, sécurité et prévention des risques au travail : secourisme (SST, MAC SST, PSC), incendie et évacuation (extincteurs, EPI, guide-file/serre-file, exploitation SSI), gestes et postures / prévention des TMS, qualité de vie au travail (stress, émotions, conflits) et parcours digitaux (onboarding sécurité, films pédagogiques). Formateurs issus des sapeurs-pompiers (SDIS 78).",
+    "points_forts": "Unité Mobile de Formation Incendie (UMFI) et bac à flammes : exercices réels sur site client.\nFormateurs sapeurs-pompiers (professionnel et volontaire) et formateurs de formateurs premiers secours.\nApproche globale du capital santé : gestes et postures + sommeil, nutrition, gestion du stress (formateur conseiller en nutrition et préparation mentale).\nIntervention sur toute la France, organisation multi-sites (jusqu'à 3 sessions magasin de 2h par jour), contact unique, documents (émargements sous 48h, attestations sous 5 jours).\nDistanciel possible (classes virtuelles animées sur Teams).\nRéférence grand compte national : Picard (1 200 magasins).",
+    "forme_juridique": "SARL",
+    "numero_declaration_activite": "11950722095",
+    "autres_certifications": "Convention collective des organismes de formation (IDCC 1516).",
+    "tva_intracommunautaire": "FR30899526305",
+    "code_naf": "85.59A",
+    "date_creation": "2021-05-10",
+    "tranche_effectif": "3 à 5 salariés"
+  },
+  "prestations": [
+    {
+      "intitule": "SST – Sauveteur Secouriste du Travail (initial)",
+      "categorie": "SECOURISME",
+      "duree": "2j",
+      "prix_intra_ht": 990
+    },
+    {
+      "intitule": "MAC SST – recyclage",
+      "categorie": "SECOURISME",
+      "duree": "1j",
+      "prix_intra_ht": 520
+    },
+    {
+      "intitule": "PSC – Prévention et secours civiques",
+      "categorie": "SECOURISME",
+      "duree": "1j",
+      "prix_intra_ht": 560
+    },
+    {
+      "intitule": "Manipulation des extincteurs",
+      "categorie": "INCENDIE",
+      "duree": "2h",
+      "groupe_min": 4,
+      "groupe_max": 8,
+      "prix_intra_ht": 330,
+      "prix_inter_ht": 70
+    },
+    {
+      "intitule": "EPI – Équipier de première intervention",
+      "categorie": "INCENDIE",
+      "duree": "3h",
+      "groupe_min": 4,
+      "groupe_max": 10,
+      "prix_intra_ht": 420
+    },
+    {
+      "intitule": "Guide-file / serre-file (évacuation) – format court",
+      "categorie": "INCENDIE",
+      "duree": "2h",
+      "groupe_min": 6,
+      "groupe_max": 8,
+      "prix_intra_ht": 330,
+      "prix_inter_ht": 70
+    },
+    {
+      "intitule": "Guide-file / serre-file (évacuation) – format long",
+      "categorie": "INCENDIE",
+      "duree": "3h",
+      "groupe_min": 8,
+      "groupe_max": 12,
+      "prix_intra_ht": 420,
+      "prix_inter_ht": 70
+    },
+    {
+      "intitule": "Exploitation SSI (système de sécurité incendie)",
+      "categorie": "INCENDIE",
+      "duree": "3h",
+      "groupe_min": 4,
+      "groupe_max": 6,
+      "prix_intra_ht": 395,
+      "prix_inter_ht": 135
+    },
+    {
+      "intitule": "Exercices d'évacuation et mises en situation",
+      "categorie": "INCENDIE",
+      "duree": "",
+      "description": "Sur devis. Avec UMFI ou bac à flammes."
+    },
+    {
+      "intitule": "Gestes et postures – préserver son capital santé (50 ans et +)",
+      "categorie": "ERGONOMIE",
+      "duree": "2h30",
+      "groupe_min": 8,
+      "groupe_max": 12,
+      "prix_intra_ht": 430,
+      "prix_inter_ht": 95,
+      "description": "TMS, anatomie et risques, 9 principes de prévention, manutention et écrans, routines d'étirement, sommeil, nutrition 50+, plan d'action personnel. Présentiel ou distanciel."
+    },
+    {
+      "intitule": "Gestion du stress en période de rush (magasin)",
+      "categorie": "QVT",
+      "duree": "2h",
+      "groupe_min": 6,
+      "groupe_max": 10,
+      "prix_intra_ht": 420,
+      "prix_inter_ht": 95
+    },
+    {
+      "intitule": "Gestion des conflits (magasin)",
+      "categorie": "QVT",
+      "duree": "2h",
+      "groupe_min": 6,
+      "groupe_max": 10,
+      "prix_intra_ht": 420,
+      "prix_inter_ht": 95
+    },
+    {
+      "intitule": "Pack Sérénité (magasin)",
+      "categorie": "QVT",
+      "duree": "4h",
+      "groupe_min": 6,
+      "groupe_max": 10,
+      "prix_intra_ht": 750,
+      "prix_inter_ht": 170
+    },
+    {
+      "intitule": "Gestion du stress professionnel",
+      "categorie": "QVT",
+      "duree": "3h",
+      "groupe_min": 8,
+      "groupe_max": 12,
+      "prix_intra_ht": 580
+    },
+    {
+      "intitule": "Gestion des émotions",
+      "categorie": "QVT",
+      "duree": "3h",
+      "groupe_min": 8,
+      "groupe_max": 12,
+      "prix_intra_ht": 580
+    },
+    {
+      "intitule": "Gestion des conflits",
+      "categorie": "QVT",
+      "duree": "3h",
+      "groupe_min": 8,
+      "groupe_max": 12,
+      "prix_intra_ht": 580
+    },
+    {
+      "intitule": "Parcours onboarding sécurité – licence annuelle illimitée",
+      "categorie": "DIGITAL",
+      "duree": "1 an",
+      "prix_intra_ht": 4200
+    },
+    {
+      "intitule": "Parcours onboarding sécurité – par apprenant",
+      "categorie": "DIGITAL",
+      "duree": "",
+      "prix_inter_ht": 17,
+      "description": "Minimum de commande 1 000 € HT."
+    },
+    {
+      "intitule": "Film pédagogique personnalisé sécurité-prévention",
+      "categorie": "DIGITAL",
+      "duree": "4 à 6 min",
+      "prix_intra_ht": 2900
+    },
+    {
+      "intitule": "Frais de déplacement",
+      "categorie": "AUTRE",
+      "duree": "",
+      "description": "0-50 km inclus ; 51-100 km : 80 € ; 101-200 km : 150 € ; 201-300 km : 250 € ; au-delà sur devis."
+    }
+  ],
+  "formateurs": [
+    {
+      "prenom": "Matthieu",
+      "nom": "Landon",
+      "fonction": "Formateur prévention / santé",
+      "domaines": "Prévention des risques, gestes et postures, QVT, préparation mentale, incendie",
+      "qualifications": "Sapeur-pompier volontaire SDIS 78 (chef de garde, chef d'agrès tout engin)\nPraticien TOP© (Techniques d'optimisation du potentiel)\nSpécialiste en préparation mentale\nAnimateur en prévention des risques\nCQP animation sportive\nAnimateur sport santé « Prescriforme »",
+      "experience": "Dirige depuis 2023 un organisme de prévention, sécurité et santé au travail (accompagnement, conseil, formation). Auparavant Key Account Manager grands comptes nationaux (Europcar France) et responsable de studio."
+    },
+    {
+      "prenom": "Nicolas",
+      "nom": "Frazionari",
+      "fonction": "Formateur incendie, secourisme et santé",
+      "domaines": "Incendie, secourisme, nutrition, gestion du stress",
+      "qualifications": "Sapeur-pompier professionnel SDIS 78 depuis 2007, chef d'agrès tout engin (2021)\nFormateur incendie / secourisme au centre de formation départemental du SDIS 78\nFormateur de premiers secours (2017), formateur accompagnateur (2019)\nConseiller Pleine Santé (École 5.3, 2022) : nutrition, gestion du stress et préparation mentale, naturopathie et phytothérapie",
+      "experience": "Ancien agent de sécurité incendie / opérateur de poste central de sécurité (Technocentre Renault, 2003-2007)."
+    }
+  ],
+  "references": [
+    {
+      "client": "Picard Surgelés",
+      "secteur": "Distribution alimentaire",
+      "public": false,
+      "objet": "Convention de partenariat prévention incendie : extincteurs, guide-file / serre-file, exploitation SSI, exercices, modules vidéo",
+      "description": "Référencement national exclusif sur le périmètre incendie / évacuation, tous sites du client. Formations avec unité mobile (UMFI) ou bac à flammes. Business review trimestrielle.",
+      "date_debut": "2026-03-24",
+      "date_fin": "2027-03-31",
+      "volume": "1 200 magasins, 4 500 collaborateurs magasin et 650 en fonctions support, toute France"
+    }
+  ],
+  "profil_veille": {
+    "nom": "FORMA'ST – cœur de métier",
+    "mots_cles": "sst\nsecouriste*\nincendie\nextincteur*\nevacuation\nssi\ntms\ntroubles musculo*\nergonomie\nmanutention\nport de charges\nprevention des risques\nrisques professionnels\nsecurite au travail\ndocument unique\nduerp\nrisques psychosociaux\nrps\nqualite de vie au travail\nqvt\nqvct\nstress\ngestion des conflits\nhabilitation electrique\ntravail en hauteur\nsante au travail\npremiers secours\ndefibrillateur*\nsecurite incendie\nsecurite des personnes\nhygiene et securite\nhygiene securite\nconditions de travail\nactivite physique\nsedentarite",
+    "mots_cles_exclus": "gardiennage\nsurveillance humaine\nvideoprotection\ntelesurveillance\nmise a disposition d agents\nmaintenance\nverification*\ncontrole* technique*\ncontroles periodiques\nmaitrise d oeuvre\nassurance*\nlocation\ncsps\ncoordination securite\ncoordination en matiere de securite\nnettoyage\ndesenfumage\nfourniture*\ntravaux\nacquisition\ncoordonnateur*\nsps\npreventeur\ncontrole technique\nassistance a maitrise d ouvrage\namo",
+    "cpv": "805\n80330",
+    "departements": "",
+    "seuil_digest": 50,
+    "seuil_alerte": 80,
+    "destinataires": "",
+    "mots_cles_forts": "sauveteur secouriste\nsauveteurs secouristes\nmac sst\nformation sst\nsecourisme\npremiers secours\npsc1\ngestes qui sauvent\nequipier de premiere intervention\nequipiers de premiere intervention\nequipier de seconde intervention\nguide file\nserre file\nguides files\nserres files\nexercice d evacuation\nexercices d evacuation\nmanipulation des extincteurs\nmaniement des extincteurs\ngestes et postures\nprap\nsante et securite au travail\nformation securite\nformations securite\nformation incendie\nformations incendie\nformations obligatoires\nformation prevention\nformations prevention\nrisques psychosociaux\ngestion du stress\nprevention des tms",
+    "mots_contexte": "formation*\nformer\nsensibilisation*\nstage*\nenseignement\npedagog*\nexercice*\nanimations de prevention\nanimation prevention\nateliers de prevention\nactions de prevention\nprevention sante",
+    "mots_contexte_texte": "stagiaire*\napprenant*\npedagogique*\nsessions de formation\naction de formation\nactions de formation\norganisme de formation\ncatalogue de formation\nplan de formation\nformateur*"
+  },
+  "consultations_privees": [
+    {
+      "source_id": "PICARD-GP-2026",
+      "objet": "Picard – Gestes et postures : préserver son capital santé (collaborateurs magasin)",
+      "acheteur": "Picard Surgelés",
+      "acheteur_type": "privé",
+      "date_publication": "2026-11-17",
+      "date_limite": "2026-12-11T18:00:00+01:00",
+      "lieu_execution": "Toute France (salles de formation louées)",
+      "procedure": "Consultation privée, réponse par e-mail puis soutenance orale sous 4 à 6 semaines",
+      "texte": "Public : collaborateurs magasin, priorité aux plus de 10 ans d'ancienneté. Risques DUER : TMS (dos, cervicales, épaules, coudes, poignets, mains, genoux), écrasement, coupures, chutes. Activités : dépotage des rolls, mise en rayon bacs congélateurs, rotations, nettoyage/dégivrage, inventaires, Click & Collect, caisse, tablette et Zebra.\nAttendus : approche concrète non médicale, ateliers pratiques (cartons, rolls), analyse de postures, prévention des chutes, échauffement et récupération, hygiène de vie (sédentarité, alimentation, respiration). Visite préparatoire par un ergonome ou professionnel de santé = un plus.\nOutils d'ancrage : livret participant, aide-mémoire, fiches réflexes illustrées, affiches, exercices d'échauffement réutilisables, supports numériques.\nOrganisation : 12 stagiaires/session, 4 sessions dont une pilote, à partir de février 2027, 9h-12h30 ou 14h-17h30 (3h30), salles louées partout en France, accessible PSH.\nDeux programmes : présentiel (pratique) et distanciel (routines d'hygiène de vie), tronc commun.\nLivrables : programme détaillé, outils participants, modalités d'évaluation (satisfaction + acquis à moyen/long terme), étapes d'ingénierie pédagogique et contributions attendues de Picard, CV des formateurs, détail du prix et CGV.\nRéponse par e-mail au plus tard le 11 décembre (3 destinataires, voir cahier des charges)."
+    }
+  ],
+  "blocs": [
+    {
+      "titre": "Gestes et postures 50+ : objectifs",
+      "categorie": "PROGRAMME",
+      "source": "Proposition de référencement Picard 2026",
+      "texte": "Objectifs : appréhender les risques dorsolombaires ; maîtriser les techniques de gestes et postures pour réduire les accidents ; atténuer la fatigue et améliorer les compétences professionnelles.\nContrat didactique avec le groupe : travail d'équipe, respect et liberté de parole, partage d'expérience."
+    },
+    {
+      "titre": "Gestes et postures : déroulé type (capital santé)",
+      "categorie": "PROGRAMME",
+      "source": "Proposition de référencement Picard 2026",
+      "texte": "1. Comprendre la mécanique : anatomie de la colonne (cervicales, dorsales, lombaires) et risques ; les TMS (95 % des maux de dos sont d'origine mécanique ; environ 2 000 inclinaisons du dos par jour) ; pathologies courantes : lombalgie, cervicalgie, sciatique.\n2. Les 9 grands principes généraux de prévention (éviter, évaluer, combattre à la source, adapter le travail à l'homme, tenir compte de la technique, remplacer le dangereux, planifier, priorité à la protection collective, instructions appropriées).\n3. Ergonomie au quotidien : manutention (superposer les centres de gravité, assurer l'équilibre pieds décalés, fixer la colonne) et travail sur écran (pas de « bonne » position unique : le secret est le changement régulier).\n4. Routines d'étirement (ex. libérer les cervicales : rentrer le menton, étirement du sterno-cléido-mastoïdien, auto-massage).\n5. Le sommeil, pilier de la récupération : balance fatigue / récupération, cycles d'environ 90 minutes (4 à 6 par nuit) ; contexte 50+ : sommeil plus léger et fragmenté.\n6. Nutrition 50+ : la qualité avant la quantité (assiette : 50 % légumes, 25 % protéines contre la sarcopénie, 25 % féculents complets).\n7. Capital santé, gestion globale : postures, mouvement, nutrition, sommeil. Clôture : « quelle petite habitude allez-vous changer dès demain ? »"
+    },
+    {
+      "titre": "Animation en distanciel",
+      "categorie": "PEDAGOGIE",
+      "source": "Proposition de référencement Picard 2026",
+      "texte": "Sessions à distance sur Microsoft Teams : classes virtuelles animées, pédagogie interactive, support pédagogique en soutien, techniques de maintien de l'engagement des apprenants."
+    },
+    {
+      "titre": "Formations incendie avec unité mobile",
+      "categorie": "MOYENS",
+      "source": "Convention de partenariat incendie Picard 2026-2027",
+      "texte": "Formations réalisées avec l'Unité Mobile de Formation Incendie (UMFI) ou, à défaut, en format traditionnel avec bac à flammes. Mobilisation optimisée : minimum indicatif de 3 sessions « magasin » de 2 h par jour. Les formations évacuation ne nécessitent pas systématiquement l'unité mobile.\nBesoins sur site : zone d'intervention adaptée et sécurisée d'environ 4 m x 3 m pour les dispositifs mobiles, accès à une alimentation 230 V si possible. Le prestataire complète le registre de sécurité du site après l'intervention.\nLe matériel pédagogique nécessaire est fourni systématiquement (extincteurs, mannequins, supports vidéo…)."
+    },
+    {
+      "titre": "Organisation et contact unique",
+      "categorie": "ORGANISATION",
+      "source": "Convention de partenariat incendie Picard 2026-2027",
+      "texte": "Un interlocuteur unique assure la coordination des interventions, la planification, le suivi administratif et la communication avec le client. Délai de planification de 5 semaines dans la mesure du possible. À partir de la liste des sites et des besoins, nous proposons une planification optimisée (regroupement géographique, enchaînement des sessions, mobilisation des moyens pédagogiques), soumise à validation et ajustable d'un commun accord.\nSessions maintenues même avec un seul participant, pour garantir la continuité et la conformité réglementaire. En cas d'annulation moins de 15 jours avant, recherche active d'une solution de remplacement.\nReport sans pénalité en cas de conditions météorologiques défavorables pour les exercices en extérieur."
+    },
+    {
+      "titre": "Documents et traçabilité",
+      "categorie": "QUALITE",
+      "source": "Convention de partenariat incendie Picard 2026-2027",
+      "texte": "Après chaque action : feuilles d'émargement signées transmises sous 48 heures, attestations de formation individuelles sous 5 jours ouvrés, par voie électronique sauf demande contraire. Traçabilité conforme aux obligations réglementaires de la formation professionnelle, y compris l'alimentation du Passeport de Prévention lorsque requis."
+    },
+    {
+      "titre": "Évaluation et amélioration continue",
+      "categorie": "EVALUATION",
+      "source": "Convention de partenariat incendie Picard 2026-2027",
+      "texte": "Chaque session fait l'objet d'un dispositif d'évaluation : questionnaire systématique mesurant la qualité pédagogique, la clarté des contenus, l'adéquation aux besoins terrain et la satisfaction globale. Analyse conjointe des résultats pour identifier les axes d'amélioration.\nPilotage : « business review » trimestrielle possible avec indicateurs partagés (sessions réalisées, collaborateurs formés, chiffre d'affaires, taux de participation, taux de satisfaction, retours d'expérience)."
+    },
+    {
+      "titre": "Protection des données (RGPD)",
+      "categorie": "QUALITE",
+      "source": "Convention de partenariat incendie Picard 2026-2027",
+      "texte": "Données strictement nécessaires (nom, prénom, date de naissance, coordonnées professionnelles, participation ; NIR si requis pour le Passeport de Prévention), utilisées uniquement pour l'organisation, les attestations, la justification réglementaire et le suivi qualité. Mesures de sécurité et accès limité aux personnes habilitées, aucune transmission à des tiers non autorisés, conservation limitée aux durées légales, droits des personnes garantis (RGPD)."
+    },
+    {
+      "titre": "Propriété intellectuelle et droit à l'image",
+      "categorie": "AUTRE",
+      "source": "Convention de partenariat incendie Picard 2026-2027",
+      "texte": "Supports pédagogiques remis pour un usage interne au client. Toute prise de vue respecte strictement le droit à l'image, sans identification nominative sans accord préalable ; retrait de toute image sur simple demande du client."
+    }
+  ]
+}
