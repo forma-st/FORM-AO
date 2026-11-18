@@ -1,0 +1,624 @@
+<title>Veille AO FORMA'ST – démo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout : barre de navigation collante, puis une vue à la fois (tableau, fiche, réponse, pipeline, profil, coffre-fort, ajout). */
+:root {
+  --fond:#f5f4f1; --carte:#ffffff; --carte2:#faf9f7; --texte:#1f2328; --doux:#5f6670; --bord:#e1ded8;
+  --accent:#b3261e; --accent-fond:#fbeceb; --lien:#0b5cad;
+  --vert:#1f7a3a; --vert-fond:#e6f3ea; --orange:#a86400; --orange-fond:#fdf1df; --rouge:#b3261e; --rouge-fond:#fbeceb; --gris:#737a82;
+  --mark:#fff3a3; --sur-accent:#ffffff;
+  --titre:"Space Grotesk", system-ui, sans-serif; --corps:Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --fond:#161719; --carte:#202225; --carte2:#26282c; --texte:#ecebe8; --doux:#a3a8ae; --bord:#34373b;
+  --accent:#ef6a60; --accent-fond:#3a2220; --lien:#7db4f0;
+  --vert:#4cb36d; --vert-fond:#1d3324; --orange:#e3a04a; --orange-fond:#3a2d1a; --rouge:#ef6a60; --rouge-fond:#3a2220; --gris:#8d939a;
+  --mark:#5a4d00; --sur-accent:#1b0f0e; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --fond:#161719; --carte:#202225; --carte2:#26282c; --texte:#ecebe8; --doux:#a3a8ae; --bord:#34373b;
+  --accent:#ef6a60; --accent-fond:#3a2220; --lien:#7db4f0;
+  --vert:#4cb36d; --vert-fond:#1d3324; --orange:#e3a04a; --orange-fond:#3a2d1a; --rouge:#ef6a60; --rouge-fond:#3a2220; --gris:#8d939a;
+  --mark:#5a4d00; --sur-accent:#1b0f0e; color-scheme:dark }
+* { box-sizing:border-box; }
+body { background:var(--fond); color:var(--texte); font:15px/1.5 var(--corps); }
+body::before { content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:30; background:var(--carte); }
+a { color:var(--lien); }
+h1, h2, h3 { font-family:var(--titre); text-wrap:balance; margin:0; }
+h1 { font-size:24px; } h2 { font-size:17px; } h3 { font-size:15px; }
+mark { background:var(--mark); color:inherit; padding:0 2px; }
+.gutter { padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+header.nav { position:sticky; top:env(safe-area-inset-top, 0px); z-index:20; background:var(--carte); border-bottom:1px solid var(--bord); }
+header.nav .in { max-width:1200px; margin:0 auto; display:flex; gap:6px 18px; align-items:center; flex-wrap:wrap; padding-block:10px; }
+.marque { font-family:var(--titre); font-weight:700; color:var(--accent); font-size:17px; text-decoration:none; margin-right:6px; }
+nav.liens { display:flex; gap:4px 14px; flex-wrap:wrap; }
+nav.liens a { color:var(--texte); text-decoration:none; font-size:14px; padding:2px 0; border-bottom:2px solid transparent; }
+nav.liens a.actif { border-color:var(--accent); font-weight:600; }
+.demo-pill { margin-left:auto; display:flex; gap:8px; align-items:center; font-size:12px; color:var(--doux); }
+main { max-width:1200px; margin:0 auto; padding-block:20px 80px; display:grid; gap:16px; }
+.carte { background:var(--carte); border:1px solid var(--bord); border-radius:8px; padding:14px 16px; min-width:0; }
+.doux { color:var(--doux); font-size:13px; }
+.ligne { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.entete { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; }
+.grille2 { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:16px; align-items:start; }
+@media (max-width:860px) { .grille2 { grid-template-columns:minmax(0,1fr); } }
+.pile { display:grid; gap:12px; min-width:0; }
+input, select, textarea { font:inherit; color:var(--texte); background:var(--carte); padding:6px 8px; border:1px solid var(--bord); border-radius:6px; max-width:100%; }
+textarea { width:100%; min-height:80px; }
+label.champ { display:grid; gap:3px; font-size:13px; color:var(--doux); }
+label.champ input, label.champ select, label.champ textarea { color:var(--texte); font-size:14px; }
+.form2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px 14px; }
+button, .bouton { font:inherit; font-size:14px; padding:6px 12px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:var(--sur-accent); cursor:pointer; text-decoration:none; display:inline-flex; gap:6px; align-items:center; }
+button.sec, .bouton.sec { background:transparent; color:var(--accent); }
+button.discret { background:transparent; border-color:var(--bord); color:var(--texte); }
+button:disabled { opacity:.5; cursor:default; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline:2px solid var(--lien); outline-offset:2px; }
+.tablewrap { overflow-x:auto; border:1px solid var(--bord); border-radius:8px; background:var(--carte); }
+table { width:100%; border-collapse:collapse; }
+th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--bord); vertical-align:top; }
+tr:last-child td { border-bottom:0; }
+th { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--doux); background:var(--carte2); white-space:nowrap; }
+tbody tr.clic { cursor:pointer; } tbody tr.clic:hover td { background:var(--carte2); }
+.num { font-variant-numeric:tabular-nums; }
+.score { display:inline-block; min-width:38px; text-align:center; font-weight:700; border-radius:6px; padding:2px 6px; color:#fff; font-variant-numeric:tabular-nums; }
+.s-go { background:var(--vert); } .s-etude { background:var(--orange); } .s-nogo { background:var(--gris); } .s-vide { background:transparent; color:var(--doux); border:1px dashed var(--bord); }
+.score.grand { font-size:28px; min-width:72px; padding:6px 10px; border-radius:10px; }
+.pastille { display:inline-block; font-size:12px; padding:1px 8px; border-radius:20px; border:1px solid var(--bord); background:var(--carte2); white-space:nowrap; }
+.p-fav { background:var(--vert-fond); border-color:transparent; color:var(--vert); }
+.p-neu { background:var(--carte2); }
+.p-def { background:var(--orange-fond); border-color:transparent; color:var(--orange); }
+.p-eli { background:var(--rouge-fond); border-color:transparent; color:var(--rouge); font-weight:600; }
+.urgent { color:var(--rouge); font-weight:600; }
+ul.liste { margin:0; padding-left:18px; display:grid; gap:4px; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; }
+.kpi { background:var(--carte); border:1px solid var(--bord); border-radius:8px; padding:10px 14px; }
+.kpi b { display:block; font-family:var(--titre); font-size:22px; font-variant-numeric:tabular-nums; }
+.filtres { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.filtres input[type=search] { flex:1 1 220px; }
+.kanban { display:grid; grid-template-columns:repeat(6, minmax(190px, 1fr)); gap:10px; overflow-x:auto; padding-bottom:6px; }
+.col { background:var(--carte2); border:1px solid var(--bord); border-radius:8px; padding:8px; display:grid; gap:8px; align-content:start; min-height:160px; }
+.col.survol { outline:2px dashed var(--accent); }
+.col h3 { font-size:13px; display:flex; justify-content:space-between; }
+.ticket { background:var(--carte); border:1px solid var(--bord); border-radius:6px; padding:8px; display:grid; gap:6px; cursor:grab; font-size:13px; }
+.ticket a { color:var(--texte); text-decoration:none; font-weight:500; }
+.ticket select { font-size:12px; padding:2px 4px; }
+.doc { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; padding:8px 0; border-bottom:1px solid var(--bord); }
+.doc:last-child { border-bottom:0; }
+.ia { border-left:3px solid var(--accent); }
+.flux { white-space:pre-wrap; font-size:14px; }
+.rendu { font-size:14px; line-height:1.6; overflow-wrap:anywhere; }
+.rendu h2 { font-size:16px; margin:18px 0 6px; } .rendu h3 { font-size:14px; margin:12px 0 4px; }
+.rendu table { margin:8px 0; } .rendu td, .rendu th { font-size:13px; }
+.rendu .tw { overflow-x:auto; }
+.etat { display:flex; gap:8px; align-items:center; color:var(--doux); font-size:14px; }
+.spin { width:14px; height:14px; border:2px solid var(--bord); border-top-color:var(--accent); border-radius:50%; animation:tourne 0.9s linear infinite; }
+@keyframes tourne { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation:none; } }
+dialog { border:1px solid var(--bord); border-radius:10px; padding:0; background:var(--carte); color:var(--texte); width:min(860px, calc(100vw - 32px)); max-height:calc(100vh - 48px); }
+dialog::backdrop { background:rgba(0,0,0,.45); }
+dialog .tete { display:flex; justify-content:space-between; gap:10px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--bord); position:sticky; top:0; background:var(--carte); }
+dialog .corps { padding:16px 20px; overflow:auto; }
+.apercu-doc { font-family:Georgia, "Times New Roman", serif; font-size:14px; }
+.apercu-doc table { margin:8px 0; } .apercu-doc td { border:1px solid var(--bord); font-size:13px; }
+.apercu-doc h3 { font-size:18px; margin:14px 0 6px; } .apercu-doc h4 { font-family:var(--titre); font-size:14px; margin:14px 0 4px; }
+.toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom, 0px)); background:var(--texte); color:var(--fond); padding:9px 16px; border-radius:8px; z-index:50; font-size:14px; max-width:calc(100vw - 32px); }
+.barre { height:8px; background:var(--carte2); border:1px solid var(--bord); border-radius:6px; overflow:hidden; }
+.barre i { display:block; height:100%; background:var(--vert); }
+details summary { cursor:pointer; font-weight:500; }
+.vide { padding:24px; text-align:center; color:var(--doux); }
+.chk-ok { color:var(--vert); font-weight:600; } .chk-ko { color:var(--rouge); font-weight:600; } .chk-av { color:var(--orange); font-weight:600; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<header class="nav"><div class="in gutter">
+  <a class="marque" href="#tableau">Veille AO · FORMA'ST</a>
+  <nav class="liens" id="nav">
+    <a href="#tableau" data-v="tableau">Tableau</a>
+    <a href="#pipeline" data-v="pipeline">Pipeline</a>
+    <a href="#ajouter" data-v="ajouter">Consultation privée</a>
+    <a href="#coffre" data-v="coffre">Coffre-fort</a>
+    <a href="#profil" data-v="profil">Profil</a>
+  </nav>
+  <div class="demo-pill"><span id="ia-etat">IA : vérification…</span><button class="discret" id="reset" type="button">Réinitialiser la démo</button></div>
+</div></header>
+<main class="gutter" id="vue"><div class="vide"><span class="etat"><span class="spin"></span>Chargement des données…</span></div></main>
+<dialog id="modal"><div class="tete"><strong id="modal-titre"></strong><div class="ligne" id="modal-actions"></div></div><div class="corps" id="modal-corps"></div></dialog>
+
+<script>
+"use strict";
+const CLE = "formast-demo-v1";
+const STATUTS = [["DETECTE","Détecté"],["A_QUALIFIER","À qualifier"],["GO","Go"],["NO_GO","No-Go"],["REDACTION","En rédaction"],["DEPOSE","Déposé"],["GAGNE","Gagné"],["PERDU","Perdu"],["SANS_SUITE","Sans suite"],["ECARTE","Écarté (hors cible)"]];
+const KANBAN = ["A_QUALIFIER","GO","REDACTION","DEPOSE","GAGNE","PERDU"];
+const RECO = {GO:"Go", A_ETUDIER:"À étudier", NO_GO:"No-Go"};
+const SOURCES = {BOAMP:"BOAMP", TED:"TED (JOUE)", PRIVE:"Consultation privée", MANUEL:"Saisie manuelle", PROFIL:"Profil acheteur"};
+const PIECES_REQUISES = ["KBIS","URSSAF","FISCAL","RCPRO","QUALIOPI"];
+let BASE = null, S = null, sample = null, downloads = null, ctlIA = null;
+
+// ---------- utilitaires ----------
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $ = s => document.querySelector(s);
+const libStatut = c => (STATUTS.find(s => s[0] === c) || [c, c])[1];
+const aujourdHui = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+function jours(iso) { if (!iso) return null; const d = new Date(iso); d.setHours(0,0,0,0); return Math.round((d - aujourdHui()) / 864e5); }
+function fdate(iso, heure) { if (!iso) return "–"; const d = new Date(iso); return d.toLocaleDateString("fr-FR") + (heure ? " " + d.toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"}) : ""); }
+function classeScore(a) { if (a.score == null) return "s-vide"; return a.recommandation === "GO" ? "s-go" : a.recommandation === "NO_GO" ? "s-nogo" : "s-etude"; }
+const badge = (a, grand) => `<span class="score ${classeScore(a)}${grand ? " grand" : ""}">${a.score ?? "–"}</span>`;
+function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+function md(txt) { const h = window.marked ? marked.parse(txt || "") : "<pre>" + esc(txt) + "</pre>"; const s = window.DOMPurify ? DOMPurify.sanitize(h) : esc(txt); return s.replace(/<table/g, '<div class="tw"><table').replace(/<\/table>/g, "</table></div>").replace(/\[À COMPLÉTER[^\]]*\]/g, m => `<mark>${m}</mark>`); }
+function joursLib(a) { const j = jours(a.date_limite); if (j == null) return '<span class="doux">–</span>'; if (j < 0) return '<span class="doux">dépassée</span>'; return `<span class="${j <= 10 ? "urgent" : ""}">${j} j</span>`; }
+
+// ---------- état (navigateur du visiteur) ----------
+function sauver() { try { localStorage.setItem(CLE, JSON.stringify(S)); } catch (e) { toast("Stockage du navigateur plein : la modification ne sera pas gardée après rechargement."); } }
+function etatInitial() { return { avis: structuredClone(BASE.avis.map(a => { const c = {...a}; delete c.documents; return c; })), entreprise: structuredClone(BASE.entreprise), pieces: [], analyses: {}, memoires: {}, prochainId: 9000 }; }
+function charger() { try { const s = JSON.parse(localStorage.getItem(CLE) || "null"); if (s && s.avis) return s; } catch (e) {} return etatInitial(); }
+const avisPar = id => S.avis.find(a => String(a.id) === String(id));
+const docsDe = a => (BASE.avis.find(b => b.id === a.id) || {}).documents || null;
+
+// ---------- capacités ----------
+async function capacites() {
+  if (!window.claude || !claude.use) { majIA(); return; }
+  claude.use("sample").then(s => { sample = s; majIA(); }).catch(() => majIA());
+  claude.use("downloads").then(d => { downloads = d; }).catch(() => {});
+  setTimeout(majIA, 11000);
+}
+function majIA() { $("#ia-etat").textContent = sample ? "IA : disponible" : "IA : mode règles"; }
+function erreurIA(e) {
+  const c = e && e.code;
+  if (c === "not_granted" || c === "sampling_disabled") { sample = null; majIA(); return "L'IA n'a pas été autorisée pour cette page. Le reste de la démo fonctionne sans elle."; }
+  if (c === "rate_limited") return "Trop de demandes à l'IA. Réessayez dans un moment.";
+  if (c === "cancelled") return "Arrêté.";
+  if (c === "invalid_json") return "La réponse de l'IA n'était pas au bon format. Relancez.";
+  return "L'IA n'a pas répondu. Relancez dans un instant.";
+}
+async function telecharger(nom, data) {
+  if (!downloads) { toast("Le téléchargement n'est pas disponible dans cette vue."); return; }
+  try { await downloads.save({ filename: nom, data }); toast("Fichier enregistré : " + nom); }
+  catch (e) { if (e && e.code !== "declined") toast("Téléchargement impossible (" + (e.code || "erreur") + ")."); }
+}
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+// ---------- routeur ----------
+function route() {
+  const h = (location.hash || "#tableau").slice(1);
+  const [v, id] = h.split(/-(.+)/);
+  document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("actif", a.dataset.v === v || (v === "avis" || v === "reponse") && a.dataset.v === "tableau"));
+  if (ctlIA && v !== "reponse") { /* une génération continue en arrière-plan sans affichage */ }
+  const vues = { tableau: vueTableau, avis: () => vueAvis(id), reponse: () => vueReponse(id), pipeline: vuePipeline, ajouter: vueAjouter, coffre: vueCoffre, profil: vueProfil };
+  (vues[v] || vueTableau)();
+  window.scrollTo(0, 0);
+}
+
+// ---------- tableau ----------
+let filtres = { q: "", reco: "", statut: "", source: "" };
+function vueTableau() {
+  const tous = S.avis;
+  const actifs = tous.filter(a => !["NO_GO","PERDU","SANS_SUITE","ECARTE","GAGNE"].includes(a.statut));
+  const urg = tous.filter(a => { const j = jours(a.date_limite); return j != null && j >= 0 && j <= 14 && a.recommandation !== "NO_GO"; }).length;
+  $("#vue").innerHTML = `
+  <div class="entete"><div><h1>Appels d'offres</h1><p class="doux">${BASE.stats.publies} avis collectés sur BOAMP et TED, ${tous.length} retenus par le filtre et notés.</p></div>
+  <a class="bouton sec" href="#ajouter">+ Consultation privée</a></div>
+  <div class="kpis">
+    <div class="kpi"><b>${tous.filter(a => a.recommandation === "GO").length}</b><span class="doux">Go recommandés</span></div>
+    <div class="kpi"><b>${tous.filter(a => a.recommandation === "A_ETUDIER").length}</b><span class="doux">À étudier</span></div>
+    <div class="kpi"><b>${actifs.length}</b><span class="doux">En cours de suivi</span></div>
+    <div class="kpi"><b class="${urg ? "urgent" : ""}">${urg}</b><span class="doux">Date limite sous 14 jours</span></div>
+  </div>
+  <div class="filtres">
+    <input type="search" id="f-q" placeholder="Rechercher un objet, un acheteur…" value="${esc(filtres.q)}" aria-label="Recherche">
+    <select id="f-reco" aria-label="Recommandation"><option value="">Toutes recommandations</option>${Object.entries(RECO).map(([k,v]) => `<option value="${k}" ${filtres.reco===k?"selected":""}>${v}</option>`).join("")}</select>
+    <select id="f-statut" aria-label="Statut"><option value="">Tous statuts</option>${STATUTS.map(([k,v]) => `<option value="${k}" ${filtres.statut===k?"selected":""}>${v}</option>`).join("")}</select>
+    <select id="f-source" aria-label="Source"><option value="">Toutes sources</option>${Object.entries(SOURCES).map(([k,v]) => `<option value="${k}" ${filtres.source===k?"selected":""}>${v}</option>`).join("")}</select>
+  </div>
+  <div class="tablewrap"><table style="min-width:760px"><thead><tr><th>Score</th><th>Objet</th><th>Acheteur</th><th>Source</th><th>Date limite</th><th>Reste</th><th>Statut</th></tr></thead><tbody id="lignes"></tbody></table></div>`;
+  const maj = () => {
+    const q = filtres.q.toLowerCase();
+    const l = S.avis.filter(a => (!q || (a.objet + " " + a.acheteur + " " + (a.resume || "")).toLowerCase().includes(q)) && (!filtres.reco || a.recommandation === filtres.reco) && (!filtres.statut || a.statut === filtres.statut) && (!filtres.source || a.source === filtres.source))
+      .sort((x, y) => (y.score ?? -1) - (x.score ?? -1));
+    $("#lignes").innerHTML = l.length ? l.map(a => `<tr class="clic" data-id="${a.id}"><td>${badge(a)}</td><td><a href="#avis-${a.id}">${esc(a.objet.slice(0, 110))}</a><div class="doux">${esc((a.resume || "").slice(0, 140))}${(a.resume || "").length > 140 ? "…" : ""}</div></td><td>${esc(a.acheteur)}</td><td><span class="pastille">${esc(a.source)}</span></td><td class="num">${fdate(a.date_limite)}</td><td class="num">${joursLib(a)}</td><td><span class="pastille">${libStatut(a.statut)}</span></td></tr>`).join("")
+      : `<tr><td colspan="7" class="vide">Aucun avis ne correspond à ces filtres.</td></tr>`;
+  };
+  $("#f-q").oninput = e => { filtres.q = e.target.value; maj(); };
+  ["reco","statut","source"].forEach(k => $("#f-" + k).onchange = e => { filtres[k] = e.target.value; maj(); });
+  $("#lignes").onclick = e => { const tr = e.target.closest("tr[data-id]"); if (tr && !e.target.closest("a")) location.hash = "avis-" + tr.dataset.id; };
+  maj();
+}
+
+// ---------- fiche avis ----------
+function blocScore(d) {
+  if (!d) return `<div class="carte"><p class="doux">Pas encore de score.</p></div>`;
+  const evc = {favorable:"p-fav", neutre:"p-neu", defavorable:"p-def", eliminatoire:"p-eli"};
+  const evl = {favorable:"Favorable", neutre:"Neutre", defavorable:"Défavorable", eliminatoire:"Éliminatoire"};
+  const liste = (t, l) => l && l.length ? `<div class="carte"><h2>${t}</h2><ul class="liste" style="margin-top:6px">${l.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : "";
+  return `
+  <div class="carte ia"><h2>Pourquoi ce score</h2><p style="margin:6px 0 0">${esc(d.pourquoi || "")}</p>
+    <div class="ligne" style="margin-top:10px"><span class="pastille">Besoin couvert : ${esc(d.part_du_besoin_couverte || "–")}</span><span class="pastille">Concurrence : ${esc(d.concurrence_estimee || "–")}</span>${(d.lots_a_viser || []).length ? `<span class="pastille">Lots à viser : ${esc(d.lots_a_viser.join(", "))}</span>` : ""}${d.mode ? `<span class="pastille">${esc(d.mode)}</span>` : ""}</div></div>
+  <div class="tablewrap"><table><thead><tr><th>Critère</th><th>Évaluation</th><th>Commentaire</th></tr></thead><tbody>
+    ${(d.criteres || []).map(c => `<tr><td>${esc(c.critere)}</td><td><span class="pastille ${evc[c.evaluation] || ""}">${evl[c.evaluation] || esc(c.evaluation)}</span></td><td>${esc(c.commentaire)}</td></tr>`).join("")}
+  </tbody></table></div>
+  ${liste("Exigences bloquantes", d.exigences_bloquantes)}
+  ${liste("Prestations de notre catalogue concernées", d.prestations_concernees)}
+  ${liste("Points de vigilance", d.points_de_vigilance)}
+  ${liste("À vérifier dans le DCE", d.questions_a_verifier)}`;
+}
+function vueAvis(id) {
+  const a = avisPar(id);
+  if (!a) { $("#vue").innerHTML = `<div class="vide">Cet avis n'existe pas. <a href="#tableau">Retour au tableau</a></div>`; return; }
+  $("#vue").innerHTML = `
+  <p class="doux"><a href="#tableau">← Tableau</a></p>
+  <div class="entete"><div class="ligne" style="align-items:flex-start;flex-wrap:nowrap;gap:14px">${badge(a, true)}<div><h1>${esc(a.objet)}</h1>
+    <p class="doux">${esc(a.acheteur)} · ${esc(SOURCES[a.source] || a.source)}${a.source_id ? " " + esc(a.source_id) : ""} · ${a.recommandation ? "Recommandation : <strong>" + RECO[a.recommandation] + "</strong>" : "Non noté"}</p></div></div>
+    <div class="ligne"><a class="bouton" href="#reponse-${a.id}">Préparer la réponse</a>${a.url ? `<a class="bouton sec" href="${esc(a.url)}" target="_blank" rel="noopener">Voir l'avis d'origine</a>` : ""}</div></div>
+  <div class="grille2">
+    <div class="pile">
+      <div class="carte"><h2>Ce que veut l'acheteur</h2><p style="margin:6px 0 0">${esc(a.resume || "Pas encore de résumé.")}</p></div>
+      ${blocScore(a.score_details)}
+      ${a.texte ? `<div class="carte"><details><summary>Texte de l'avis</summary><p class="flux" style="margin-top:8px">${esc(a.texte)}</p></details></div>` : ""}
+    </div>
+    <div class="pile">
+      <form class="carte pile" id="suivi"><h2>Suivi</h2>
+        <label class="champ">Statut<select id="s-statut">${STATUTS.map(([k,v]) => `<option value="${k}" ${a.statut===k?"selected":""}>${v}</option>`).join("")}</select></label>
+        <label class="champ">Responsable<input id="s-resp" value="${esc(a.responsable)}" placeholder="Ex. Steven"></label>
+        <label class="champ">Lots visés<input id="s-lots" value="${esc(a.lots_vises)}" placeholder="Vide = marché global"></label>
+        <label class="champ">Motif de la décision<textarea id="s-motif">${esc(a.decision_motif)}</textarea></label>
+        <label class="champ">Notes<textarea id="s-notes">${esc(a.notes)}</textarea></label>
+        <button type="submit">Enregistrer</button></form>
+      <div class="carte"><h2>Informations</h2><table style="margin-top:6px"><tbody>
+        <tr><td class="doux">Publication</td><td class="num">${fdate(a.date_publication)}</td></tr>
+        <tr><td class="doux">Date limite</td><td class="num">${fdate(a.date_limite, true)} (${joursLib(a)})</td></tr>
+        <tr><td class="doux">Procédure</td><td>${esc(a.procedure || "–")}</td></tr>
+        <tr><td class="doux">Type</td><td>${esc(a.type_marche || "–")}</td></tr>
+        <tr><td class="doux">Départements</td><td>${esc(a.departements || "–")}</td></tr>
+        <tr><td class="doux">CPV</td><td>${esc(a.cpv || "–")}</td></tr>
+        <tr><td class="doux">Mots-clés trouvés</td><td>${esc(a.mots_cles_trouves || "–")}</td></tr>
+        <tr><td class="doux">Montant estimé</td><td class="num">${a.montant_estime ? Number(a.montant_estime).toLocaleString("fr-FR") + " € HT" : "–"}</td></tr>
+      </tbody></table></div>
+      ${a.source === "PRIVE" || a.source === "MANUEL" ? `<div class="carte pile"><h2>Score IA</h2><p class="doux">Relancer la notation à partir du texte de la consultation.</p><button type="button" class="sec" id="rescorer">Noter à nouveau</button><div id="rescore-etat"></div></div>` : ""}
+    </div>
+  </div>`;
+  $("#suivi").onsubmit = e => { e.preventDefault(); Object.assign(a, { statut: $("#s-statut").value, responsable: $("#s-resp").value, lots_vises: $("#s-lots").value, decision_motif: $("#s-motif").value, notes: $("#s-notes").value }); sauver(); toast("Suivi enregistré."); };
+  const rb = $("#rescorer"); if (rb) rb.onclick = async () => { rb.disabled = true; await noter(a, $("#rescore-etat")); rb.disabled = false; vueAvis(a.id); };
+}
+
+// ---------- notation ----------
+const SCHEMA_SCORE = `{"score": entier 0-100, "recommandation": "GO"|"A_ETUDIER"|"NO_GO", "resume": "ce que l'acheteur veut, 2-3 phrases", "pourquoi": "1-2 phrases", "criteres": [{"critere": "Adéquation métier", "evaluation": "favorable"|"neutre"|"defavorable"|"eliminatoire", "commentaire": "une phrase"}] (les 7 critères du barème), "prestations_concernees": ["intitulés exacts de NOTRE catalogue"], "part_du_besoin_couverte": "totale"|"majoritaire"|"partielle"|"marginale"|"aucune", "lots_a_viser": [], "exigences_bloquantes": [], "concurrence_estimee": "faible"|"moyenne"|"forte"|"inconnue", "points_de_vigilance": [], "questions_a_verifier": []}`;
+function texteAvis(a) {
+  return `# Avis à évaluer\nObjet : ${a.objet}\nAcheteur : ${a.acheteur} (${a.acheteur_type || "type non précisé"})\nSource : ${SOURCES[a.source] || a.source}\nDate limite : ${a.date_limite ? fdate(a.date_limite, true) : "non précisée"}\nLieu : ${a.lieu_execution || a.departements || "non précisé"}\nMontant estimé : ${a.montant_estime || "non précisé"}\nProcédure : ${a.procedure || "non précisée"}\n\nTexte :\n${(a.texte || "").slice(0, 30000)}\n\n(Nous sommes le ${new Date().toLocaleDateString("fr-FR")}.)`;
+}
+function scoreRegles(a) {
+  const norm = s => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[’'\-]/g, " ");
+  const v = BASE.veille[0] || {}; const txt = norm(a.objet + " " + a.texte);
+  const mots = s => [...new Set((s || "").split(/[\n,]/).map(x => norm(x.trim().replace(/\*$/, ""))).filter(x => x.length > 2))];
+  const forts = mots(v.mots_cles_forts).filter(m => txt.includes(m));
+  const gen = mots(v.mots_cles).filter(m => txt.includes(m));
+  const ctx = mots(v.mots_contexte).filter(m => txt.includes(m));
+  const exclus = mots(v.mots_cles_exclus).filter(m => norm(a.objet).includes(m));
+  let s = Math.min(70, forts.length * 25 + (ctx.length ? gen.length * 12 : 0) + (ctx.length ? 10 : 0));
+  if (exclus.length) s = Math.min(s, 20);
+  return { score: s, recommandation: s >= 40 ? "A_ETUDIER" : "NO_GO", resume: a.objet, mode: "Score par règles (sans IA)",
+    pourquoi: forts.length || gen.length ? `Mots-clés trouvés : ${[...forts, ...gen].join(", ")}. Score plafonné à 70 sans IA.` : "Aucun mot-clé du profil de veille trouvé.",
+    criteres: [{ critere: "Mots-clés forts", evaluation: forts.length ? "favorable" : "neutre", commentaire: forts.join(", ") || "aucun" },
+               { critere: "Mots-clés génériques avec contexte", evaluation: gen.length && ctx.length ? "favorable" : "neutre", commentaire: (gen.join(", ") || "aucun") + (ctx.length ? " · contexte : " + ctx.join(", ") : "") },
+               { critere: "Exclusions", evaluation: exclus.length ? "eliminatoire" : "favorable", commentaire: exclus.join(", ") || "aucune" }],
+    prestations_concernees: [], part_du_besoin_couverte: "partielle", lots_a_viser: [], exigences_bloquantes: [], concurrence_estimee: "inconnue",
+    points_de_vigilance: ["Score calculé sans IA : à confirmer en lisant l'avis."], questions_a_verifier: [] };
+}
+async function noter(a, zone) {
+  let d = null;
+  if (sample) {
+    zone.innerHTML = `<div class="etat"><span class="spin"></span>L'IA lit la consultation et la compare au profil FORMA'ST (20 à 60 s)…</div>`;
+    try {
+      d = await sample.json(`${BASE.prompts.profil}\n\n${BASE.prompts.regles}\n\n${texteAvis(a)}\n\nRéponds uniquement avec un objet JSON de cette forme :\n${SCHEMA_SCORE}`, { cache: false });
+      if (typeof d?.score !== "number") throw { code: "invalid_json" };
+      d.mode = "Score IA (Claude)";
+    } catch (e) { zone.innerHTML = `<p class="doux">${esc(erreurIA(e))} Score par règles appliqué.</p>`; d = null; }
+  }
+  if (!d) d = scoreRegles(a);
+  Object.assign(a, { score: Math.max(0, Math.min(100, Math.round(d.score))), recommandation: d.recommandation, resume: d.resume || a.resume, score_details: d, statut: a.statut === "DETECTE" ? "A_QUALIFIER" : a.statut });
+  sauver();
+}
+
+// ---------- ajout consultation privée ----------
+function vueAjouter() {
+  $("#vue").innerHTML = `
+  <div><h1>Nouvelle consultation privée</h1><p class="doux">Pour une demande reçue en direct (e-mail d'un client, appel d'offres d'une entreprise). Elle est notée comme les avis publics.</p></div>
+  <form class="carte pile" id="f-aj">
+    <div class="form2">
+      <label class="champ">Objet *<input id="a-objet" required placeholder="Ex. Formation SST pour 3 entrepôts"></label>
+      <label class="champ">Client / acheteur *<input id="a-ach" required placeholder="Ex. Logistique Val-d'Oise"></label>
+      <label class="champ">Date limite<input id="a-dl" type="date"></label>
+      <label class="champ">Lieu d'exécution<input id="a-lieu" placeholder="Ex. Cergy (95)"></label>
+      <label class="champ">Montant estimé (€ HT)<input id="a-mt" type="number" min="0" step="100"></label>
+    </div>
+    <label class="champ">Texte de la demande (cahier des charges, e-mail…)<textarea id="a-txt" style="min-height:180px" placeholder="Collez ici le besoin : public, volumes, lieux, attendus, critères…"></textarea></label>
+    <div class="ligne"><button type="submit">Ajouter et noter</button><button type="button" class="discret" id="a-ex">Remplir avec un exemple</button><span class="doux" id="a-mode"></span></div>
+    <div id="a-etat"></div>
+  </form>`;
+  $("#a-mode").textContent = sample ? "La note sera donnée par l'IA." : "Sans IA, la note est calculée par règles (plafonnée à 70).";
+  $("#a-ex").onclick = () => {
+    $("#a-objet").value = "Formation Sauveteur Secouriste du Travail (SST) et MAC SST – 3 entrepôts";
+    $("#a-ach").value = "Logidis Île-de-France (exemple fictif)";
+    const d = new Date(); d.setDate(d.getDate() + 24); $("#a-dl").value = d.toISOString().slice(0, 10);
+    $("#a-lieu").value = "Gonesse (95), Bonneuil (94), Lisses (91)";
+    $("#a-mt").value = 18000;
+    $("#a-txt").value = "Nous recherchons un organisme habilité INRS pour former nos préparateurs de commandes au SST (formation initiale, 14 h) et assurer le MAC SST (7 h) des sauveteurs existants.\nVolumes 2027 : 6 sessions SST initiales de 10 stagiaires et 8 sessions MAC de 10 stagiaires, réparties sur 3 entrepôts.\nLes sessions ont lieu en intra, sur site, en horaires décalés possibles (5 h – 13 h).\nAttendus : programme conforme au référentiel INRS, mises en situation adaptées à la logistique (chariots, quais, chambres froides), suivi des certificats et relances des recyclages.\nCritères : valeur technique 60 % (pédagogie, adaptation au contexte, formateurs), prix 40 %.\nRéponse par e-mail avec proposition technique et financière.";
+  };
+  $("#f-aj").onsubmit = async e => {
+    e.preventDefault();
+    const btn = e.submitter; btn.disabled = true;
+    const a = { id: S.prochainId++, source: "PRIVE", source_id: "", url: "", nature: "AVIS", objet: $("#a-objet").value.trim(), acheteur: $("#a-ach").value.trim(), acheteur_type: "privé",
+      departements: "", lieu_execution: $("#a-lieu").value.trim(), date_publication: new Date().toISOString().slice(0, 10), date_limite: $("#a-dl").value ? $("#a-dl").value + "T12:00:00" : null,
+      type_marche: "SERVICES", procedure: "Consultation privée", cpv: "", montant_estime: $("#a-mt").value || null, texte: $("#a-txt").value.trim(), mots_cles_trouves: "",
+      score: null, recommandation: "", resume: "", score_details: null, statut: "DETECTE", responsable: "", decision_motif: "", notes: "", lots_vises: "" };
+    S.avis.push(a); sauver();
+    await noter(a, $("#a-etat"));
+    toast("Consultation ajoutée et notée : " + a.score + "/100.");
+    location.hash = "avis-" + a.id;
+  };
+}
+
+// ---------- pipeline ----------
+function vuePipeline() {
+  const parCol = c => S.avis.filter(a => a.statut === c || (c === "A_QUALIFIER" && a.statut === "DETECTE"));
+  const hors = S.avis.filter(a => !KANBAN.includes(a.statut) && a.statut !== "DETECTE");
+  $("#vue").innerHTML = `
+  <div><h1>Pipeline des réponses</h1><p class="doux">Glissez une carte d'une colonne à l'autre, ou changez son statut dans la liste déroulante.</p></div>
+  <div class="kanban" id="kb">${KANBAN.map(c => `<div class="col" data-c="${c}"><h3>${libStatut(c)}<span class="doux">${parCol(c).length}</span></h3>${parCol(c).sort((x,y)=>(y.score??0)-(x.score??0)).map(ticket).join("")}</div>`).join("")}</div>
+  <details class="carte"><summary>Écartés, No-Go et sans suite (${hors.length})</summary><div class="pile" style="margin-top:10px">${hors.map(ticket).join("") || '<p class="doux">Aucun.</p>'}</div></details>`;
+  const kb = $("#kb"); let glisse = null;
+  document.querySelectorAll(".ticket").forEach(t => { t.addEventListener("dragstart", () => glisse = t.dataset.id); });
+  kb.querySelectorAll(".col").forEach(col => {
+    col.addEventListener("dragover", e => { e.preventDefault(); col.classList.add("survol"); });
+    col.addEventListener("dragleave", () => col.classList.remove("survol"));
+    col.addEventListener("drop", e => { e.preventDefault(); col.classList.remove("survol"); if (glisse) changer(glisse, col.dataset.c); });
+  });
+  document.querySelectorAll(".ticket select").forEach(s => s.onchange = () => changer(s.dataset.id, s.value));
+}
+function ticket(a) {
+  return `<div class="ticket" draggable="true" data-id="${a.id}"><div class="ligne" style="flex-wrap:nowrap;align-items:flex-start">${badge(a)}<a href="#avis-${a.id}">${esc(a.objet.slice(0, 80))}</a></div>
+  <span class="doux">${esc(a.acheteur.slice(0, 40))} · ${joursLib(a)}${a.responsable ? " · " + esc(a.responsable) : ""}</span>
+  <select data-id="${a.id}" aria-label="Statut">${STATUTS.map(([k,v]) => `<option value="${k}" ${a.statut===k?"selected":""}>${v}</option>`).join("")}</select></div>`;
+}
+function changer(id, statut) { const a = avisPar(id); if (!a || a.statut === statut) return; a.statut = statut; sauver(); toast(`« ${a.objet.slice(0, 40)}… » → ${libStatut(statut)}`); vuePipeline(); }
+
+// ---------- coffre-fort ----------
+function etatPiece(type, dateRef) {
+  const ps = S.pieces.filter(p => p.type === type).sort((x, y) => (y.date_expiration || "9999") > (x.date_expiration || "9999") ? 1 : -1);
+  if (!ps.length) return { statut: "manquante", piece: null };
+  const p = ps[0];
+  if (p.date_expiration && dateRef && new Date(p.date_expiration) < new Date(dateRef)) return { statut: "expiree", piece: p };
+  return { statut: "ok", piece: p };
+}
+function vueCoffre() {
+  const types = BASE.pieces_types;
+  const lib = t => (types.find(x => x[0] === t) || [t, t])[1];
+  $("#vue").innerHTML = `
+  <div><h1>Coffre-fort administratif</h1><p class="doux">Les pièces valides à la date limite sont ajoutées automatiquement au dossier de réponse. Une alerte part 30 jours avant l'échéance.</p></div>
+  <div class="grille2">
+    <div class="tablewrap"><table><thead><tr><th>Pièce</th><th>Fichier</th><th>Expire le</th><th>État</th><th></th></tr></thead><tbody>
+    ${S.pieces.length ? S.pieces.map((p, i) => { const j = jours(p.date_expiration); const st = j == null ? '<span class="chk-ok">Sans échéance</span>' : j < 0 ? '<span class="chk-ko">Expirée</span>' : j <= 30 ? `<span class="chk-av">Expire dans ${j} j</span>` : '<span class="chk-ok">Valide</span>';
+      return `<tr><td>${esc(lib(p.type))}${p.libelle ? `<div class="doux">${esc(p.libelle)}</div>` : ""}</td><td>${esc(p.nom_fichier || "–")}</td><td class="num">${fdate(p.date_expiration)}</td><td>${st}</td><td><button class="discret" data-sup="${i}" type="button">Supprimer</button></td></tr>`; }).join("")
+      : `<tr><td colspan="5" class="vide">Aucune pièce pour l'instant. Ajoutez le Kbis, l'attestation URSSAF, l'attestation fiscale, la RC Pro et Qualiopi.</td></tr>`}
+    </tbody></table></div>
+    <form class="carte pile" id="f-piece"><h2>Ajouter une pièce</h2>
+      <label class="champ">Type<select id="p-type">${types.map(([k,v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select></label>
+      <label class="champ">Libellé (facultatif)<input id="p-lib"></label>
+      <label class="champ">Fichier<input id="p-fic" type="file"></label>
+      <label class="champ">Date d'expiration<input id="p-exp" type="date"></label>
+      <div class="ligne"><button type="submit">Ajouter</button><button type="button" class="discret" id="p-ex">Ajouter des pièces d'exemple</button></div>
+      <p class="doux">Dans la démo, les fichiers de moins de 800 Ko sont gardés dans votre navigateur et mis dans le ZIP du dossier.</p>
+    </form>
+  </div>`;
+  $("#f-piece").onsubmit = async e => {
+    e.preventDefault();
+    const f = $("#p-fic").files[0]; let data = null;
+    if (f && f.size < 800000) data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(String(fr.result).split(",")[1]); fr.readAsDataURL(f); });
+    S.pieces.push({ type: $("#p-type").value, libelle: $("#p-lib").value, nom_fichier: f ? f.name : "", data, date_expiration: $("#p-exp").value || null });
+    sauver(); toast("Pièce ajoutée."); vueCoffre();
+  };
+  $("#p-ex").onclick = () => {
+    const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+    S.pieces.push({ type: "KBIS", libelle: "Exemple", nom_fichier: "Kbis_exemple.pdf", data: null, date_expiration: d(70) },
+                  { type: "URSSAF", libelle: "Exemple", nom_fichier: "URSSAF_exemple.pdf", data: null, date_expiration: d(20) },
+                  { type: "RCPRO", libelle: "Exemple", nom_fichier: "RC_Pro_exemple.pdf", data: null, date_expiration: d(200) },
+                  { type: "QUALIOPI", libelle: "Exemple", nom_fichier: "Qualiopi_exemple.pdf", data: null, date_expiration: d(500) });
+    sauver(); toast("4 pièces d'exemple ajoutées (l'attestation fiscale reste manquante)."); vueCoffre();
+  };
+  document.querySelectorAll("[data-sup]").forEach(b => b.onclick = () => { S.pieces.splice(+b.dataset.sup, 1); sauver(); vueCoffre(); });
+}
+
+// ---------- profil ----------
+const CHAMPS = [["raison_sociale","Raison sociale"],["forme_juridique","Forme juridique"],["siret","SIRET"],["tva_intracommunautaire","N° TVA"],["code_naf","Code NAF"],["numero_declaration_activite","Déclaration d'activité"],
+  ["adresse","Adresse"],["code_postal","Code postal"],["ville","Ville"],["representant_nom","Représentant"],["representant_qualite","Qualité"],["email","E-mail"],["telephone","Téléphone"],["site_web","Site web"],
+  ["capital","Capital (€)"],["tranche_effectif","Effectif"],["ca_n1","CA N-1 (€)"],["ca_n2","CA N-2 (€)"],["ca_n3","CA N-3 (€)"],["qualiopi_expiration","Qualiopi : fin de validité"],["habilitation_inrs_sst_expiration","Habilitation INRS : fin"]];
+function vueProfil() {
+  const e = S.entreprise;
+  const remplis = CHAMPS.filter(([k]) => e[k] !== null && e[k] !== "" && e[k] !== undefined).length;
+  const pct = Math.round(remplis / CHAMPS.length * 100);
+  const manquants = CHAMPS.filter(([k]) => e[k] === null || e[k] === "" || e[k] === undefined).map(c => c[1]);
+  $("#vue").innerHTML = `
+  <div class="entete"><div><h1>Profil FORMA'ST</h1><p class="doux">Ces informations remplissent DC1, DC2, DUME et la présentation, et servent à l'IA pour noter les avis.</p></div></div>
+  <div class="carte pile"><div class="ligne" style="justify-content:space-between"><strong>Profil complet à ${pct} %</strong><span class="doux">${remplis} champs sur ${CHAMPS.length}</span></div>
+    <div class="barre"><i style="width:${pct}%"></i></div>${manquants.length ? `<p class="doux">À compléter : ${esc(manquants.join(", "))}.</p>` : ""}</div>
+  <form class="carte pile" id="f-prof"><h2>Identité et chiffres</h2>
+    <div class="form2">${CHAMPS.map(([k, l]) => `<label class="champ">${l}<input id="e-${k}" ${/expiration/.test(k) ? 'type="date"' : /^ca_|capital/.test(k) ? 'type="number"' : ""} value="${esc(e[k] ?? "")}"></label>`).join("")}</div>
+    <label class="champ">Présentation<textarea id="e-presentation" style="min-height:110px">${esc(e.presentation)}</textarea></label>
+    <div class="ligne"><button type="submit">Enregistrer le profil</button></div></form>
+  <div class="carte"><h2>Catalogue (${BASE.prestations.length} prestations)</h2></div>
+  <div class="tablewrap"><table style="min-width:640px"><thead><tr><th>Prestation</th><th>Catégorie</th><th>Durée</th><th>Groupe</th><th>Prix intra HT</th></tr></thead><tbody>
+    ${BASE.prestations.map(p => `<tr><td>${esc(p.intitule)}${p.description ? `<div class="doux">${esc(p.description.slice(0, 120))}${p.description.length > 120 ? "…" : ""}</div>` : ""}</td><td>${esc(p.categorie)}</td><td>${esc(p.duree || "–")}</td><td class="num">${p.groupe_max ? (p.groupe_min || 1) + "–" + p.groupe_max : "–"}</td><td class="num">${p.prix_intra_ht != null ? Number(p.prix_intra_ht).toLocaleString("fr-FR") + " €" : "–"}</td></tr>`).join("")}
+  </tbody></table></div>
+  <div class="grille2"><div class="carte pile"><h2>Formateurs</h2>${BASE.formateurs.map(f => `<div><strong>${esc(f.prenom)} ${esc(f.nom)}</strong><div class="doux">${esc(f.fonction)}</div><p class="flux doux" style="margin:4px 0 0">${esc((f.qualifications || "").slice(0, 300))}</p></div>`).join("")}</div>
+  <div class="carte pile"><h2>Références</h2>${BASE.references.map(r => `<div><strong>${esc(r.client)}</strong><div class="doux">${esc(r.objet)}</div></div>`).join("")}</div></div>`;
+  $("#f-prof").onsubmit = ev => { ev.preventDefault(); CHAMPS.forEach(([k]) => { const v = $("#e-" + k).value.trim(); e[k] = v === "" ? null : v; }); e.presentation = $("#e-presentation").value; sauver(); toast("Profil enregistré."); vueProfil(); };
+}
+
+// ---------- préparer la réponse ----------
+function controles(a) {
+  const types = a.source === "PRIVE" ? ["KBIS","URSSAF","RCPRO","QUALIOPI"] : PIECES_REQUISES;
+  return types.map(t => ({ type: t, lib: (BASE.pieces_types.find(x => x[0] === t) || [t, t])[1], ...etatPiece(t, a.date_limite) }));
+}
+function vueReponse(id) {
+  const a = avisPar(id);
+  if (!a) { $("#vue").innerHTML = `<div class="vide">Cet avis n'existe pas. <a href="#tableau">Retour au tableau</a></div>`; return; }
+  const docs = docsDe(a);
+  const ctr = controles(a);
+  const an = S.analyses[a.id], mem = S.memoires[a.id];
+  const cls = { ok: "chk-ok", expiree: "chk-ko", manquante: "chk-av" }, libc = { ok: "Valide à la date limite", expiree: "Expirée à la date limite", manquante: "Manquante" };
+  $("#vue").innerHTML = `
+  <p class="doux"><a href="#avis-${a.id}">← Fiche de l'avis</a></p>
+  <div class="entete"><div><h1>Préparer la réponse</h1><p class="doux">${esc(a.objet)} · ${esc(a.acheteur)} · date limite ${fdate(a.date_limite, true)}</p></div>
+    <button type="button" id="zip">Télécharger le dossier complet (ZIP)</button></div>
+  <div class="grille2">
+    <div class="pile">
+      <div class="carte"><h2>1. Pièces de candidature générées</h2>
+        ${docs ? Object.entries(docs).map(([k, d]) => `<div class="doc"><div><strong>${esc(d.nom.replace(/_/g, " ").replace(".docx", ""))}</strong><div class="doux">Word, pré-rempli depuis le profil. Les manques sont surlignés « [À COMPLÉTER] ».</div></div>
+          <div class="ligne"><button class="discret" data-voir="${k}" type="button">Aperçu</button><button class="sec" data-dl="${k}" type="button">.docx</button></div></div>`).join("")
+          : `<p class="doux">Pour une consultation ajoutée dans la démo, seule la présentation de FORMA'ST s'applique.</p><div class="doc"><div><strong>Présentation FORMA'ST</strong></div><div class="ligne"><button class="discret" data-voir-pres type="button">Aperçu</button></div></div>`}
+        ${a.source === "PRIVE" ? '<p class="doux">Consultation privée : pas de DC1, DC2 ni DUME.</p>' : ""}
+      </div>
+      <div class="carte" id="c-dce"><h2>2. Analyse du DCE par l'IA</h2>
+        <p class="doux">Déposez le règlement de consultation ou le cahier des charges (PDF ou texte), ou collez son contenu. L'IA en tire les critères, les pièces, les exigences et le plan du mémoire.</p>
+        <div class="pile" style="margin-top:8px">
+          <input type="file" id="dce-fic" accept=".pdf,.txt,.md" aria-label="Fichier du DCE">
+          <textarea id="dce-txt" placeholder="…ou collez le texte du DCE ici" style="min-height:110px">${esc(S.analyses["txt-" + a.id] || "")}</textarea>
+          <div class="ligne"><button type="button" id="dce-go">Analyser le DCE</button><button type="button" class="discret" id="dce-avis">Utiliser le texte de l'avis</button><button type="button" class="discret" id="dce-stop" hidden>Arrêter</button></div>
+          <div id="dce-etat"></div>
+        </div>
+        <div id="dce-res">${an ? rendreAnalyse(an) : ""}</div>
+      </div>
+      <div class="carte" id="c-mem"><h2>3. Brouillon du mémoire technique</h2>
+        <p class="doux">Rédigé par l'IA à partir du profil, de la bibliothèque de contenus${an ? " et du plan issu de l'analyse" : " et d'un plan par défaut (lancez l'analyse du DCE pour suivre le cadre de l'acheteur)"}. Rien n'est inventé : chaque manque est signalé.</p>
+        <label class="champ" style="margin-top:8px">Consignes (facultatif)<input id="mem-cons" placeholder="Ex. insister sur les horaires décalés, ton concret"></label>
+        <div class="ligne" style="margin-top:8px"><button type="button" id="mem-go">${mem ? "Rédiger à nouveau" : "Rédiger le brouillon"}</button><button type="button" class="discret" id="mem-stop" hidden>Arrêter</button>${mem ? '<button type="button" class="sec" id="mem-dl">Télécharger (.html pour Word)</button><button type="button" class="discret" id="mem-md">.md</button>' : ""}</div>
+        <div id="mem-etat"></div>
+        <div class="rendu" id="mem-res">${mem ? md(mem) : ""}</div>
+      </div>
+    </div>
+    <div class="pile">
+      <div class="carte"><h2>Check-list des pièces</h2><p class="doux">Vérifiées à la date limite (${fdate(a.date_limite)}).</p>
+        <table style="margin-top:6px"><tbody>${ctr.map(c => `<tr><td>${esc(c.lib)}</td><td class="${cls[c.statut]}">${libc[c.statut]}${c.statut !== "ok" ? ' · <a href="#coffre">ajouter</a>' : ""}</td></tr>`).join("")}</tbody></table></div>
+      <div class="carte"><h2>Statut</h2><p style="margin:6px 0">${libStatut(a.statut)}</p><div class="ligne"><button class="discret" type="button" id="st-red">Passer en rédaction</button><button class="discret" type="button" id="st-dep">Marquer déposé</button></div></div>
+    </div>
+  </div>`;
+  document.querySelectorAll("[data-voir]").forEach(b => b.onclick = () => voirDoc(docs[b.dataset.voir], b.dataset.voir));
+  document.querySelectorAll("[data-dl]").forEach(b => b.onclick = () => telecharger(docs[b.dataset.dl].nom, b64(docs[b.dataset.dl].b64)));
+  const vp = document.querySelector("[data-voir-pres]"); if (vp) vp.onclick = () => voirDoc(BASE.avis[0].documents.presentation, "presentation");
+  $("#st-red").onclick = () => { a.statut = "REDACTION"; sauver(); toast("Statut : en rédaction."); vueReponse(a.id); };
+  $("#st-dep").onclick = () => { a.statut = "DEPOSE"; sauver(); toast("Statut : déposé."); vueReponse(a.id); };
+  $("#zip").onclick = () => dossierZip(a, docs, ctr);
+  $("#dce-avis").onclick = () => { $("#dce-txt").value = `${a.objet}\nAcheteur : ${a.acheteur}\nDate limite : ${fdate(a.date_limite, true)}\n\n${a.texte}`; };
+  $("#dce-fic").onchange = async e => { const f = e.target.files[0]; if (!f) return; $("#dce-etat").innerHTML = `<div class="etat"><span class="spin"></span>Lecture de ${esc(f.name)}…</div>`;
+    try { $("#dce-txt").value = await lireFichier(f); $("#dce-etat").innerHTML = `<p class="doux">${esc(f.name)} lu (${$("#dce-txt").value.length.toLocaleString("fr-FR")} caractères).</p>`; }
+    catch (err) { $("#dce-etat").innerHTML = `<p class="doux">Impossible de lire ce fichier dans la démo. Copiez-collez son texte à la place.</p>`; } };
+  $("#dce-go").onclick = () => analyser(a);
+  $("#mem-go").onclick = () => rediger(a);
+  if (mem) { $("#mem-dl").onclick = () => telecharger(`Memoire_technique_${a.id}.html`, htmlMemoire(a, mem)); $("#mem-md").onclick = () => telecharger(`Memoire_technique_${a.id}.md`, mem); }
+  if (!sample) { ["#dce-go", "#mem-go"].forEach(s => { $(s).disabled = true; $(s).title = "Nécessite l'IA"; }); $("#dce-etat").innerHTML = $("#mem-etat").innerHTML = `<p class="doux">L'IA n'est pas disponible dans cette vue : ouvrez la démo sur claude.ai et autorisez Claude quand la page le demande.</p>`; }
+}
+function voirDoc(d, cle) {
+  $("#modal-titre").textContent = d.nom.replace(/_/g, " ");
+  $("#modal-corps").innerHTML = `<div class="apercu-doc">${d.html}</div>`;
+  $("#modal-actions").innerHTML = (d.b64 ? `<button class="sec" type="button" id="m-dl">Télécharger .docx</button>` : "") + `<button class="discret" type="button" id="m-x">Fermer</button>`;
+  if (d.b64) $("#m-dl").onclick = () => telecharger(d.nom, b64(d.b64));
+  $("#m-x").onclick = () => $("#modal").close();
+  $("#modal").showModal();
+}
+async function lireFichier(f) {
+  if (/\.pdf$/i.test(f.name)) {
+    if (!window.pdfjsLib) await new Promise((ok, ko) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"; s.onload = ok; s.onerror = ko; document.head.appendChild(s); });
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise; let out = "";
+    for (let i = 1; i <= Math.min(pdf.numPages, 80); i++) { const c = await (await pdf.getPage(i)).getTextContent(); out += `\n\n[${f.name} – page ${i}]\n` + c.items.map(x => x.str).join(" "); }
+    return out.trim();
+  }
+  return await f.text();
+}
+
+// ---------- analyse DCE ----------
+const SCHEMA_ANALYSE = `{"synthese": "le besoin en une dizaine de lignes", "objet": "", "lots": [{"numero": "", "intitule": "", "pertinent_pour_nous": true, "commentaire": ""}], "duree_et_volumes": "", "lieux_et_organisation": "", "forme_du_prix": "", "date_limite_offres": "", "date_limite_questions": "", "visite_ou_soutenance": "", "criteres_jugement": [{"nom": "", "ponderation": "ex. 60 % ou non précisée", "sous_criteres": [], "source": "document et page"}], "pieces_a_fournir": [{"piece": "", "etape": "candidature"|"offre", "source": ""}], "exigences": [{"exigence": "", "source": "", "statut": "remplie"|"non_remplie"|"a_verifier", "commentaire": ""}], "pieges_et_clauses_sensibles": [], "questions_a_poser": [], "plan_memoire": [{"titre": "", "critere_lie": "", "attendus": [], "longueur_conseillee": ""}], "prix_a_chiffrer": [], "score": 0, "recommandation": "GO"|"A_ETUDIER"|"NO_GO", "justification": ""}`;
+async function analyser(a) {
+  const txt = $("#dce-txt").value.trim();
+  if (txt.length < 80) { $("#dce-etat").innerHTML = `<p class="doux">Ajoutez d'abord le texte du DCE (au moins quelques lignes), ou cliquez « Utiliser le texte de l'avis ».</p>`; return; }
+  S.analyses["txt-" + a.id] = txt.slice(0, 20000); sauver();
+  ctlIA = new AbortController(); const go = $("#dce-go"), stop = $("#dce-stop"); go.disabled = true; stop.hidden = false; stop.onclick = () => ctlIA.abort();
+  $("#dce-etat").innerHTML = `<div class="etat"><span class="spin"></span>Analyse en cours : l'IA lit le dossier (1 à 2 min)…</div>`;
+  try {
+    const r = await sample.json(`${BASE.prompts.profil}\n\n${BASE.prompts.analyse}\n\n# Avis\n${a.objet} – ${a.acheteur}\n\n# Dossier de consultation\n${txt.slice(0, 180000)}\n\nRéponds uniquement avec un objet JSON de cette forme :\n${SCHEMA_ANALYSE}`, { signal: ctlIA.signal, cache: false, modelTier: "complex" });
+    if (!r || !r.synthese) throw { code: "invalid_json" };
+    S.analyses[a.id] = r; sauver();
+    if (location.hash === "#reponse-" + a.id) vueReponse(a.id);
+    toast("Analyse du DCE terminée.");
+  } catch (e) { const z = $("#dce-etat"); if (z) z.innerHTML = `<p class="doux">${esc(erreurIA(e))}</p>`; }
+  finally { if ($("#dce-go")) { $("#dce-go").disabled = false; $("#dce-stop").hidden = true; } }
+}
+function rendreAnalyse(r) {
+  const sc = { remplie: "p-fav", non_remplie: "p-eli", a_verifier: "p-def" }, sl = { remplie: "Remplie", non_remplie: "Non remplie", a_verifier: "À vérifier" };
+  const li = l => (l || []).length ? `<ul class="liste">${l.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : '<p class="doux">Rien de signalé.</p>';
+  return `<div class="pile ia" style="margin-top:12px;padding-left:12px">
+    <div class="ligne">${badge({ score: r.score, recommandation: r.recommandation })}<strong>${RECO[r.recommandation] || ""}</strong><span class="doux">${esc(r.justification)}</span></div>
+    <div><h3>Synthèse</h3><p style="margin:4px 0">${esc(r.synthese)}</p></div>
+    <div class="form2"><div><span class="doux">Durée et volumes</span><div>${esc(r.duree_et_volumes)}</div></div><div><span class="doux">Lieux</span><div>${esc(r.lieux_et_organisation)}</div></div><div><span class="doux">Forme du prix</span><div>${esc(r.forme_du_prix)}</div></div><div><span class="doux">Dates</span><div>Offres : ${esc(r.date_limite_offres)}<br>Questions : ${esc(r.date_limite_questions)}</div></div><div><span class="doux">Visite / soutenance</span><div>${esc(r.visite_ou_soutenance)}</div></div></div>
+    ${(r.lots || []).length ? `<div><h3>Lots</h3><ul class="liste">${r.lots.map(l => `<li><strong>${esc(l.numero)}</strong> ${esc(l.intitule)} ${l.pertinent_pour_nous ? '<span class="pastille p-fav">pertinent</span>' : ""} <span class="doux">${esc(l.commentaire)}</span></li>`).join("")}</ul></div>` : ""}
+    <div><h3>Critères de jugement</h3><div class="tablewrap"><table><thead><tr><th>Critère</th><th>Poids</th><th>Source</th></tr></thead><tbody>${(r.criteres_jugement || []).map(c => `<tr><td>${esc(c.nom)}${(c.sous_criteres || []).length ? `<div class="doux">${esc(c.sous_criteres.join(" · "))}</div>` : ""}</td><td class="num">${esc(c.ponderation)}</td><td class="doux">${esc(c.source)}</td></tr>`).join("")}</tbody></table></div></div>
+    <div><h3>Exigences</h3><div class="tablewrap"><table><tbody>${(r.exigences || []).map(x => `<tr><td>${esc(x.exigence)}<div class="doux">${esc(x.commentaire)} · ${esc(x.source)}</div></td><td><span class="pastille ${sc[x.statut] || ""}">${sl[x.statut] || esc(x.statut)}</span></td></tr>`).join("")}</tbody></table></div></div>
+    <div><h3>Pièces à fournir</h3><ul class="liste">${(r.pieces_a_fournir || []).map(p => `<li>${esc(p.piece)} <span class="doux">(${esc(p.etape)} · ${esc(p.source)})</span></li>`).join("")}</ul></div>
+    <div><h3>Pièges et clauses sensibles</h3>${li(r.pieges_et_clauses_sensibles)}</div>
+    <div><h3>Questions à poser à l'acheteur</h3>${li(r.questions_a_poser)}</div>
+    <div><h3>Postes à chiffrer</h3>${li(r.prix_a_chiffrer)}</div>
+    <div><h3>Plan du mémoire</h3><ol class="liste">${(r.plan_memoire || []).map(s => `<li><strong>${esc(s.titre)}</strong> <span class="doux">— ${esc(s.critere_lie)} · ${esc(s.longueur_conseillee)}</span></li>`).join("")}</ol></div>
+  </div>`;
+}
+
+// ---------- mémoire ----------
+function planMemoire(a) {
+  const an = S.analyses[a.id];
+  if (!an || !(an.plan_memoire || []).length) return "Plan (par défaut, aucun cadre de réponse imposé connu) :\n" + BASE.prompts.plan_defaut.map((t, i) => `${i + 1}. ${t}`).join("\n");
+  return "Plan imposé (issu de l'analyse du DCE) :\n" + an.plan_memoire.map((s, i) => `${i + 1}. ${s.titre} — critère : ${s.critere_lie} — longueur : ${s.longueur_conseillee}\n` + (s.attendus || []).map(x => `   - attendu : ${x}`).join("\n")).join("\n");
+}
+async function rediger(a) {
+  ctlIA = new AbortController(); const go = $("#mem-go"), stop = $("#mem-stop"); go.disabled = true; stop.hidden = false; stop.onclick = () => ctlIA.abort();
+  $("#mem-etat").innerHTML = `<div class="etat"><span class="spin"></span>L'IA prépare le mémoire. Le texte s'affiche au fur et à mesure (2 à 5 min au total)…</div>`;
+  $("#mem-res").innerHTML = "";
+  const dossier = S.analyses["txt-" + a.id] || `${a.objet}\n${a.acheteur}\n\n${a.texte}`;
+  const prompt = `${BASE.prompts.profil}\n\n${BASE.prompts.biblio}\n\n${BASE.prompts.memoire}\n\n# Consultation\n${a.objet} – ${a.acheteur} – date limite ${fdate(a.date_limite)}\n\n# Dossier\n${dossier.slice(0, 120000)}\n\n${planMemoire(a)}\n\nConsignes complémentaires : ${$("#mem-cons").value || "aucune"}\n\nRéponds en Markdown, en commençant directement par la première section.`;
+  let dernier = 0;
+  try {
+    const r = await sample(prompt, { signal: ctlIA.signal, cache: false, onText: ({ text }) => { const n = Date.now(); if (n - dernier > 400) { dernier = n; const z = $("#mem-res"); if (z) z.innerHTML = md(text); } } });
+    S.memoires[a.id] = r.text; sauver();
+    if (location.hash === "#reponse-" + a.id) vueReponse(a.id);
+    toast(r.truncated ? "Brouillon coupé avant la fin : relancez avec moins de consignes." : "Brouillon du mémoire prêt.");
+  } catch (e) {
+    if (e && e.text) { S.memoires[a.id] = e.text + "\n\n*(Rédaction interrompue.)*"; sauver(); }
+    const z = $("#mem-etat"); if (z) z.innerHTML = `<p class="doux">${esc(erreurIA(e))}</p>`;
+  } finally { if ($("#mem-go")) { $("#mem-go").disabled = false; $("#mem-stop").hidden = true; } }
+}
+function htmlMemoire(a, txt) {
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Mémoire technique – ${esc(a.objet)}</title><style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;max-width:800px;margin:2cm auto;line-height:1.45}h1{color:#b3261e}table{border-collapse:collapse}td,th{border:1px solid #999;padding:4px 6px}mark{background:#fff3a3}</style></head><body><h1>Mémoire technique</h1><p><strong>${esc(S.entreprise.raison_sociale)}</strong> – réponse à : ${esc(a.objet)} (${esc(a.acheteur)})</p>${md(txt)}</body></html>`;
+}
+
+// ---------- dossier ZIP ----------
+async function dossierZip(a, docs, ctr) {
+  if (!window.JSZip) { toast("La création du ZIP n'est pas disponible."); return; }
+  const z = new JSZip(); let i = 1;
+  if (docs) for (const d of Object.values(docs)) if (d.b64) z.file(`1_Candidature/${String(i++).padStart(2, "0")}_${d.nom}`, b64(d.b64));
+  ctr.filter(c => c.statut === "ok" && c.piece && c.piece.data).forEach(c => z.file(`1_Candidature/${String(i++).padStart(2, "0")}_${c.type}_${c.piece.nom_fichier}`, b64(c.piece.data)));
+  if (S.memoires[a.id]) z.file(`2_Offre/Memoire_technique.html`, htmlMemoire(a, S.memoires[a.id]));
+  const lignes = ["CHECK-LIST DU DOSSIER", `${a.objet} – ${a.acheteur}`, `Date limite : ${fdate(a.date_limite, true)}`, "", ...ctr.map(c => `[${c.statut === "ok" ? "OK" : c.statut === "expiree" ? "EXPIRÉE" : "MANQUANTE"}] ${c.lib}${c.piece && !c.piece.data && c.statut === "ok" ? " (fichier non stocké dans la démo)" : ""}`), "", S.memoires[a.id] ? "[OK] Mémoire technique (brouillon)" : "[MANQUANT] Mémoire technique"];
+  z.file("00_Check-list.txt", lignes.join("\r\n"));
+  const blob = await z.generateAsync({ type: "blob" });
+  telecharger(`Dossier_FORMAST_${a.id}.zip`, blob);
+}
+
+// ---------- démarrage ----------
+$("#reset").onclick = () => {
+  const b = $("#reset");
+  if (b.dataset.conf) { try { localStorage.removeItem(CLE); } catch (e) {} S = etatInitial(); delete b.dataset.conf; b.textContent = "Réinitialiser la démo"; toast("Démo remise à zéro."); route(); return; }
+  b.dataset.conf = "1"; b.textContent = "Confirmer la remise à zéro"; setTimeout(() => { delete b.dataset.conf; b.textContent = "Réinitialiser la démo"; }, 4000);
+};
+window.addEventListener("hashchange", route);
+fetch("data.json").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => { BASE = d; S = charger(); route(); })
+  .catch(() => { $("#vue").innerHTML = `<div class="vide">Les données de la démo n'ont pas pu être chargées. Rechargez la page.</div>`; });
+capacites();
+</script>
