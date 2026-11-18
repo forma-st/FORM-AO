@@ -124,6 +124,9 @@ Planification (cron) chaque jour à 7 h 10 :
 
 ## Mise en production
 
+Guide pas à pas pour un serveur loué (VPS) : [deploy/INSTALLATION.md](deploy/INSTALLATION.md). Le script `deploy/install.sh` installe tout (application, HTTPS, veille chaque matin, sauvegardes).
+
+
 - Servir l'application avec un seul processus multi-thread, par exemple `gunicorn config.wsgi --workers 1 --threads 4 --timeout 120`, derrière nginx et en HTTPS. Les analyses et les mémoires tournent dans des threads de ce processus.
 - **Ne pas** faire servir `/media/` directement par nginx : les pièces (Kbis, RIB, CV) passent par l'application, qui vérifie la connexion.
 - Sauvegarder chaque jour `db.sqlite3` et le dossier `media/`.

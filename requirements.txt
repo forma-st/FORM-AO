@@ -6,3 +6,4 @@ pydantic==2.14.3
 pypdf==7.1.0
 python-docx==1.2.0
 python-dotenv==1.2.4
+gunicorn==23.0.0

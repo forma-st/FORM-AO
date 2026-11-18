@@ -149,3 +149,14 @@ LOGGING = {
     'loggers': {'veille': {'handlers': ['console'], 'level': 'INFO'}},
 }
 BASE_URL = os.environ.get('BASE_URL', 'http://localhost:8000')
+
+# --- Production (derrière nginx en HTTPS) ---------------------------------
+STATIC_ROOT = BASE_DIR / "staticfiles"
+CSRF_TRUSTED_ORIGINS = ([BASE_URL] if BASE_URL.startswith("https://") else []) + [
+    o for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o
+]
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_AGE = 60 * 60 * 24 * 14

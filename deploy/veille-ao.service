@@ -1,0 +1,14 @@
+[Unit]
+Description=Veille AO FORMA'ST (gunicorn)
+After=network.target
+
+[Service]
+User=veilleao
+Group=veilleao
+WorkingDirectory=/opt/veille-ao
+ExecStart=/opt/veille-ao/.venv/bin/gunicorn config.wsgi --bind 127.0.0.1:8000 --workers 1 --threads 4 --timeout 120
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
