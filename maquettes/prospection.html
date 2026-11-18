@@ -310,11 +310,31 @@ crmLog:[
  {d:'17/11/2026 16:40',ev:'rdv.fixe',obj:'Groupe Sanitaire Ouest → opportunité créée',ok:true},
  {d:'17/11/2026 11:15',ev:'opposition.enregistree',obj:'r.lefort@comptoirgourmand.example',ok:true}
 ],
+historique:[
+ {id:1,nom:'Boulangeries Marceau',pid:11,prest:'MAC SST',date:'2025-01-20',n:12,formateur:'Formateur A',src:'Import tableur'},
+ {id:2,nom:'Garage Central Nord',pid:12,prest:'SST initial',date:'2025-03-15',n:4,formateur:'Formateur B',src:'Import tableur'},
+ {id:3,nom:'Boulangeries Marceau',pid:11,prest:"Exercice d'évacuation",date:'2026-06-10',n:22,formateur:'Formateur A',src:'Saisie'},
+ {id:4,nom:'Boulangeries Marceau',pid:11,prest:'Manipulation des extincteurs',date:'2025-12-01',n:30,formateur:'Formateur B',src:'Saisie'},
+ {id:5,nom:'Garage Central Nord',pid:12,prest:"Exercice d'évacuation",date:'2026-04-02',n:1,formateur:'Formateur B',src:'Saisie'},
+ {id:6,nom:'Groupe Sanitaire Ouest',pid:0,prest:'Gestes et postures',date:'2025-02-03',n:24,formateur:'Formateur A',src:'Import tableur'},
+ {id:7,nom:'Groupe Sanitaire Ouest',pid:0,prest:'MAC SST',date:'2025-05-12',n:9,formateur:'Formateur A',src:'Import tableur'}
+],
+boites:[
+ {adr:'j.morel@contact.formast-exemple.fr',cnx:'Microsoft Graph',cap:40,auj:18,reb:'0,9 %',etat:'ok'},
+ {adr:'s.diallo@contact.formast-exemple.fr',cnx:'Microsoft Graph',cap:30,auj:7,reb:'1,6 %',etat:'ok'},
+ {adr:'formation@contact.formast-exemple.fr',cnx:'SMTP / IMAP (repli)',cap:20,auj:0,reb:'—',etat:'warn'}
+],
+file:[
+ {id:1,pid:13,a:'l.girard@distrinord.example',obj:'Preuve : référence comparable et UMFI',quand:'19/11/2026 09:04',boite:0,st:'Programmé'},
+ {id:2,pid:2,a:'s.lemaire@cliniquehp.example',obj:'Évacuation horizontale : 3 questions',quand:'19/11/2026 09:41',boite:0,st:'Programmé'},
+ {id:3,pid:6,a:'j.petit@bergeshotels.example',obj:'Accueil sécurité de vos nouveaux salariés',quand:'26/11/2026 10:12',boite:1,st:'En pause (absence)'}
+],
+mailTest:true, crmMode:'autonome',
 chat:[], nextId:100
 };}
 
 let S;
-const KEY='prospection-maquette-v1';
+const KEY='prospection-maquette-v2';
 try{ S = JSON.parse(localStorage.getItem(KEY)) }catch(e){}
 if(!S || !S.prospects) S = seed();
 const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify(S)) }catch(e){} };
@@ -464,10 +484,12 @@ const VIEWS = [
   ['assistant','Assistant'],
   ['grp','Alimenter'],
   ['import','Import de bases'],
+  ['historique','Historique des formations', ()=>S.historique.filter(h=>echeance(h).etat!=='ok'&&!h.relance).length],
   ['sources','Sources et signaux'],
   ['grp','Automatiser'],
   ['sequences','Séquences'],
   ['automatisations','Automatisations', ()=>S.autos.filter(a=>a.on).length],
+  ['messagerie','Messagerie', ()=>S.file.filter(m=>m.st==='Programmé').length],
   ['grp','Paramètres'],
   ['score','Réglage du score'],
   ['conformite','Conformité RGPD'],
@@ -486,7 +508,7 @@ const esChip = es => ({verifie:'<span class="chip ok">vérifié</span>',probable
 function render(){
   nav();
   const v = ui.view;
-  const html = ({tableau,prospects,fiche,taches,reponses,assistant,import:imp,sources,sequences,automatisations,score:scoreV,conformite,crm})[v]?.() ?? tableau();
+  const html = ({tableau,prospects,fiche,taches,reponses,assistant,import:imp,historique,messagerie,sources,sequences,automatisations,score:scoreV,conformite,crm})[v]?.() ?? tableau();
   $('#view').innerHTML = html;
   if(v==='assistant'){ const c=$('#chatbox'); if(c) c.scrollTop=c.scrollHeight; }
 }
@@ -630,7 +652,7 @@ function fiche(){
 function taches(){
   if(ui.session) return sessionAppels();
   const f=ui.tfilter, list=S.tasks.filter(t=>(f==='tous'||t.t===f)).sort((a,b)=>a.fait-b.fait||a.ech-b.ech);
-  const calls=S.tasks.filter(t=>t.t==='appel'&&!t.fait).length;
+  const calls=S.tasks.filter(t=>t.t==='appel'&&!t.fait&&byId(t.pid)).length;
   return head('Tâches du jour', 'Préparées par les séquences et les automatisations, avec le texte prêt à l\'emploi', `<button class="btn" data-act="session" ${calls?'':'disabled'}>Lancer la session d'appels (${calls})</button>`) + `
   <div class="tabs">${[['tous','Toutes'],['appel','Appels'],['linkedin','LinkedIn'],['email','E-mails à valider'],['qualifier','Qualification']].map(([k,l])=>`<button data-act="tf" data-k="${k}" class="${f===k?'on':''}">${l}</button>`).join('')}</div>
   <div class="card"><div class="list">${list.map(t=>{const p=byId(t.pid);return `<div class="li" style="${t.fait?'opacity:.55':''}">
@@ -640,7 +662,7 @@ function taches(){
     ${p?`<button class="btn sm ghost" data-act="open" data-id="${p.id}" data-canal="${t.t==='appel'?'appel':t.t==='linkedin'?'linkedin':'email'}">Ouvrir avec le texte</button>`:''}</div>`}).join('')||'<p class="muted">Rien à faire ici.</p>'}</div></div>`;
 }
 function sessionAppels(){
-  const calls=S.tasks.filter(t=>t.t==='appel'&&!t.fait);
+  const calls=S.tasks.filter(t=>t.t==='appel'&&!t.fait&&byId(t.pid));
   if(!calls.length){ ui.session=null; return taches(); }
   const t=calls[0], p=byId(t.pid), c=mainContact(p), g=gen(p,c,'appel','direct','');
   return head('Session d\'appels', `${calls.length} appel${calls.length>1?'s':''} restant${calls.length>1?'s':''}`, `<button class="btn ghost" data-act="endsession">Terminer la session</button>`) + `
@@ -888,26 +910,77 @@ function conformite(){
   </div>`;
 }
 
+/* ---- Historique des formations ---- */
+const ECH={'SST initial':[24,90],'MAC SST':[24,90],"Exercice d'évacuation":[6,30],'Manipulation des extincteurs':[12,45],'Gestes et postures':[24,60]};
+function echeance(h){ const [m,rel]=ECH[h.prest]||[24,60]; const d=new Date(h.date); d.setMonth(d.getMonth()+m); const j=Math.round((d-TODAY)/DAY); return {d,j,rel,etat: j<0?'retard': j<=rel?'relancer':'ok'}; }
+function historique(){
+  const rows=S.historique.map(h=>({h,e:echeance(h)})).sort((a,b)=>a.e.j-b.e.j);
+  const noms=[...new Set([...S.prospects.filter(p=>p.client).map(p=>p.nom),...S.historique.map(h=>h.nom)])];
+  return head('Historique des formations', S.crmMode==='autonome'?'Table locale du module (mode autonome). En mode CRM interne, ces lignes viennent du CRM.':'Lu dans le CRM interne. La table locale ne sert plus qu\'à la reprise.', `<a class="btn sec" href="#crm">Changer de source</a>`) + `
+  <div class="kpis">
+    <div class="kpi"><span class="l">Sessions enregistrées</span><span class="v">${rows.length}</span></div>
+    <div class="kpi"><span class="l">Échéances dépassées</span><span class="v" style="color:var(--bad)">${rows.filter(r=>r.e.etat==='retard').length}</span></div>
+    <div class="kpi"><span class="l">À relancer maintenant</span><span class="v" style="color:var(--warn)">${rows.filter(r=>r.e.etat==='relancer').length}</span></div>
+    <div class="kpi"><span class="l">Stagiaires à recycler (12 mois)</span><span class="v">${rows.filter(r=>r.e.j<=365&&/SST/.test(r.h.prest)).reduce((t,r)=>t+r.h.n,0)}</span></div>
+  </div>
+  <div class="card"><div class="row between"><h2>Échéances</h2><button class="btn sm" data-act="relances" ${rows.some(r=>r.e.etat!=='ok'&&!r.h.relance)?'':'disabled'}>Créer toutes les relances dues</button></div>
+  <div class="tw"><table><thead><tr><th>Compte</th><th>Prestation</th><th>Session</th><th>Stagiaires</th><th>Échéance</th><th>État</th><th></th></tr></thead><tbody>
+  ${rows.map(({h,e})=>`<tr><td>${h.pid?`<a href="#" data-act="open" data-id="${h.pid}">${esc(h.nom)}</a>`:esc(h.nom)}<div class="small muted">${esc(h.src)}</div></td><td>${esc(h.prest)}</td><td>${fmt(new Date(h.date))}</td><td>${h.n}</td><td>${fmt(e.d)}<div class="small muted">${e.j<0?'dépassée de '+(-e.j)+' j':'dans '+e.j+' j'}</div></td>
+    <td>${e.etat==='retard'?'<span class="chip bad">en retard</span>':e.etat==='relancer'?'<span class="chip warn">à relancer</span>':'<span class="chip ok">à jour</span>'}${h.relance?' <span class="chip info">relance créée</span>':''}</td>
+    <td>${e.etat!=='ok'&&!h.relance?`<button class="btn sm sec" data-act="relance" data-id="${h.id}">Créer la relance</button>`:''}</td></tr>`).join('')}</tbody></table></div>
+  <p class="small muted">Règles : SST et MAC SST 24 mois (relance J-90), exercice d'évacuation 6 mois (J-30), extincteurs 12 mois (J-45), gestes et postures 24 mois (J-60). Paramétrables par prestation.</p></div>
+  <div class="grid g2e">
+    <div class="card"><h2>Ajouter une session réalisée</h2><div class="grid" style="gap:8px">
+      <label class="f">Compte<input type="text" id="h-nom" list="h-noms" placeholder="Raison sociale"><datalist id="h-noms">${noms.map(n=>`<option value="${esc(n)}">`).join('')}</datalist></label>
+      <div class="row"><label class="f">Prestation<select id="h-prest">${Object.keys(ECH).map(k=>`<option>${k}</option>`).join('')}</select></label>
+      <label class="f">Date<input type="date" id="h-date" value="2026-11-10"></label><label class="f">Stagiaires<input type="number" id="h-n" value="8" min="1" style="width:80px"></label></div>
+      <button class="btn" data-act="addhist" style="justify-self:start">Enregistrer</button></div></div>
+    <div class="card"><h2>Reprise de l'existant</h2><p class="small" style="margin-top:0">Importez un tableur (sessions, factures ou émargements) avec les colonnes : SIREN ou raison sociale, prestation, date, nombre de stagiaires, formateur. Les écrans de correspondance et de dédoublonnage sont ceux de l'<a href="#import">import de bases</a>.</p>
+      <p class="small muted" style="margin:0">Les stagiaires sont des données clients : ils ne sont jamais démarchés eux-mêmes. Leurs noms servent aux attestations et aux recyclages.</p></div>
+  </div>`;
+}
+
+/* ---- Messagerie ---- */
+function messagerie(){
+  return head('Messagerie','Brique commune, réutilisable par le CRM et l\'application AO. Réglages des serveurs à faire plus tard.') + `
+  <div class="card row between"><div class="grow" style="min-width:0"><h2>Mode test</h2><p class="small" style="margin:4px 0 0">${S.mailTest?'<b>Activé</b> : tous les envois sont redirigés vers <code>test-prospection@formast-exemple.fr</code>. Aucun prospect ne reçoit rien.':'<b>Désactivé</b> : les messages partent réellement aux prospects.'}</p></div>
+    <label class="switch"><input type="checkbox" id="mail-test" data-act="mailtest" ${S.mailTest?'checked':''} aria-label="Mode test"><span></span></label></div>
+  <div class="card"><h2>Boîtes d'envoi</h2><div class="tw"><table><thead><tr><th>Adresse</th><th>Connexion</th><th>Aujourd'hui</th><th>Rebonds 30 j</th><th>État</th></tr></thead><tbody>
+    ${S.boites.map(b=>`<tr><td>${esc(b.adr)}</td><td class="small">${esc(b.cnx)}</td><td><div class="score"><div class="bar ${b.auj/b.cap>.8?'warn':'ok'}"><i style="width:${b.auj/b.cap*100}%"></i></div><span class="small">${b.auj} / ${b.cap}</span></div></td><td>${b.reb}</td><td>${b.etat==='ok'?'<span class="chip ok">opérationnelle</span>':'<span class="chip warn">identifiants à saisir</span>'}</td></tr>`).join('')}</tbody></table></div>
+    <p class="small muted">Sous-domaine dédié contact.formast-exemple.fr (SPF, DKIM, DMARC). Arrêt automatique d'une boîte au-delà de 3 % de rebonds ou 0,1 % de plaintes.</p></div>
+  <div class="card"><div class="row between"><h2>File d'envoi</h2><button class="btn sm" data-act="flush" ${S.file.some(m=>m.st==='Programmé')?'':'disabled'}>Simuler le passage de 9 h</button></div>
+    <div class="tw"><table><thead><tr><th>Prévu</th><th>Destinataire</th><th>Objet</th><th>Boîte</th><th>Statut</th><th></th></tr></thead><tbody>
+    ${S.file.map(m=>`<tr><td class="small">${m.quand}</td><td class="small">${byId(m.pid)?`<a href="#" data-act="open" data-id="${m.pid}">${esc(byId(m.pid).nom)}</a><br>`:''}${esc(m.a)}</td><td class="small">${esc(m.obj)}</td><td class="small">${esc(S.boites[m.boite]?.adr.split('@')[0]||'')}</td><td><span class="chip ${m.st==='Programmé'?'info':m.st.startsWith('Envoyé')?'ok':m.st==='Annulé'?'':'warn'}">${esc(m.st)}</span></td>
+      <td>${m.st==='Programmé'?`<button class="btn sm ghost" data-act="cancelmail" data-id="${m.id}">Annuler</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="muted">File vide. Validez un e-mail depuis une fiche prospect.</td></tr>'}</tbody></table></div>
+    <p class="small muted">Envoi idempotent (jamais deux fois), jours ouvrés, 8 h 30–11 h 30 et 14 h–17 h, espacement de 2 à 6 minutes. Pied de page RGPD et lien d'opposition ajoutés automatiquement.</p></div>
+  <div class="grid g2e">
+    <div class="card"><h2>Relève des réponses</h2><dl class="kv"><dt>Fréquence</dt><dd>toutes les 5 minutes</dd><dt>Dernière relève</dt><dd>18/11/2026 10:35 · 2 réponses</dd><dt>Rattachement</dt><dd>en-têtes In-Reply-To / References, puis adresse</dd><dt>Classement</dt><dd><a href="#reponses">voir les réponses</a></dd></dl></div>
+    <div class="card"><div class="row between" style="flex-wrap:nowrap"><h2>Suivi d'ouverture (pixel)</h2><label class="switch"><input type="checkbox" id="pixel" disabled aria-label="Suivi d'ouverture"><span></span></label></div>
+      <p class="small" style="margin:6px 0 0">Désactivé par défaut : la CNIL encadre les pixels de suivi dans les e-mails. À activer seulement après validation juridique. Sans lui, le signal « e-mails ouverts sans réponse » n'est pas calculé.</p></div>
+  </div>`;
+}
+
 /* ---- CRM ---- */
 function crm(){
   const p=byId(ui.pid)||S.prospects[0], s=score(p), b=besoin(p);
   return head('Intégration CRM','Le CRM reste maître des clients et des opportunités ; l\'agent est maître des prospects jusqu\'à leur qualification.') + `
-  <div class="grid g3">
-    <div class="kpi"><span class="l">Niveau actuel</span><span class="v">N1</span><span class="small muted">Échange de fichiers (export CSV au format du CRM)</span></div>
-    <div class="kpi"><span class="l">Niveau 2</span><span class="v" style="color:var(--warn)">À configurer</span><span class="small muted">API et webhooks : CRM à préciser</span></div>
-    <div class="kpi"><span class="l">Niveau 3</span><span class="v" style="color:var(--muted)">P4</span><span class="small muted">Panneau intégré dans la fiche compte du CRM</span></div>
-  </div>
+  <div class="card"><div class="row between"><h2>Source des clients et de l'historique</h2>
+    <div class="tabs" style="margin:0;border:0">${[['autonome','Mode autonome (test)'],['crm_interne','CRM interne']].map(([k,l])=>`<button data-act="crmmode" data-k="${k}" class="${S.crmMode===k?'on':''}">${l}</button>`).join('')}</div></div>
+    ${S.crmMode==='autonome'
+      ? `<p style="margin:0">L'agent utilise ses <b>propres tables</b> : comptes clients et <a href="#historique">historique des formations</a> alimentés par import. Rien n'est écrit ailleurs. La commande <code>migrer_vers_crm</code> reversera tout dans le CRM le moment venu.</p>`
+      : `<p style="margin:0">L'agent lit et écrit <b>directement dans le CRM interne</b> par la passerelle <code>crm_interne.py</code> : clients, formations réalisées, opportunités, activités, oppositions. Même projet Django (option A) ou API interne (option B) : les écrans ne changent pas.</p>`}
+    <p class="small muted" style="margin:8px 0 0">Réglage <code>PROSPECTION_CRM = "${S.crmMode}"</code> · clé commune : SIREN · l'application AO fournit acheteurs, attributions, catalogue et références.</p></div>
   <div class="grid g2">
     <div class="card"><h2>Aperçu du panneau intégré (niveau 3)</h2>
-      <div class="crm"><div class="h">Module admin CRM › Comptes › ${esc(p.nom)}</div><div style="padding:12px" class="grid g2e">
+      <div class="crm"><div class="h">CRM interne › Comptes › ${esc(p.nom)}</div><div style="padding:12px" class="grid g2e">
         <div class="small"><b>Fiche compte du CRM</b><dl class="kv" style="margin-top:6px"><dt>Raison sociale</dt><dd>${esc(p.nom)}</dd><dt>Ville</dt><dd>${esc(p.ville)}</dd><dt>Propriétaire</dt><dd>${esc(p.owner||'—')}</dd><dt>Opportunités</dt><dd>${p.statut==='Transmis au CRM'?'1 ouverte':'aucune'}</dd></dl></div>
         <div class="widget small"><div class="row between"><b>Assistant prospection</b>${tierChip(s)}</div>
           <p style="margin:6px 0">${esc(explain(p))}</p>
           <p style="margin:6px 0"><b>Besoin :</b> ${b.sst} SST, ${b.exo} exercices / an · ${eur(b.an1)}</p>
           <p style="margin:6px 0"><b>Prochaine action :</b> ${topSig(p)?'contacter sur le signal « '+SIGNAUX[topSig(p).t].l.toLowerCase()+' »':'nurturing'}</p>
           <div class="row"><button class="btn sm" data-act="open" data-id="${p.id}">Rédiger</button><button class="btn sm sec" data-act="tocrm">Créer l'opportunité</button></div></div></div></div>
-      <p class="small muted">Compte affiché : le dernier prospect ouvert. Intégration par iframe authentifiée ou composant, selon le CRM.</p></div>
-    <div class="card"><h2>Journal des échanges</h2><div class="tw"><table><thead><tr><th>Date</th><th>Événement</th><th>Objet</th></tr></thead><tbody>${S.crmLog.map(l=>`<tr><td class="small">${l.d}</td><td><code>${l.ev}</code></td><td class="small">${esc(l.obj)}</td></tr>`).join('')}</tbody></table></div></div>
+      <p class="small muted">Compte affiché : le dernier prospect ouvert. Chaque brique (panneau, rédaction, tâches, messagerie, assistant) peut être intégrée seule.</p></div>
+    <div class="card"><h2>Journal des événements</h2><div class="tw"><table><thead><tr><th>Date</th><th>Événement</th><th>Objet</th></tr></thead><tbody>${S.crmLog.map(l=>`<tr><td class="small">${l.d}</td><td><code>${l.ev}</code></td><td class="small">${esc(l.obj)}</td></tr>`).join('')}</tbody></table></div></div>
   </div>
   <div class="card"><h2>Correspondance des objets</h2><div class="tw"><table><thead><tr><th>Agent</th><th>CRM</th><th>Maître</th><th>Sens</th></tr></thead><tbody>
     <tr><td>Compte prospect</td><td>Compte (statut prospect)</td><td>Agent</td><td>→ au RDV fixé ou sur demande</td></tr>
@@ -917,7 +990,7 @@ function crm(){
     <tr><td>E-mails, appels, notes</td><td>Activités (chronologie)</td><td>Agent</td><td>→</td></tr>
     <tr><td>Formations réalisées</td><td>Sessions / stagiaires</td><td>CRM</td><td>← (dates de MAC SST)</td></tr>
     <tr><td>Opposition</td><td>Opposition / désabonnement</td><td>Les deux</td><td>↔ immédiat</td></tr></tbody></table></div>
-    <p class="small muted">Webhooks émis : prospect.cree, prospect.qualifie, prospect.score_change, reponse.recue, rdv.fixe, opposition.enregistree. Reçus : client.cree, opportunite.gagnee, opportunite.perdue, formation.realisee.</p></div>`;
+    <p class="small muted">Événements émis : prospect.cree, prospect.qualifie, prospect.score_change, reponse.recue, rdv.fixe, opposition.enregistree. Reçus : client.cree, opportunite.gagnee, opportunite.perdue, formation.realisee, ao.resultat (application AO).</p></div>`;
 }
 
 /* ============ Actions ============ */
@@ -933,7 +1006,7 @@ document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]'); if(!el) return;
   if(e.target.closest('[data-stop]') && el.dataset.act==='open') return;
   const a=el.dataset.act, id=el.dataset.id, k=el.dataset.k, p=byId(ui.pid);
-  if(['open','back','newp','enrich','inscrire','tache','tocrm','canal','regen','copy','valider','tachecanal','addc','ecarter','opposer','tf','session','endsession','out','rep','ract','sugg','confirm','cancel','clearchat','sample','doimport','seq','addseq','up','down','delstep','addstep','addauto','simu','resetw','addopp','delopp','purge','export','bulkseq','bulkcrm','bulkclear'].includes(a)) e.preventDefault();
+  if(['open','back','newp','enrich','inscrire','tache','tocrm','canal','regen','copy','valider','tachecanal','addc','ecarter','opposer','tf','session','endsession','out','rep','ract','sugg','confirm','cancel','clearchat','sample','doimport','seq','addseq','up','down','delstep','addstep','addauto','simu','resetw','addopp','delopp','purge','export','crmmode','relance','relances','addhist','flush','cancelmail','bulkseq','bulkcrm','bulkclear'].includes(a)) e.preventDefault();
   switch(a){
     case 'open': ui.canal=el.dataset.canal||'email'; ui.cidx=0; ui.consigne=''; go('fiche',id); break;
     case 'back': go('prospects'); break;
@@ -947,7 +1020,7 @@ document.addEventListener('click',e=>{
     case 'canal': ui.canal=k; ui.gen=null; render(); break;
     case 'regen': ui.consigne=$('#g-cons').value; ui.gen=null; render(); toast(ui.consigne?'Texte régénéré avec la consigne.':'Texte régénéré.'); break;
     case 'copy': { const t=$('#g-out'); const v=t.value; (navigator.clipboard?.writeText(v)||Promise.reject()).then(()=>toast('Copié.')).catch(()=>{t.select();toast('Texte sélectionné : copiez-le avec Ctrl+C.');}); break; }
-    case 'valider': { const cs=p.contacts.filter(c=>c.es!=='bloque'), c=cs[ui.cidx]||cs[0]; if(S.oppositions.includes(c.email)){toast('Envoi bloqué : adresse sur la liste d\'opposition.');break;} if(p.statut!=='En séquence') p.statut='En séquence'; addHist(p,`E-mail validé pour ${c.n}, envoi programmé demain 9 h 12`); save(); render(); toast('Envoi programmé demain à 9 h 12 (plage d\'envoi, plafond respecté).'); break; }
+    case 'valider': { const cs=p.contacts.filter(c=>c.es!=='bloque'), c=cs[ui.cidx]||cs[0]; if(S.oppositions.includes(c.email)){toast('Envoi bloqué : adresse sur la liste d\'opposition.');break;} if(p.statut!=='En séquence') p.statut='En séquence'; addHist(p,`E-mail validé pour ${c.n}, envoi programmé demain 9 h 12`); S.file.unshift({id:++S.nextId,pid:p.id,a:c.email,obj:ui.gen.titre.replace(/^Objet : /,''),quand:'19/11/2026 09:12',boite:p.owner==='S. Diallo'?1:0,st:'Programmé'}); save(); render(); toast(S.mailTest?'Ajouté à la file d\'envoi (mode test : redirigé vers l\'adresse interne).':'Envoi programmé demain à 9 h 12 (plage d\'envoi, plafond respecté).'); break; }
     case 'tachecanal': addTask(ui.canal==='appel'?'appel':'linkedin',p.id,(ui.canal==='appel'?'Appeler ':'LinkedIn : contacter ')+(mainContact(p)?.n||p.nom),0); save(); render(); toast('Tâche créée avec le texte préparé.'); break;
     case 'addc': { const n=$('#nc-n').value.trim(), f=$('#nc-f').value.trim(); if(!n){toast('Indiquez au moins un nom.');break;} p.contacts.push(C(n,f||'—',/dir|drh|g[ée]rant|qse|hse|responsable/i.test(f)?'decideur':'utilisateur','','absent')); addHist(p,'Contact ajouté : '+n); save(); ui.gen=null; render(); toast('Contact ajouté. Lancez l\'enrichissement pour trouver son e-mail.'); break; }
     case 'ecarter': p.statut='Écarté'; addHist(p,'Écarté manuellement'); save(); render(); toast('Prospect écarté.'); break;
@@ -992,6 +1065,11 @@ document.addEventListener('click',e=>{
     case 'bulkseq': { const sid=$('#bulk-seq').value; let n=0; ui.sel.forEach(i=>{ if(inscrire(byId(i),sid)) n++; }); ui.sel.clear(); save(); render(); toast(`${n} prospect${n>1?'s':''} inscrit${n>1?'s':''}.`); break; }
     case 'bulkcrm': ui.sel.forEach(i=>{ const pp=byId(i); pp.statut='Transmis au CRM'; crmLog('prospect.qualifie',pp.nom); }); toast(`${ui.sel.size} prospect(s) envoyé(s) au CRM.`); ui.sel.clear(); save(); render(); break;
     case 'bulkclear': ui.sel.clear(); render(); break;
+    case 'crmmode': S.crmMode=k; save(); render(); toast(k==='autonome'?'Mode autonome : tables locales du module.':'Mode CRM interne : clients et historique lus dans le CRM.'); break;
+    case 'relance': case 'relances': { const list=a==='relance'?[S.historique.find(h=>h.id===+id)]:S.historique.filter(h=>echeance(h).etat!=='ok'&&!h.relance); list.forEach(h=>{ h.relance=true; addTask('appel',h.pid||0,`Relance ${h.prest} : ${h.nom} (${h.n} stagiaire${h.n>1?'s':''}, échéance ${fmt(echeance(h).d)})`,0); }); save(); render(); toast(`${list.length} relance${list.length>1?'s':''} créée${list.length>1?'s':''} dans les tâches.`); break; }
+    case 'addhist': { const nom=$('#h-nom').value.trim(); if(!nom){toast('Indiquez le compte.');break;} const pp=S.prospects.find(x=>x.nom.toLowerCase()===nom.toLowerCase()); S.historique.push({id:++S.nextId,nom,pid:pp?pp.id:0,prest:$('#h-prest').value,date:$('#h-date').value||'2026-11-10',n:+$('#h-n').value||1,formateur:'—',src:'Saisie'}); save(); render(); toast('Session enregistrée, échéance calculée.'); break; }
+    case 'flush': { let n=0; S.file.forEach(m=>{ if(m.st==='Programmé'){ m.st=S.mailTest?'Envoyé (redirigé test)':'Envoyé'; n++; const pp=byId(m.pid); if(pp) addHist(pp,`E-mail envoyé${S.mailTest?' (mode test, redirigé)':''} : ${m.obj}`); } }); S.boites[0].auj+=n; save(); render(); toast(`${n} message${n>1?'s':''} ${S.mailTest?'redirigé'+(n>1?'s':'')+' vers l\'adresse de test':'envoyé'+(n>1?'s':'')}.`); break; }
+    case 'cancelmail': { const m=S.file.find(x=>x.id===+id); m.st='Annulé'; save(); render(); toast('Envoi annulé.'); break; }
   }
 });
 document.addEventListener('change',e=>{
@@ -1009,6 +1087,7 @@ document.addEventListener('change',e=>{
     case 'map': ui.imp.map[+el.dataset.i]=el.value; analyse(); render(); break;
     case 'seqmode': S.sequences.find(s=>s.id===ui.seq).mode=el.value; save(); toast('Mode de validation enregistré.'); break;
     case 'seqcap': S.sequences.find(s=>s.id===ui.seq).plafond=+el.value; save(); break;
+    case 'mailtest': S.mailTest=el.checked; save(); render(); toast(S.mailTest?'Mode test activé : aucun envoi réel.':'Mode test désactivé : les envois partiront réellement.'); break;
     case 'reclass': { const r=S.replies.find(x=>x.id===+el.dataset.id); if(el.value){ r.cl=el.value; r.conf=100; save(); render(); toast('Classement corrigé : la correction sert au jeu de test du classement.'); } break; }
   }
   if(el.id==='file' && el.files[0]){ const f=el.files[0]; const rd=new FileReader(); rd.onload=()=>loadCSV(String(rd.result),f.name); rd.readAsText(f); }

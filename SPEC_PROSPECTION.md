@@ -1,6 +1,8 @@
-# Agent d'aide à la prospection — Cahier des charges (v0.1)
+# Agent d'aide à la prospection — Cahier des charges (v0.2)
 
-Module **interne** de FORMA'ST, conçu pour s'ajouter à l'outil Veille AO (même application Django, même profil entreprise, même catalogue) puis s'intégrer au **module admin du CRM**.
+Module **interne** de FORMA'ST, testé d'abord seul, puis intégré en tout ou partie au **CRM interne** (développé avec Claude Code) et à l'**application AO** (Veille AO, ce dépôt).
+
+> **v0.2 (18/11/2026)** : le CRM est un outil interne, l'intégration se fait donc directement (3.14) ; ajout du module de messagerie (3.16) et d'une base « historique des formations » en attendant la connexion au CRM (3.17).
 
 Maquette fonctionnelle : [`maquettes/prospection.html`](maquettes/prospection.html) (données fictives).
 
@@ -11,6 +13,8 @@ Maquette fonctionnelle : [`maquettes/prospection.html`](maquettes/prospection.ht
 | Cibles | Privé (PME et ETI multi-sites en priorité, grands comptes) et public (collectivités, établissements de santé, bailleurs) |
 | Zone | Nationale, avec un poids plus fort pour l'Île-de-France et les zones déjà couvertes par les formateurs |
 | Utilisateurs | 2 à 5 personnes (dirigeant, commercial, assistante) |
+| Intégration | CRM interne et application AO, développés avec Claude Code : intégration directe, sans connecteur tiers |
+| Mode de test | Module autonome (sa propre base), puis branchement au CRM par une simple bascule de configuration |
 | Objectif chiffré proposé | 8 à 12 rendez-vous qualifiés par mois après 3 mois, pour moins de 2 h de travail commercial par jour |
 
 ---
@@ -276,33 +280,75 @@ Fonctionnement : l'IA dispose d'**outils** (recherche de prospects, lecture de f
 | Délivrabilité | SPF, DKIM, DMARC sur le domaine d'envoi, sous-domaine dédié conseillé, montée en charge progressive, taux de rebond < 3 %, plaintes < 0,1 %, arrêt automatique d'une boîte au-delà |
 | IA | Textes relus ou issus de modèles validés ; journal des générations ; aucune décision automatisée produisant des effets juridiques |
 
-### 3.14 Intégration au CRM
+### 3.14 Intégration au CRM interne et à l'application AO
 
-Le module admin du CRM n'est pas dans ce dépôt : l'intégration est conçue **indépendante du CRM**, avec trois niveaux.
+Le CRM et l'application AO sont des outils internes développés avec Claude Code. Il n'y a donc **pas de connecteur tiers** à écrire : l'agent est conçu comme un **module Django réutilisable** (`prospection/`) qui fonctionne seul pendant les tests, puis se branche sur le CRM.
 
-| Niveau | Contenu | Phase |
+#### 3.14.1 Deux modes, une seule bascule
+
+| Mode | Usage | Où sont les comptes clients et l'historique |
 |---|---|---|
-| **N1 — Échange de fichiers** | Export CSV / XLSX des prospects qualifiés au format du CRM ; import des clients et de l'historique de formation | MVP |
-| **N2 — Synchronisation par API** | API REST de l'agent + webhooks sortants ; connecteur vers l'API du CRM | P2–P3 |
-| **N3 — Intégration dans l'écran CRM** | Panneau « Assistant prospection » affiché dans la fiche compte du CRM (iframe authentifiée ou composant), actions de l'agent appelables depuis le CRM | P4 |
+| **Autonome** (`PROSPECTION_CRM = "autonome"`) | Phase de test, démonstration | Tables locales du module : `Compte` (statut client) et `HistoriqueFormation` (3.17), alimentées par import |
+| **CRM interne** (`PROSPECTION_CRM = "crm_interne"`) | Production | Lus directement dans le CRM (même base ou API interne, voir 3.14.2) |
 
-**Objets et propriété des données** :
+Tout le code de l'agent passe par une seule interface, `prospection/crm/base.py` :
 
-| Objet | Maître | Synchronisation |
+```python
+class PasserelleCRM(Protocol):
+    def clients(self, **filtres) -> Iterable[CompteCRM]: ...            # exclusion, réactivation
+    def historique_formations(self, siren=None, avant=None) -> Iterable[Formation]: ...  # recyclages
+    def creer_ou_maj_compte(self, prospect) -> str: ...               # renvoie l'identifiant CRM
+    def creer_opportunite(self, prospect, besoin, brief) -> str: ...
+    def ajouter_activite(self, compte_id, type, texte, date) -> None: ...
+    def enregistrer_opposition(self, valeur) -> None: ...
+    def est_oppose(self, valeur) -> bool: ...
+```
+
+Deux implémentations : `autonome.py` (tables locales) et `crm_interne.py`. Passer de l'une à l'autre ne change ni les écrans ni les automatisations. Une commande `migrer_vers_crm` reverse les comptes, contacts, activités et l'historique saisis pendant le test.
+
+#### 3.14.2 Branchement technique (à choisir avec l'architecture du CRM)
+
+| Option | Quand la choisir | Contenu |
+|---|---|---|
+| **A — Même projet Django** (recommandée si possible) | Le CRM, l'application AO et l'agent peuvent partager un serveur et une base | Le CRM, `veille` et `prospection` sont des applications d'un même projet ; l'agent lit et écrit les modèles du CRM directement ; un seul identifiant de connexion ; transactions communes |
+| **B — Applications séparées** | Le CRM a son propre serveur ou sa propre base | API REST interne entre les applications (jeton par application) + webhooks ; même interface `PasserelleCRM`, implémentée par appels HTTP |
+
+Dans les deux cas : **SIREN comme clé commune** entre CRM, application AO et agent ; utilisateurs et droits du CRM réutilisés ; l'agent ne duplique jamais un client du CRM.
+
+#### 3.14.3 Ce que le CRM gagne (intégration « tout ou partie »)
+
+Chaque brique peut être intégrée séparément :
+
+| Brique | Dans le CRM | Effort |
+|---|---|---|
+| Panneau « Assistant prospection » sur la fiche compte | Score, explication, besoin estimé, signaux, prochaine action, bouton « Rédiger » | Faible (gabarit inclus dans la fiche) |
+| Rédaction assistée | Bouton sur chaque contact : e-mail, LinkedIn, script d'appel, relance | Faible |
+| File de tâches | Tâches de l'agent dans l'agenda / les tâches du CRM | Moyen |
+| Séquences et messagerie | Envoi et chronologie des e-mails dans la fiche du CRM | Moyen |
+| Réactivation clients | Alertes MAC SST et exercices semestriels depuis l'historique du CRM | Faible |
+| Assistant conversationnel | Fenêtre de dialogue dans le CRM, avec les outils de l'agent | Moyen |
+
+#### 3.14.4 Lien avec l'application AO
+
+L'application AO fournit déjà : les acheteurs publics actifs, les avis d'attribution (concurrents), le profil FORMA'ST, le catalogue, les références, la bibliothèque de contenus et le client IA. L'agent les **lit sans les recopier**. En retour :
+- un acheteur public qualifié dans l'agent apparaît dans l'application AO (suivi de ses futurs avis) ;
+- un AO gagné ou perdu met à jour le compte dans l'agent et dans le CRM ;
+- le radar de renouvellement (DECP, 3.4) est commun aux deux outils.
+
+#### 3.14.5 Propriété des données
+
+| Objet | Maître | Règle |
 |---|---|---|
 | Compte prospect (avant qualification) | Agent | Créé dans le CRM au statut « RDV fixé » ou sur demande |
 | Compte client | CRM | Lu par l'agent (exclusion, réactivation) |
-| Contact | Agent avant transmission, CRM ensuite | Bidirectionnelle, dernier modifié gagne, conflit signalé |
+| Contact | Agent avant transmission, CRM ensuite | Dernier modifié gagne, conflit signalé |
 | Opportunité / devis | CRM | Créée par l'agent, mise à jour par le CRM |
-| Activités (e-mails, appels, notes) | Agent | Poussées dans la chronologie du CRM |
-| Formations réalisées (stagiaires, dates) | CRM ou outil de gestion des formations | Lues par l'agent pour les recyclages |
-| Opposition | Agent et CRM | Bidirectionnelle, immédiate |
+| Activités (e-mails, appels, notes) | Agent | Visibles dans la chronologie du CRM |
+| Formations réalisées | CRM (ou `HistoriqueFormation` en mode autonome) | Lues par l'agent pour les recyclages |
+| Opposition | Agent et CRM | Une seule liste partagée, effet immédiat |
+| Avis de marché, attributions | Application AO | Lus par l'agent |
 
-**API de l'agent (extrait)** : `GET/POST /api/prospects`, `GET /api/prospects/{id}` (avec score, besoin, signaux), `POST /api/prospects/{id}/enrichir`, `POST /api/prospects/{id}/message` (génération), `POST /api/sequences/{id}/inscrire`, `GET /api/taches?pour=moi`, `POST /api/assistant` (question en langage naturel). Authentification par jeton par application, droits limités.
-**Webhooks émis** : `prospect.cree`, `prospect.qualifie`, `prospect.score_change`, `reponse.recue`, `rdv.fixe`, `opposition.enregistree`.
-**Webhooks reçus** : `client.cree`, `opportunite.gagnee`, `opportunite.perdue`, `formation.realisee`.
-
-Si le CRM est lui-même une application Django (module admin), le niveau N2 peut se faire par appel direct des modèles et le niveau N3 par une simple vue intégrée.
+**Événements internes** (signaux Django en option A, webhooks en option B) émis : `prospect.cree`, `prospect.qualifie`, `prospect.score_change`, `reponse.recue`, `rdv.fixe`, `opposition.enregistree`. Reçus : `client.cree`, `opportunite.gagnee`, `opportunite.perdue`, `formation.realisee`, `ao.resultat`.
 
 ### 3.15 Possibilités complémentaires (non demandées, recommandées)
 
@@ -320,6 +366,45 @@ Si le CRM est lui-même une application Django (module admin), le niveau N2 peut
 12. **Analyse des devis perdus** : relance à 11 mois, motif de perte, prix du concurrent si connu.
 13. **Contenu LinkedIn hebdomadaire** proposé par l'agent (3.1.3, n° 5).
 14. **Intégration Teams** : notifications et commandes simples (« /prospect clinique des Tilleuls ») dans un canal.
+
+### 3.16 Module de messagerie
+
+Brique commune, réutilisable plus tard par le CRM et l'application AO (envoi des digests, des devis). Les réglages précis (serveurs, domaine, comptes) seront définis plus tard ; le module est conçu pour les accepter sans changement de code.
+
+| Fonction | Détail |
+|---|---|
+| **Boîtes d'envoi** | Plusieurs boîtes (une par commercial + une générique). Connexion par **Microsoft Graph** (Microsoft 365, choix confirmé) ou SMTP / IMAP en solution de repli. Identifiants dans `.env` ou coffre chiffré, jamais en clair dans la base |
+| **Domaine** | Sous-domaine dédié à la prospection (accord donné), avec SPF, DKIM et DMARC ; le domaine principal reste réservé aux échanges courants |
+| **Envoi** | File d'attente idempotente (un message n'est jamais envoyé deux fois, même après une coupure), plafond par boîte et par jour, montée en charge progressive, plages horaires et jours ouvrés, espacement aléatoire |
+| **Composition** | Éditeur texte simple (pas de HTML lourd), variables (`{prenom}`, `{entreprise}`, `{besoin_sst}`…), signature par utilisateur, pied de page RGPD et lien d'opposition ajoutés automatiquement et non supprimables |
+| **Envoi depuis la fiche** | Un e-mail ponctuel peut partir hors séquence, avec les mêmes contrôles (opposition, plafond) |
+| **Relève** | Toutes les 5 minutes ; rattachement des réponses par en-têtes `In-Reply-To` / `References`, puis par adresse ; classement par l'IA (3.8) |
+| **Fil de discussion** | Chaque échange est visible dans la fiche prospect (et dans la fiche CRM après intégration), envoyés et reçus |
+| **Suivi** | Rebonds (définitifs / temporaires), réponses, désinscriptions. Le **suivi d'ouverture par pixel est désactivé par défaut** : la CNIL encadre ces pixels (consentement en principe requis) ; à activer seulement après validation. Sans lui, le signal « e-mails ouverts sans réponse » (3.4) n'est pas utilisé |
+| **Santé des boîtes** | Taux de rebond et de plainte par boîte, arrêt automatique au-delà des seuils, alerte à l'administrateur |
+| **Mode test** | Tous les envois redirigés vers une adresse interne, ou écrits dans un fichier (comme le `EMAIL_BACKEND` de Veille AO), pour tester les séquences sans rien envoyer |
+| **Journal** | Contenu exact envoyé, date, boîte, utilisateur qui a validé, modèle et coût de génération |
+
+Tables ajoutées : `BoiteEnvoi` (§5), `FileEnvoi` (message, boîte, prévu_le, tentatives, statut, erreur), `FilDiscussion` (compte, contact, sujet, messages).
+
+### 3.17 Base « historique des formations » (en attendant le CRM)
+
+En mode autonome, l'agent a sa propre table d'historique pour calculer les recyclages. En mode CRM, la même interface lit l'historique du CRM et cette table sert seulement de reprise.
+
+**Table `HistoriqueFormation`** : compte (SIREN), établissement, prestation (lien vers le catalogue), date de session, nombre de stagiaires, liste des stagiaires (nom, prénom, fonction ; facultatif), formateur, résultat (certificat SST délivré oui / non), date d'échéance calculée, source (import, saisie, CRM), facture / devis lié.
+
+**Règles d'échéance** (paramétrables par prestation) :
+
+| Prestation | Échéance | Relance |
+|---|---|---|
+| SST initial ou MAC SST | 24 mois après la session | J-90 (séquence), J-60 (appel) |
+| Exercice d'évacuation | 6 mois | J-30 |
+| Manipulation des extincteurs, EPI | 12 mois (recommandation d'usage) | J-45 |
+| Gestes et postures | Pas d'échéance réglementaire : relance à 24 mois et pour les nouveaux embauchés | J-60 |
+
+**Alimentation** : import CSV / XLSX (mêmes écrans que 3.1.2, modèle de fichier fourni), saisie après chaque session, reprise des feuilles d'émargement et des attestations existantes. Les stagiaires sont des données de clients, pas de prospects : conservation selon la durée de la relation commerciale et les obligations Qualiopi, jamais utilisées pour démarcher les stagiaires eux-mêmes.
+
+**Usages** : recyclages (recette 2), tableau « échéances à venir », calcul du CA récurrent, références citables par secteur, preuve d'antériorité dans les messages (« nous avons formé 12 de vos salariés en janvier 2025 »).
 
 ---
 
@@ -345,6 +430,7 @@ Si le CRM est lui-même une application Django (module admin), le niveau N2 peut
 |---|---|
 | `Compte` | siren, siret_siege, nom, nom_normalise, naf, segment, tranche_effectif, effectif_estime, nb_etablissements, departement, ville, site_web, idcc, opco, icpe, erp, statut, responsable, score, score_adequation, score_intention, score_acces, palier, explication_score, besoin (JSON), ca_potentiel, crm_id, cree_le, maj_sirene_le, provenance (JSON) |
 | `Etablissement` | compte, siret, adresse, effectif, actif |
+| `HistoriqueFormation` | compte, etablissement, prestation, date_session, nb_stagiaires, stagiaires (JSON), formateur, certificat_delivre, echeance, source, crm_id |
 | `Contact` | compte, civilite, prenom, nom, fonction, role_decision, email, statut_email, telephone, linkedin_url, base_legale, informe_le, oppose, dernier_contact_entrant_le, crm_id |
 | `Signal` | compte, type, source, url, extrait, date_signal, poids, demi_vie_jours, actif |
 | `Source` / `Import` | nom, type, fichier, mapping (JSON), lignes_lues, crees, maj, doublons, rejets, annulable_jusqu_au |
@@ -383,7 +469,8 @@ prospection/
     classement.py             classement des réponses (modèle économique)
     automatisations.py        moteur Quand → Si → Alors, simulation, journal
     assistant.py              dialogue avec outils, confirmation des écritures
-    crm/                      base.py (interface), fichier.py (N1), api.py (N2), connecteurs par CRM
+    crm/                      base.py (interface PasserelleCRM), autonome.py (tables locales), crm_interne.py (CRM maison)
+    messagerie/               boîtes, file d'envoi, Graph / SMTP / IMAP, relève, santé des boîtes (3.16)
     rgpd.py                   opposition, purge, export, registre
   api/                        API REST (Django REST Framework) + webhooks
   management/commands/        prospection_horaire, prospection_quotidienne, importer, purger_rgpd
@@ -412,7 +499,9 @@ prospection/
 | Assistant | Dialogue avec résultats exploitables |
 | Paramètres du score | Poids réglables, aperçu immédiat de l'effet sur les paliers |
 | Conformité | Oppositions, purge, registre, état de la délivrabilité |
-| Intégration CRM | État de la synchronisation, correspondance des champs, journal des webhooks |
+| Historique des formations | Sessions réalisées, échéances calculées, relances (3.17) |
+| Messagerie | Boîtes d'envoi, file d'attente, mode test, santé des boîtes (3.16) |
+| Intégration CRM | Bascule autonome / CRM interne, propriété des données, journal des événements, aperçu du panneau dans la fiche CRM |
 
 ---
 
@@ -420,10 +509,10 @@ prospection/
 
 | Phase | Contenu | Charge |
 |---|---|---|
-| **P1 — MVP « base utile »** (4 semaines) | Import S1 avec dédoublonnage et rapprochement SIRENE, base clients S2, acheteurs Veille AO S4, profil idéal, besoin estimé, score (adéquation + accessibilité), fiche, brief et messages IA (copier-coller), tâches, export CRM N1, opposition | 15–20 j |
-| **P2 — « contacter »** (4 semaines) | Boîtes d'envoi, séquences e-mail + tâches LinkedIn et appels, relève et classement des réponses, 6 premières automatisations, tableau de bord, RGPD complet, enrichissement S11 (option), PostgreSQL | 15–20 j |
+| **P1 — MVP « base utile »** (4 semaines) | Module autonome ; import S1 avec dédoublonnage et rapprochement SIRENE, historique des formations (3.17) et recyclages, acheteurs de l'application AO S4, profil idéal, besoin estimé, score (adéquation + accessibilité), fiche, brief et messages IA (copier-coller), tâches, opposition | 15–20 j |
+| **P2 — « contacter »** (4 semaines) | Module de messagerie (3.16) avec mode test, séquences e-mail + tâches LinkedIn et appels, relève et classement des réponses, 6 premières automatisations, tableau de bord, RGPD complet, enrichissement S11 (option), PostgreSQL | 15–20 j |
 | **P3 — « signaux »** (4 semaines) | BODACC, France Travail, Géorisques, annuaire public, DECP et radar, veille web, score d'intention, assistant conversationnel, recettes 3 à 14 | 15–20 j |
-| **P4 — « intégré »** | Synchronisation CRM N2 puis panneau N3, calendrier et prise de RDV, mode session d'appels, recalibrage du score, simulateur web, extension navigateur (après avis juridique), Teams | 15–25 j |
+| **P4 — « intégré »** | Passerelle `crm_interne` et reprise des données du test, panneau dans la fiche compte du CRM, briques intégrées au choix (3.14.3), calendrier et prise de RDV, mode session d'appels, recalibrage du score, simulateur web, extension navigateur (après avis juridique), Teams | 15–25 j |
 
 ---
 
@@ -458,13 +547,14 @@ prospection/
 
 ## 11. Questions ouvertes
 
-1. **Quel CRM** (nom, éditeur, ou application interne) et son API : cela fixe le niveau N2 et le N3.
-2. La messagerie de l'équipe est-elle **Microsoft 365** (probable, Teams) ? Accord pour un **sous-domaine d'envoi** dédié ?
-3. Où sont l'historique des formations et les dates de passage des stagiaires (pour les recyclages MAC SST) ?
-4. Bases fournies disponibles aujourd'hui (fichiers, origine, date d'achat, consentements) ?
-5. Licence **Sales Navigator** en place ou envisagée ?
-6. Départements et segments prioritaires, capacité des formateurs par zone.
-7. Budget mensuel acceptable pour l'enrichissement des contacts.
-8. Qui valide les messages, et à quel rythme (mode de validation par défaut) ?
-9. Validation juridique : extension navigateur LinkedIn, démarchage téléphonique des entrepreneurs individuels.
-10. Objectif chiffré de RDV et de CA à retenir.
+Réglées (v0.2) : CRM interne développé avec Claude Code (intégration directe) ; Microsoft 365 et sous-domaine d'envoi acceptés, réglages plus tard ; historique des formations lu dans le CRM, ou base « historique » locale en attendant.
+
+1. **Architecture du CRM** : même projet Django que l'application AO (option A) ou application séparée (option B) ? Quel est son modèle de compte (clé SIREN présente ?) et où sont stockées les formations réalisées ?
+2. Bases fournies disponibles aujourd'hui (fichiers, origine, date d'achat, consentements) ?
+3. Historique des formations existant (tableur, factures, émargements) pour amorcer la table 3.17 ?
+4. Licence **Sales Navigator** en place ou envisagée ?
+5. Départements et segments prioritaires, capacité des formateurs par zone.
+6. Budget mensuel acceptable pour l'enrichissement des contacts.
+7. Qui valide les messages, et à quel rythme (mode de validation par défaut) ?
+8. Validation juridique : extension navigateur LinkedIn, démarchage téléphonique des entrepreneurs individuels, pixels de suivi d'ouverture.
+9. Objectif chiffré de RDV et de CA à retenir.
