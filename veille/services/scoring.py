@@ -177,11 +177,16 @@ def description_avis(a: AvisMarche) -> str:
 
 
 def _client() -> anthropic.Anthropic:
-    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
-        raise ScoringIndisponible(
-            "Aucune clé API Anthropic : renseignez ANTHROPIC_API_KEY dans le fichier .env."
-        )
-    return anthropic.Anthropic()
+    # VEILLE_ANTHROPIC_API_KEY sert dans les sessions cloud Claude Code, qui ne
+    # transmettent pas la variable ANTHROPIC_API_KEY aux commandes.
+    cle_veille = os.environ.get("VEILLE_ANTHROPIC_API_KEY")
+    if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+        return anthropic.Anthropic()
+    if cle_veille:
+        return anthropic.Anthropic(api_key=cle_veille)
+    raise ScoringIndisponible(
+        "Aucune clé API Anthropic : renseignez ANTHROPIC_API_KEY dans le fichier .env."
+    )
 
 
 def scorer(avis: AvisMarche, client: anthropic.Anthropic | None = None, profil: str | None = None) -> ScoreAvis:

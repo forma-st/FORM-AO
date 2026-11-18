@@ -93,7 +93,7 @@ Le fichier `data/seed_formast.json` contient des données internes (prix, CV, bi
 
 L'application lit la clé dans la variable `ANTHROPIC_API_KEY`. Elle peut venir du fichier `.env` ou de l'environnement du serveur.
 - **Serveur de production** : dans `.env`, ajouter la ligne `ANTHROPIC_API_KEY=sk-ant-…`, puis redémarrer l'application.
-- **Session cloud Claude Code** (pour les tests) : ajouter une variable d'environnement `ANTHROPIC_API_KEY` dans les réglages de l'environnement. Elle est lisible par toute personne et toute commande qui utilise cet environnement.
+- **Session cloud Claude Code** (pour les tests) : ajouter une variable d'environnement `VEILLE_ANTHROPIC_API_KEY` dans les réglages de l'environnement (la session ne transmet pas `ANTHROPIC_API_KEY` aux commandes). Elle est lisible par toute personne et toute commande qui utilise cet environnement.
 
 Sans clé, l'outil fonctionne quand même : le score se fait par règles, mais l'analyse du DCE et le mémoire restent indisponibles.
 
