@@ -1,0 +1,20 @@
+{% extends "veille/base.html" %}
+{% load veille_tags %}
+{% block titre %}Pipeline{% endblock %}
+{% block contenu %}
+<h1>Pipeline des réponses</h1>
+<div class="kanban">
+{% for titre, avis in colonnes %}
+  <div class="colonne">
+    <h3>{{ titre }} ({{ avis|length }})</h3>
+    {% for a in avis %}
+      <div class="ticket">
+        <span class="score {{ a.score|couleur_score }}">{{ a.score|default_if_none:"?" }}</span>
+        <a href="{% url 'detail' a.pk %}">{{ a.objet|truncatechars:90 }}</a>
+        <div class="doux">{{ a.acheteur|truncatechars:40 }}{% if a.date_limite %} · {{ a.date_limite|date:"d/m" }}{% endif %}{% if a.responsable %} · {{ a.responsable }}{% endif %}</div>
+      </div>
+    {% empty %}<p class="doux">—</p>{% endfor %}
+  </div>
+{% endfor %}
+</div>
+{% endblock %}

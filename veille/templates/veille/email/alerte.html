@@ -1,0 +1,5 @@
+{% load veille_tags %}<div style="font-family:Arial,sans-serif;font-size:14px;max-width:720px">
+<p><strong>Score {{ a.score }}/100 – {{ a.recommandation|libelle_reco }}</strong></p>
+<p><a href="{{ base_url }}/avis/{{ a.pk }}/">{{ a.objet }}</a><br>{{ a.acheteur }}{% if a.date_limite %} · date limite {{ a.date_limite|date:"d/m/Y H:i" }}{% endif %}</p>
+<p>{{ a.resume }}</p><p style="color:#626a73">{{ a.score_details.pourquoi }}</p>
+</div>

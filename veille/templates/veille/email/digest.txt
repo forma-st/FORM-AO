@@ -1,0 +1,11 @@
+{% load veille_tags %}Veille appels d'offres – {% now "d/m/Y" %}
+{% for a in avis %}
+[{{ a.score }}/100 – {{ a.recommandation|libelle_reco }}] {{ a.objet }}
+  {{ a.acheteur }}{% if a.date_limite %} – date limite {{ a.date_limite|date:"d/m/Y" }}{% endif %}
+  {{ a.resume }}
+  {{ base_url }}/avis/{{ a.pk }}/
+{% endfor %}{% if echeances %}
+Dates limites proches :{% for a in echeances %}
+- {{ a.date_limite|date:"d/m H:i" }} {{ a.objet|truncatechars:100 }}{% endfor %}{% endif %}{% if pieces %}
+Pièces à renouveler :{% for p in pieces %}
+- {{ p }} (expire le {{ p.date_expiration|date:"d/m/Y" }}){% endfor %}{% endif %}

@@ -1,0 +1,55 @@
+{% extends "veille/base.html" %}
+{% load veille_tags %}
+{% block contenu %}
+<h1>Appels d'offres à regarder</h1>
+<p class="doux">
+  {{ stats.total }} avis collectés, {{ stats.retenus }} retenus par la veille, {{ stats.go }} recommandés « Go ».
+  {% if derniere_collecte %}Dernière collecte : {{ derniere_collecte.source }} le {{ derniere_collecte.debut|date:"d/m à H:i" }}{% if derniere_collecte.erreur %} <span class="urgent">(erreur)</span>{% endif %}.{% endif %}
+</p>
+
+{% if pieces %}
+<div class="carte">
+  <strong>Pièces administratives à renouveler :</strong>
+  {% for p in pieces %}{{ p }} (expire le {{ p.date_expiration|date:"d/m/Y" }}){% if not forloop.last %}, {% endif %}{% endfor %}
+</div>
+{% endif %}
+
+<form class="filtres" method="get">
+  <input type="search" name="q" value="{{ filtres.q }}" placeholder="Rechercher (objet, acheteur…)">
+  <select name="reco">
+    <option value="">Toutes recommandations</option>
+    <option value="GO" {% if filtres.reco == "GO" %}selected{% endif %}>Go</option>
+    <option value="A_ETUDIER" {% if filtres.reco == "A_ETUDIER" %}selected{% endif %}>À étudier</option>
+    <option value="NO_GO" {% if filtres.reco == "NO_GO" %}selected{% endif %}>No-Go</option>
+  </select>
+  <select name="statut">
+    <option value="">Statuts actifs</option>
+    {% for code, lib in statuts %}<option value="{{ code }}" {% if filtres.statut == code %}selected{% endif %}>{{ lib }}</option>{% endfor %}
+  </select>
+  <select name="ouverts">
+    <option value="1">Encore ouverts</option>
+    <option value="0" {% if filtres.ouverts == "0" %}selected{% endif %}>Tous</option>
+  </select>
+  <button type="submit">Filtrer</button>
+</form>
+
+<table>
+  <thead><tr><th>Score</th><th>Objet</th><th class="masquer-mobile">Acheteur</th><th>Date limite</th><th class="masquer-mobile">Statut</th></tr></thead>
+  <tbody>
+  {% for a in avis %}
+    <tr>
+      <td><span class="score {{ a.score|couleur_score }}">{{ a.score|default_if_none:"?" }}</span><br><span class="doux">{{ a.recommandation|libelle_reco }}</span></td>
+      <td><a href="{% url 'detail' a.pk %}">{{ a.objet|truncatechars:140 }}</a>
+        <div class="doux">{{ a.get_source_display }}{% if a.departements %} · dép. {{ a.departements|truncatechars:30 }}{% endif %}{% if a.montant_estime %} · {{ a.montant_estime|floatformat:0 }} € HT{% endif %}</div>
+        {% if a.resume %}<div class="doux">{{ a.resume|truncatechars:220 }}</div>{% endif %}
+      </td>
+      <td class="masquer-mobile">{{ a.acheteur|truncatechars:60 }}</td>
+      <td>{% if a.date_limite %}{{ a.date_limite|date:"d/m/Y" }}<br><span class="doux {% if a.jours_restants < 10 %}urgent{% endif %}">J-{{ a.jours_restants }}</span>{% else %}—{% endif %}</td>
+      <td class="masquer-mobile"><span class="pastille">{{ a.get_statut_display }}</span></td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5">Aucun avis pour ces filtres. Lancez une collecte : <code>python manage.py veille_quotidienne</code></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

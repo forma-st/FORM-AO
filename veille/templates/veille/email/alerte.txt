@@ -1,0 +1,5 @@
+{% load veille_tags %}Score {{ a.score }}/100 – {{ a.recommandation|libelle_reco }}
+{{ a.objet }}
+{{ a.acheteur }}{% if a.date_limite %} – date limite {{ a.date_limite|date:"d/m/Y H:i" }}{% endif %}
+{{ a.resume }}
+{{ base_url }}/avis/{{ a.pk }}/

@@ -1,0 +1,12 @@
+{% extends "veille/base.html" %}
+{% block titre %}Ajouter une consultation{% endblock %}
+{% block contenu %}
+<h1>Ajouter une consultation privée</h1>
+<p class="doux">Pour une consultation reçue par mail ou repérée hors BOAMP/TED. Collez le texte du cahier des charges : l'IA s'en sert pour le score.</p>
+<div class="carte">
+<form method="post">{% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Ajouter</button>
+</form>
+</div>
+{% endblock %}
