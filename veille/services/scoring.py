@@ -177,11 +177,17 @@ def description_avis(a: AvisMarche) -> str:
 
 
 def _client() -> anthropic.Anthropic:
-    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
-        raise ScoringIndisponible(
-            "Aucune clé API Anthropic : renseignez ANTHROPIC_API_KEY dans le fichier .env."
-        )
-    return anthropic.Anthropic()
+    # ANTHROPIC_API_KEY prime ; VEILLE_ANTHROPIC_API_KEY sert de repli
+    # (clé dédiée à l'application, sans collision avec d'autres outils).
+    cle = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("VEILLE_ANTHROPIC_API_KEY")
+    if cle:
+        return anthropic.Anthropic(api_key=cle)
+    if os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+        return anthropic.Anthropic()
+    raise ScoringIndisponible(
+        "Aucune clé API Anthropic : renseignez ANTHROPIC_API_KEY "
+        "(ou VEILLE_ANTHROPIC_API_KEY) dans le fichier .env."
+    )
 
 
 def scorer(avis: AvisMarche, client: anthropic.Anthropic | None = None, profil: str | None = None) -> ScoreAvis:
