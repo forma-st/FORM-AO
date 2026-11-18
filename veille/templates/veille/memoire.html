@@ -1,0 +1,9 @@
+{% extends "veille/base.html" %}
+{% block titre %}Mémoire technique{% endblock %}
+{% block contenu %}
+<p class="doux"><a href="{% url 'reponse' m.avis.pk %}">← Retour à la réponse</a></p>
+<h1>Mémoire technique – brouillon du {{ m.cree_le|date:"d/m/Y H:i" }}</h1>
+<p class="doux">{{ m.avis.objet }} · {{ m.nb_a_completer }} point(s) à compléter · {{ m.modele }}</p>
+{% if m.statut == "OK" %}<p><a class="bouton" href="{% url 'memoire_docx' m.pk %}">Télécharger en Word</a></p>{% endif %}
+<div class="carte"><pre class="texte" style="max-height:none">{{ m.contenu }}</pre></div>
+{% endblock %}

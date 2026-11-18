@@ -1,0 +1,27 @@
+{% extends "veille/base.html" %}
+{% block titre %}Coffre-fort{% endblock %}
+{% block contenu %}
+<h1>Coffre-fort des pièces administratives</h1>
+<p class="doux">Les pièces valides sont jointes automatiquement aux dossiers de candidature. Une alerte part dans le digest 30 jours avant expiration.</p>
+{% if manquantes %}<div class="carte"><strong>Pièces manquantes :</strong> {{ manquantes|join:", " }}</div>{% endif %}
+<table>
+  <thead><tr><th>Pièce</th><th>Type</th><th>Émise le</th><th>Expire le</th><th>État</th><th></th></tr></thead>
+  <tbody>
+  {% for p in pieces %}
+    <tr>
+      <td>{% if p.fichier %}<a href="{{ p.fichier.url }}">{{ p }}</a>{% else %}{{ p }}{% endif %}</td>
+      <td>{{ p.get_type_display }}</td>
+      <td>{{ p.date_emission|date:"d/m/Y"|default:"—" }}</td>
+      <td>{{ p.date_expiration|date:"d/m/Y"|default:"—" }}</td>
+      <td class="etat-{{ p.statut }}">{% if p.statut == "valide" %}Valide{% elif p.statut == "a_renouveler" %}À renouveler (J-{{ p.jours_avant_expiration }}){% elif p.statut == "expire" %}Expirée{% else %}Fichier manquant{% endif %}</td>
+      <td><form method="post" action="{% url 'supprimer_piece' p.pk %}" onsubmit="return confirm('Supprimer cette pièce ?')">{% csrf_token %}<button class="secondaire">Supprimer</button></form></td>
+    </tr>
+  {% empty %}<tr><td colspan="6">Aucune pièce pour l'instant.</td></tr>{% endfor %}
+  </tbody>
+</table>
+<h2>Ajouter une pièce</h2>
+<div class="carte">
+<form method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.as_p }}<button type="submit">Ajouter</button></form>
+<p class="doux">Durées usuelles : Kbis moins de 3 mois, attestation URSSAF 6 mois, attestation fiscale : année en cours.</p>
+</div>
+{% endblock %}

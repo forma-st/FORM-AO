@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block titre %}Veille AO{% endblock %}</title>
+{% block entete %}{% endblock %}
 <style>
   :root { --fond:#f6f5f2; --carte:#fff; --texte:#1f2328; --doux:#626a73; --bord:#e1ded8;
           --accent:#b3261e; --vert:#1f7a3a; --orange:#b26a00; --rouge:#b3261e; --gris:#8a8f96; }
@@ -40,6 +41,12 @@
   .colonne { background:#eceae5; border-radius:8px; padding:8px; min-height:200px; }
   .colonne h3 { font-size:13px; margin:2px 4px 8px; text-transform:uppercase; color:var(--doux); }
   .ticket { background:#fff; border:1px solid var(--bord); border-radius:6px; padding:8px; margin-bottom:8px; font-size:13px; }
+  .etat-ok { color:var(--vert); font-weight:600; } .etat-genere { color:#0b5cad; font-weight:600; }
+  .etat-manquante, .etat-expiree, .etat-a_faire, .etat-non_remplie { color:var(--rouge); font-weight:600; }
+  .etat-a_verifier, .etat-a_renouveler { color:var(--orange); font-weight:600; } .etat-remplie, .etat-valide { color:var(--vert); font-weight:600; }
+  .etat-expire, .etat-manquant { color:var(--rouge); font-weight:600; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+  .memoire h2 { font-size:18px; color:var(--accent); } .memoire mark { background:#fff176; }
   .critere { display:flex; gap:8px; padding:4px 0; }
   .eval-favorable { color:var(--vert); } .eval-defavorable { color:var(--orange); } .eval-eliminatoire { color:var(--rouge); font-weight:700; } .eval-neutre { color:var(--doux); }
   pre.texte { white-space:pre-wrap; font:13px/1.5 system-ui, sans-serif; background:#faf9f7; border:1px solid var(--bord); border-radius:6px; padding:10px; max-height:420px; overflow:auto; }
@@ -52,6 +59,7 @@
   <a href="{% url 'tableau' %}">Appels d'offres</a>
   <a href="{% url 'pipeline' %}">Pipeline</a>
   <a href="{% url 'ajouter' %}">+ Consultation privée</a>
+  <a href="{% url 'coffre_fort' %}">Coffre-fort</a>
   <a href="{% url 'admin:index' %}">Paramètres</a>
 </header>
 <main>

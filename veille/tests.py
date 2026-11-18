@@ -273,3 +273,234 @@ class EformsDetailsTests(TestCase):
         self.assertIn("Critère : Prix (40)", ext["texte"])
         self.assertNotIn("FRA", ext["texte"].split("\n"))
         self.assertEqual(ext["date_limite"].isoformat(), "2027-01-11T12:00:00+01:00")
+
+
+# ---------------------------------------------------------------------------
+# Phases 2 et 3
+# ---------------------------------------------------------------------------
+
+import io as _io  # noqa: E402
+import shutil  # noqa: E402
+import tempfile  # noqa: E402
+import zipfile as _zipfile  # noqa: E402
+
+from django.core.files.uploadedfile import SimpleUploadedFile  # noqa: E402
+from django.test import override_settings  # noqa: E402
+
+from .models import AnalyseDCE, BlocContenu, DocumentDCE, Memoire, PieceAdministrative, Reference  # noqa: E402
+from .services import dce, documents, memoire  # noqa: E402
+
+MEDIA_TEST = tempfile.mkdtemp()
+
+
+def _docx_bytes(texte):
+    from docx import Document
+
+    d = Document()
+    d.add_paragraph(texte)
+    buf = _io.BytesIO()
+    d.save(buf)
+    return buf.getvalue()
+
+
+def _texte_docx(contenu: bytes) -> str:
+    from docx import Document
+
+    d = Document(_io.BytesIO(contenu))
+    morceaux = [p.text for p in d.paragraphs]
+    for t in d.tables:
+        for r in t.rows:
+            morceaux += [c.text for c in r.cells]
+    return "\n".join(morceaux)
+
+
+def faux_resultat_analyse():
+    return dce.AnalyseResultat(
+        synthese="Formations SST pour 120 agents.",
+        objet="Formations SST",
+        lots=[dce.Lot(numero="1", intitule="SST", pertinent_pour_nous=True, commentaire="cœur de métier")],
+        duree_et_volumes="1 an, 10 sessions",
+        lieux_et_organisation="Rouen",
+        forme_du_prix="BPU",
+        date_limite_offres="14/12/2026",
+        date_limite_questions="non précisé",
+        visite_ou_soutenance="non",
+        criteres_jugement=[
+            dce.CritereJugement(nom="Valeur technique", ponderation="60 %", sous_criteres=["Méthodologie"], source="RC p. 5")
+        ],
+        pieces_a_fournir=[
+            dce.Piece(piece="Formulaire DC1", etape="candidature", source="RC p. 3"),
+            dce.Piece(piece="Attestation de vigilance URSSAF", etape="candidature", source="RC p. 3"),
+            dce.Piece(piece="Planning prévisionnel", etape="offre", source="RC p. 4"),
+        ],
+        exigences=[dce.Exigence(exigence="Habilitation INRS", source="CCTP p. 2", statut="remplie", commentaire="ok")],
+        pieges_et_clauses_sensibles=["Pénalités de retard"],
+        questions_a_poser=["Nombre de sites ?"],
+        plan_memoire=[
+            dce.SectionPlan(titre="Méthodologie", critere_lie="Valeur technique", attendus=["déroulé"], longueur_conseillee="3 pages")
+        ],
+        prix_a_chiffrer=["Session SST initiale"],
+        score=78,
+        recommandation="GO",
+        justification="Cœur de métier.",
+    )
+
+
+@override_settings(MEDIA_ROOT=MEDIA_TEST)
+class Phase2Tests(TestCase):
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(MEDIA_TEST, ignore_errors=True)
+
+    def setUp(self):
+        Entreprise.objects.create(
+            raison_sociale="FORMA'ST", nom_commercial="FORMA'ST", forme_juridique="SARL", siret="89952630500011",
+            numero_declaration_activite="11950722095", ville="Méry-sur-Oise", representant_nom="Steven Tabart",
+            qualiopi=True, habilitation_inrs_sst=True,
+        )
+        Reference.objects.create(client="Picard", objet="Formations incendie")
+        self.a = avis(objet="Formations SST", acheteur="Ville de Test", lots_vises="2")
+        self.a.save()
+
+    def test_dc1_dc2_contenu(self):
+        t1 = _texte_docx(documents.dc1(self.a))
+        self.assertIn("89952630500011", t1)
+        self.assertIn("L. 2141-1", t1)
+        self.assertIn("☒ au(x) lot(s) n° 2", t1)
+        t2 = _texte_docx(documents.dc2(self.a))
+        self.assertIn("11950722095", t2)
+        self.assertIn("[À COMPLÉTER]", t2)  # CA non renseigné
+        self.assertIn("Picard", t2)
+
+    def test_controle_pieces_a_la_date_limite(self):
+        PieceAdministrative.objects.create(
+            type="URSSAF", fichier=SimpleUploadedFile("u.pdf", b"%PDF"), date_expiration=timezone.localdate() + timedelta(days=5)
+        )
+        PieceAdministrative.objects.create(type="KBIS", fichier=SimpleUploadedFile("k.pdf", b"%PDF"))
+        etats = {c.type: c.statut for c in documents.controler_pieces(self.a)}
+        self.assertEqual(etats["URSSAF"], "expiree")  # date limite dans 20 jours
+        self.assertEqual(etats["KBIS"], "ok")
+        self.assertEqual(etats["FISCAL"], "manquante")
+
+    def test_dossier_zip(self):
+        PieceAdministrative.objects.create(type="KBIS", fichier=SimpleUploadedFile("k.pdf", b"%PDF-kbis"))
+        z = _zipfile.ZipFile(_io.BytesIO(documents.dossier_zip(self.a, memoire_docx=b"docx")))
+        noms = z.namelist()
+        self.assertIn("1_Candidature/01_DC1_lettre_de_candidature.docx", noms)
+        self.assertTrue(any(n.endswith("_KBIS.pdf") for n in noms))
+        self.assertIn("2_Offre/Memoire_technique_FORMAST.docx", noms)
+        self.assertIn("[MANQUANTE]", z.read("A_LIRE_check-list.txt").decode())
+
+    def test_consultation_privee_sans_formulaires_publics(self):
+        self.a.source = "PRIVE"
+        noms = _zipfile.ZipFile(_io.BytesIO(documents.dossier_zip(self.a))).namelist()
+        self.assertFalse(any("DC1" in n or "DC2" in n for n in noms))
+        self.assertTrue(any("Presentation" in n for n in noms))
+
+
+@override_settings(MEDIA_ROOT=MEDIA_TEST)
+class Phase3Tests(TestCase):
+    def setUp(self):
+        Entreprise.objects.create(raison_sociale="FORMA'ST", qualiopi=True, habilitation_inrs_sst=True)
+        BlocContenu.objects.create(titre="Contact unique", categorie="ORGANISATION", texte="Un interlocuteur unique.")
+        self.a = avis(objet="Formations SST", acheteur="Ville")
+        self.a.save()
+
+    def test_depot_zip_securise_et_types(self):
+        buf = _io.BytesIO()
+        with _zipfile.ZipFile(buf, "w") as z:
+            z.writestr("DCE/RC_reglement_consultation.docx", _docx_bytes("Critère valeur technique 60 %"))
+            z.writestr("DCE/CCTP.txt", "Formation SST")
+            z.writestr("../evil.txt", "x")
+            z.writestr("__MACOSX/._RC.docx", "x")
+            z.writestr("DCE/image.exe", "x")
+        docs = dce.ajouter_fichiers(self.a, [SimpleUploadedFile("dce.zip", buf.getvalue())])
+        self.assertEqual(sorted(d.type for d in docs), ["CCTP", "RC"])
+        rc = next(d for d in docs if d.type == "RC")
+        self.assertIn("valeur technique", rc.texte)
+
+    def test_analyse_mockee_et_rapprochement(self):
+        DocumentDCE.objects.create(avis=self.a, nom="CCTP.txt", type="CCTP", texte="SST",
+                                   fichier=SimpleUploadedFile("CCTP.txt", b"SST"))
+        client = mock.Mock()
+        client.beta.messages.parse.return_value = SimpleNamespace(
+            stop_reason="end_turn", parsed_output=faux_resultat_analyse(), model="claude-opus-5-5"
+        )
+        an = dce.analyser(self.a, client=client)
+        self.assertEqual(an.statut, "OK")
+        kwargs = client.beta.messages.parse.call_args.kwargs
+        contenu = kwargs["messages"][0]["content"]
+        self.assertEqual(contenu[0]["type"], "document")
+        self.assertEqual(kwargs["output_format"], dce.AnalyseResultat)
+        etats = {p["piece"]: p["etat"] for p in dce.rapprocher_pieces(an)}
+        self.assertEqual(etats["Formulaire DC1"], "genere")
+        self.assertEqual(etats["Attestation de vigilance URSSAF"], "manquante")
+        self.assertEqual(etats["Planning prévisionnel"], "a_faire")
+
+    def test_analyse_erreur_enregistree(self):
+        client = mock.Mock()
+        client.beta.messages.parse.side_effect = RuntimeError("panne")
+        self.a.texte = "Formations SST pour les agents"
+        an = dce.analyser(self.a, client=client)
+        self.assertEqual(an.statut, "ERREUR")
+        self.assertIn("panne", an.erreur)
+
+    def test_memoire_mocke_et_export(self):
+        AnalyseDCE.objects.create(avis=self.a, statut="OK", resultat=faux_resultat_analyse().model_dump())
+        texte = "## Méthodologie\nDéroulé en 3 temps.\n\n| Séquence | Durée |\n|---|---|\n| Accueil | 15 min |\n\n- Point **clé**\n\n[À COMPLÉTER : nombre de sessions]"
+        message = SimpleNamespace(stop_reason="end_turn", model="claude-opus-5-5",
+                                  content=[SimpleNamespace(type="text", text=texte)])
+        flux = mock.MagicMock()
+        flux.__enter__.return_value.get_final_message.return_value = message
+        client = mock.Mock()
+        client.beta.messages.stream.return_value = flux
+        m = memoire.rediger(self.a, consignes="insister sur l'UMFI", client=client)
+        self.assertEqual(m.statut, "OK", m.erreur)
+        self.assertEqual(m.nb_a_completer, 1)
+        demande = client.beta.messages.stream.call_args.kwargs["messages"][0]["content"][-1]["text"]
+        self.assertIn("Plan imposé", demande)
+        self.assertIn("insister sur l'UMFI", demande)
+        self.assertIn("Contact unique", client.beta.messages.stream.call_args.kwargs["system"][0]["text"])
+        doc_texte = _texte_docx(memoire.vers_docx(m))
+        self.assertIn("MÉMOIRE TECHNIQUE", doc_texte)
+        self.assertIn("Accueil", doc_texte)
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.statut, "REDACTION")
+
+    def test_grille_conformite(self):
+        from openpyxl import load_workbook
+
+        AnalyseDCE.objects.create(avis=self.a, statut="OK", resultat=faux_resultat_analyse().model_dump())
+        wb = load_workbook(_io.BytesIO(memoire.grille_conformite(self.a)))
+        self.assertEqual(wb.sheetnames, ["Critères et mémoire", "Exigences", "Pièces"])
+        self.assertEqual(wb["Critères et mémoire"]["E2"].value, "Méthodologie")
+
+
+@override_settings(MEDIA_ROOT=MEDIA_TEST)
+class VuesPhase23Tests(TestCase):
+    def setUp(self):
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "x"))
+        Entreprise.objects.create(raison_sociale="FORMA'ST")
+        self.a = avis(objet="Formations SST", acheteur="Ville")
+        self.a.save()
+
+    def test_pages_et_telechargements(self):
+        for url in [f"/avis/{self.a.pk}/reponse/", "/coffre-fort/", f"/avis/{self.a.pk}/document/dc1/",
+                    f"/avis/{self.a.pk}/dossier.zip", f"/avis/{self.a.pk}/grille.xlsx"]:
+            self.assertEqual(self.client.get(url).status_code, 200, url)
+
+    def test_media_protege(self):
+        p = PieceAdministrative.objects.create(type="RIB", fichier=SimpleUploadedFile("rib.pdf", b"%PDF"))
+        self.assertEqual(self.client.get(f"/media/{p.fichier.name}").status_code, 200)
+        self.assertEqual(self.client.get("/media/../config/settings.py").status_code, 404)
+        self.client.logout()
+        self.assertEqual(self.client.get(f"/media/{p.fichier.name}").status_code, 302)
+
+    def test_lancement_analyse_en_arriere_plan(self):
+        with mock.patch("veille.views.lancer") as lancer:
+            r = self.client.post(f"/avis/{self.a.pk}/reponse/", {"action": "analyser"})
+        self.assertEqual(r.status_code, 302)
+        lancer.assert_called_once()
+        self.assertEqual(AnalyseDCE.objects.get(avis=self.a).statut, "EN_COURS")
+        self.assertContains(self.client.get(f"/avis/{self.a.pk}/reponse/"), 'http-equiv="refresh"')

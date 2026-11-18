@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from veille.models import AvisMarche, Entreprise, Formateur, Prestation, ProfilVeille, Reference
+from veille.models import AvisMarche, BlocContenu, Entreprise, Formateur, Prestation, ProfilVeille, Reference
 from veille.services import prefiltre
 
 
@@ -35,6 +35,9 @@ class Command(BaseCommand):
         for r in data.get("references", []):
             Reference.objects.update_or_create(client=r["client"], objet=r["objet"], defaults=r)
 
+        for b in data.get("blocs", []):
+            BlocContenu.objects.update_or_create(titre=b["titre"], defaults=b)
+
         pv = data.get("profil_veille")
         profil = None
         if pv:
@@ -53,6 +56,7 @@ class Command(BaseCommand):
             self.style.SUCCESS(
                 f"Profil chargé : {e} – {Prestation.objects.count()} prestations, "
                 f"{Formateur.objects.count()} formateurs, {Reference.objects.count()} références, "
+                f"{BlocContenu.objects.count()} blocs de contenu, "
                 f"profil de veille « {profil} »."
             )
         )

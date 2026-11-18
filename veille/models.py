@@ -161,6 +161,22 @@ class PieceAdministrative(models.Model):
         return self.libelle or self.get_type_display()
 
     @property
+    def statut(self):
+        j = self.jours_avant_expiration
+        if not self.fichier:
+            return "manquant"
+        if j is None:
+            return "valide"
+        if j < 0:
+            return "expire"
+        if j <= 30:
+            return "a_renouveler"
+        return "valide"
+
+    def valide_le(self, jour) -> bool:
+        return bool(self.fichier) and (self.date_expiration is None or self.date_expiration >= jour)
+
+    @property
     def jours_avant_expiration(self):
         if not self.date_expiration:
             return None
@@ -341,6 +357,9 @@ class AvisMarche(models.Model):
     responsable = models.CharField("Responsable", max_length=100, blank=True)
     decision_motif = models.TextField("Motif de la décision", blank=True)
     notes = models.TextField(blank=True)
+    lots_vises = models.CharField(
+        "Lots visés", max_length=200, blank=True, help_text="Ex. « 2, 5 ». Vide = marché global."
+    )
 
     cree_le = models.DateTimeField(auto_now_add=True)
     modifie_le = models.DateTimeField(auto_now=True)
@@ -384,3 +403,112 @@ class Collecte(models.Model):
 
     def __str__(self):
         return f"{self.source} {self.debut:%d/%m %H:%M} ({self.nb_nouveaux} nouveaux)"
+
+
+# ---------------------------------------------------------------------------
+# Réponse : DCE, analyse, bibliothèque, mémoire
+# ---------------------------------------------------------------------------
+
+
+class DocumentDCE(models.Model):
+    TYPES = [
+        ("RC", "Règlement de consultation"),
+        ("CCTP", "CCTP / cahier des charges"),
+        ("CCAP", "CCAP"),
+        ("AE", "Acte d'engagement"),
+        ("BPU", "BPU / DPGF / DQE"),
+        ("AUTRE", "Autre"),
+    ]
+
+    avis = models.ForeignKey(AvisMarche, on_delete=models.CASCADE, related_name="documents")
+    fichier = models.FileField(upload_to="dce/%Y/%m/")
+    nom = models.CharField(max_length=255)
+    type = models.CharField(max_length=10, choices=TYPES, default="AUTRE")
+    texte = models.TextField(blank=True, help_text="Texte extrait (Word, Excel, texte)")
+    nb_pages = models.PositiveIntegerField(null=True, blank=True)
+    cree_le = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["type", "nom"]
+        verbose_name = "Document du DCE"
+        verbose_name_plural = "Documents du DCE"
+
+    def __str__(self):
+        return self.nom
+
+    @property
+    def extension(self):
+        return self.nom.rsplit(".", 1)[-1].lower() if "." in self.nom else ""
+
+
+class AnalyseDCE(models.Model):
+    avis = models.OneToOneField(AvisMarche, on_delete=models.CASCADE, related_name="analyse")
+    STATUTS = [("EN_COURS", "En cours"), ("OK", "Terminé"), ("ERREUR", "Erreur")]
+    statut = models.CharField(max_length=10, choices=STATUTS, default="EN_COURS")
+    erreur = models.TextField(blank=True)
+    resultat = models.JSONField(null=True, blank=True)
+    modele = models.CharField(max_length=50, blank=True)
+    cree_le = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Analyse de DCE"
+        verbose_name_plural = "Analyses de DCE"
+
+    def __str__(self):
+        return f"Analyse – {self.avis}"
+
+
+class BlocContenu(models.Model):
+    """Bibliothèque de contenus réutilisables pour les mémoires techniques."""
+
+    CATEGORIES = [
+        ("PRESENTATION", "Présentation de la structure"),
+        ("PEDAGOGIE", "Méthodes pédagogiques"),
+        ("PROGRAMME", "Programme / contenu de formation"),
+        ("ORGANISATION", "Organisation, logistique, planification"),
+        ("EVALUATION", "Évaluation et suivi"),
+        ("MOYENS", "Moyens humains et matériels"),
+        ("QUALITE", "Qualité, réglementation"),
+        ("ACCESSIBILITE", "Accessibilité / handicap"),
+        ("RSE", "RSE / environnement"),
+        ("AUTRE", "Autre"),
+    ]
+
+    titre = models.CharField(max_length=200)
+    categorie = models.CharField(max_length=20, choices=CATEGORIES)
+    texte = models.TextField()
+    source = models.CharField(max_length=200, blank=True, help_text="Ex. réponse Picard 2026")
+    actif = models.BooleanField(default=True)
+    modifie_le = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["categorie", "titre"]
+        verbose_name = "Bloc de contenu"
+        verbose_name_plural = "Bibliothèque de contenus"
+
+    def __str__(self):
+        return self.titre
+
+
+class Memoire(models.Model):
+    avis = models.ForeignKey(AvisMarche, on_delete=models.CASCADE, related_name="memoires")
+    STATUTS = [("EN_COURS", "En cours"), ("OK", "Terminé"), ("ERREUR", "Erreur")]
+    statut = models.CharField(max_length=10, choices=STATUTS, default="EN_COURS")
+    erreur = models.TextField(blank=True)
+    contenu = models.TextField(blank=True, help_text="Markdown")
+    fichier = models.FileField(upload_to="memoires/%Y/%m/", blank=True)
+    modele = models.CharField(max_length=50, blank=True)
+    consignes = models.TextField(blank=True)
+    cree_le = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-cree_le"]
+        verbose_name = "Mémoire technique"
+        verbose_name_plural = "Mémoires techniques"
+
+    def __str__(self):
+        return f"Mémoire {self.cree_le:%d/%m %H:%M} – {self.avis.objet[:60]}"
+
+    @property
+    def nb_a_completer(self):
+        return self.contenu.count("[À COMPLÉTER")

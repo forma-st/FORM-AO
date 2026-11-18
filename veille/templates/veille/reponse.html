@@ -1,0 +1,111 @@
+{% extends "veille/base.html" %}
+{% load veille_tags %}
+{% block titre %}Réponse – {{ a.objet|truncatechars:50 }}{% endblock %}
+{% block entete %}{% if en_cours %}<meta http-equiv="refresh" content="15">{% endif %}{% endblock %}
+{% block contenu %}
+<p class="doux"><a href="{% url 'detail' a.pk %}">← Fiche de l'avis</a></p>
+<h1>Préparer la réponse</h1>
+<p><strong>{{ a.objet }}</strong><br><span class="doux">{{ a.acheteur }}{% if a.date_limite %} · date limite {{ a.date_limite|date:"d/m/Y H:i" }} (J-{{ a.jours_restants }}){% endif %}</span></p>
+
+<div class="grille">
+<div>
+
+<!-- 1. DCE -->
+<div class="carte">
+  <h2 style="margin-top:0">1. Dossier de consultation (DCE)</h2>
+  {% if documents_dce %}
+  <table>
+    <thead><tr><th>Document</th><th>Type</th><th>Pages</th><th></th></tr></thead>
+    <tbody>{% for d in documents_dce %}
+      <tr><td><a href="{{ d.fichier.url }}">{{ d.nom }}</a>{% if not d.texte and d.extension != "pdf" %}<br><span class="doux urgent">Format non lu automatiquement : enregistrez-le en PDF ou .docx</span>{% endif %}</td>
+      <td>{{ d.get_type_display }}</td><td>{{ d.nb_pages|default:"—" }}</td>
+      <td><form method="post" action="{% url 'supprimer_document' d.pk %}">{% csrf_token %}<button class="secondaire">×</button></form></td></tr>
+    {% endfor %}</tbody>
+  </table>
+  {% else %}<p class="doux">Aucun document. Déposez le ZIP du DCE téléchargé sur la plateforme de l'acheteur, ou les PDF/Word un par un. Sans document, l'analyse se fait sur le texte de l'avis.</p>{% endif %}
+  <form method="post" enctype="multipart/form-data" class="actions">{% csrf_token %}
+    <input type="file" name="fichiers" multiple accept=".zip,.pdf,.docx,.xlsx,.xlsm,.txt,.csv,.doc,.xls,.odt">
+    <button name="action" value="deposer" class="secondaire">Déposer</button>
+  </form>
+</div>
+
+<!-- 2. Analyse -->
+<div class="carte">
+  <h2 style="margin-top:0">2. Analyse du DCE (Go/No-Go détaillé)</h2>
+  {% if analyse and analyse.statut == "EN_COURS" %}<p>⏳ Analyse en cours… (la page se rafraîchit toute seule)</p>
+  {% elif analyse and analyse.statut == "ERREUR" %}<p class="urgent">Erreur : {{ analyse.erreur }}</p>{% endif %}
+  {% if r %}
+    <p><span class="score {{ r.score|couleur_score }}">{{ r.score }}</span> <strong>{{ r.recommandation|libelle_reco }}</strong> – {{ r.justification }}</p>
+    <p>{{ r.synthese }}</p>
+    <p class="doux"><strong>Durée et volumes :</strong> {{ r.duree_et_volumes }}<br>
+      <strong>Lieux et organisation :</strong> {{ r.lieux_et_organisation }}<br>
+      <strong>Prix :</strong> {{ r.forme_du_prix }}<br>
+      <strong>Date limite des offres :</strong> {{ r.date_limite_offres }} · <strong>des questions :</strong> {{ r.date_limite_questions }}<br>
+      <strong>Visite / soutenance :</strong> {{ r.visite_ou_soutenance }}</p>
+
+    {% if r.lots %}<h2>Lots</h2><ul>{% for l in r.lots %}<li>{% if l.pertinent_pour_nous %}✅{% else %}—{% endif %} <strong>Lot {{ l.numero }}</strong> : {{ l.intitule }} <span class="doux">{{ l.commentaire }}</span></li>{% endfor %}</ul>{% endif %}
+
+    <h2>Critères de jugement</h2>
+    <table><thead><tr><th>Critère</th><th>Poids</th><th>Sous-critères</th><th>Source</th></tr></thead><tbody>
+    {% for c in r.criteres_jugement %}<tr><td>{{ c.nom }}</td><td>{{ c.ponderation }}</td><td>{{ c.sous_criteres|join:" ; " }}</td><td class="doux">{{ c.source }}</td></tr>{% endfor %}
+    </tbody></table>
+
+    <h2>Exigences</h2>
+    <table><thead><tr><th>Exigence</th><th>État</th><th>Source</th></tr></thead><tbody>
+    {% for x in r.exigences %}<tr><td>{{ x.exigence }}<div class="doux">{{ x.commentaire }}</div></td><td class="etat-{{ x.statut }}">{% if x.statut == "remplie" %}Remplie{% elif x.statut == "non_remplie" %}Non remplie{% else %}À vérifier{% endif %}</td><td class="doux">{{ x.source }}</td></tr>{% endfor %}
+    </tbody></table>
+
+    {% if r.pieges_et_clauses_sensibles %}<h2>Pièges et clauses sensibles</h2><ul>{% for p in r.pieges_et_clauses_sensibles %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+    {% if r.questions_a_poser %}<h2>Questions à poser à l'acheteur</h2><ul>{% for p in r.questions_a_poser %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+    {% if r.prix_a_chiffrer %}<h2>À chiffrer</h2><ul>{% for p in r.prix_a_chiffrer %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+
+    <h2>Plan du mémoire attendu</h2>
+    <ol>{% for s in r.plan_memoire %}<li><strong>{{ s.titre }}</strong> <span class="doux">({{ s.critere_lie }} · {{ s.longueur_conseillee }})</span><ul>{% for x in s.attendus %}<li class="doux">{{ x }}</li>{% endfor %}</ul></li>{% endfor %}</ol>
+    <p><a class="bouton secondaire" href="{% url 'grille' a.pk %}">Grille de conformité (Excel)</a></p>
+  {% endif %}
+  <form method="post">{% csrf_token %}
+    <button name="action" value="analyser" {% if analyse.statut == "EN_COURS" %}disabled{% endif %}>{% if r %}Relancer l'analyse{% else %}Analyser le dossier{% endif %}</button>
+  </form>
+</div>
+
+<!-- 4. Mémoire -->
+<div class="carte">
+  <h2 style="margin-top:0">4. Mémoire technique</h2>
+  <p class="doux">Brouillon rédigé selon le plan de l'analyse (ou un plan standard), à partir du profil, de la bibliothèque de contenus et du DCE. Les informations manquantes sont signalées « [À COMPLÉTER] ».</p>
+  {% for m in memoires %}
+    <p>{% if m.statut == "OK" %}✅ <a href="{% url 'memoire_voir' m.pk %}">Brouillon du {{ m.cree_le|date:"d/m H:i" }}</a> – {{ m.nb_a_completer }} point(s) à compléter – <a href="{% url 'memoire_docx' m.pk %}">Word</a>
+       {% elif m.statut == "EN_COURS" %}⏳ Rédaction en cours (lancée le {{ m.cree_le|date:"d/m H:i" }})…
+       {% else %}<span class="urgent">Échec du {{ m.cree_le|date:"d/m H:i" }} : {{ m.erreur }}</span>{% endif %}</p>
+  {% endfor %}
+  <form method="post">{% csrf_token %}{{ form_memoire.as_p }}<button name="action" value="rediger">Rédiger un brouillon</button></form>
+</div>
+
+</div>
+<div>
+
+<!-- 3. Candidature -->
+<div class="carte">
+  <h2 style="margin-top:0">3. Dossier de candidature</h2>
+  <form method="post" class="actions">{% csrf_token %}
+    <label>Lots visés <input name="lots_vises" value="{{ a.lots_vises }}" placeholder="vide = tout le marché" size="12"></label>
+    <button name="action" value="lots" class="secondaire">OK</button>
+  </form>
+  {% if a.source == "PRIVE" %}<p class="doux">Consultation privée : pas de DC1, DC2 ni DUME (formulaires des marchés publics). Le dossier contient la présentation, les pièces du coffre-fort et le mémoire.</p>{% endif %}
+  <ul>{% for cle, nom in generateurs %}<li><a href="{% url 'document_genere' a.pk cle %}">{{ nom }}</a></li>{% endfor %}</ul>
+  <p><a class="bouton" href="{% url 'dossier_zip' a.pk %}">Télécharger le dossier complet (ZIP)</a></p>
+  <p class="doux">Le ZIP contient DC1, DC2, la déclaration sur l'honneur, la présentation, les pièces valides du coffre-fort, le dernier mémoire et une check-list.</p>
+  <h2>Pièces administratives à la date limite</h2>
+  <ul>{% for c in controles %}<li class="etat-{{ c.statut }}">{{ c.libelle }} <span class="doux">– {{ c.detail }}</span></li>{% endfor %}</ul>
+  <p><a href="{% url 'coffre_fort' %}">Gérer le coffre-fort →</a></p>
+</div>
+
+{% if pieces_demandees %}
+<div class="carte">
+  <h2 style="margin-top:0">Pièces demandées par l'acheteur</h2>
+  <ul>{% for p in pieces_demandees %}<li><span class="etat-{{ p.etat }}">{% if p.etat == "ok" %}✓{% elif p.etat == "genere" %}⚙{% else %}✗{% endif %}</span> {{ p.piece }} <span class="doux">({{ p.etape }}, {{ p.source }}) – {{ p.detail }}</span></li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+</div>
+</div>
+{% endblock %}

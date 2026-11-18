@@ -1,6 +1,6 @@
-# Veille & réponse aux appels d'offres — Cahier des charges (v0.2)
+# Veille & réponse aux appels d'offres — Cahier des charges (v0.3)
 
-Outil **interne** de FORMA'ST (non commercialisé). Objectif : **décider vite et bien où se positionner**, puis réduire au minimum le temps de constitution des dossiers.
+Outil **interne** de FORMA'ST (SARL, SIRET 899 526 305 00011, Méry-sur-Oise), non commercialisé. **Profil unique** utilisé pour toutes les réponses, y compris Picard. Objectif : **décider vite et bien où se positionner**, puis réduire au minimum le temps de constitution des dossiers.
 
 | Paramètre | Valeur retenue |
 |---|---|
@@ -91,7 +91,7 @@ Un critère éliminatoire plafonne le score à 30 et impose un No-Go. Sans clé 
 
 Prévu ensuite : recalibrer le score à partir des décisions et des résultats réels (gagné ou perdu), enregistrés dans le suivi.
 
-### 4.2 Fiche Go/No-Go détaillée sur le DCE — ⏳ phase 3
+### 4.2 Fiche Go/No-Go détaillée sur le DCE — ✅ en place
 
 On dépose le ZIP du DCE dans l'app. L'IA produit :
 - une synthèse d'une page ;
@@ -115,7 +115,7 @@ Prévu ensuite : statistiques de taux de succès par activité, type d'acheteur,
 
 ---
 
-## 6. Génération des documents — ⏳ phase 2
+## 6. Génération des documents — ✅ en place (sauf remplissage des BPU)
 
 ### Candidature
 
@@ -164,8 +164,8 @@ Le dépôt reste manuel. L'app produit un dossier prêt à déposer (arborescenc
 | Phase | Contenu | État |
 |---|---|---|
 | **P1 — Veille utile** | Profil, collecte BOAMP et TED, filtre, score IA, digest et alertes, interface et pipeline, consultations privées | ✅ livrée |
-| **P2 — Dossier administratif** | Coffre-fort avec échéances (modèle prêt), génération DC1, DC2, DC4, DUME et attestations, bibliothèque de références | ⏳ |
-| **P3 — Analyse DCE et mémoire** | Dépôt du DCE, fiche Go/No-Go détaillée, BPU, brouillon de mémoire, grille de conformité | ⏳ |
+| **P2 — Dossier administratif** | Coffre-fort avec échéances, DC1, DC2, déclaration sur l'honneur, présentation, aide DUME, dossier ZIP contrôlé à la date limite | ✅ livrée (DC4 non fait) |
+| **P3 — Analyse DCE et mémoire** | Dépôt du DCE, analyse IA détaillée, bibliothèque de contenus, brouillon de mémoire en Word, grille de conformité | ✅ livrée (remplissage des BPU à faire) |
 | **P4 — Intelligence et couverture** | DECP (score de concurrence, sortants), radar de renouvellement, collecte régulière des profils acheteurs, import des AO privés par e-mail, statistiques et recalibrage | ⏳ |
 
 ---

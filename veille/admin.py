@@ -1,6 +1,10 @@
 from django.contrib import admin
 
 from .models import (
+    AnalyseDCE,
+    BlocContenu,
+    DocumentDCE,
+    Memoire,
     AvisMarche,
     Collecte,
     Entreprise,
@@ -77,3 +81,26 @@ class AvisMarcheAdmin(admin.ModelAdmin):
 @admin.register(Collecte)
 class CollecteAdmin(admin.ModelAdmin):
     list_display = ["source", "debut", "fin", "depuis", "nb_lus", "nb_nouveaux", "nb_retenus", "erreur"]
+
+
+@admin.register(BlocContenu)
+class BlocContenuAdmin(admin.ModelAdmin):
+    list_display = ["titre", "categorie", "source", "actif", "modifie_le"]
+    list_filter = ["categorie", "actif"]
+    search_fields = ["titre", "texte"]
+
+
+@admin.register(DocumentDCE)
+class DocumentDCEAdmin(admin.ModelAdmin):
+    list_display = ["nom", "type", "avis", "nb_pages", "cree_le"]
+    list_filter = ["type"]
+
+
+@admin.register(AnalyseDCE)
+class AnalyseDCEAdmin(admin.ModelAdmin):
+    list_display = ["avis", "statut", "modele", "cree_le"]
+
+
+@admin.register(Memoire)
+class MemoireAdmin(admin.ModelAdmin):
+    list_display = ["__str__", "statut", "modele", "cree_le"]

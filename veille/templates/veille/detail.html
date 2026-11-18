@@ -8,6 +8,7 @@
   {{ a.acheteur }} · {{ a.get_source_display }} {{ a.source_id }} · {{ a.get_nature_display }}
   {% if a.url %}· <a href="{{ a.url }}" target="_blank" rel="noopener">voir l'avis officiel</a>{% endif %}
 </p>
+<p><a class="bouton" href="{% url 'reponse' a.pk %}">Préparer la réponse : DCE, analyse, dossier, mémoire →</a></p>
 
 <div class="grille">
   <div>
