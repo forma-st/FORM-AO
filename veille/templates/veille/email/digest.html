@@ -1,16 +1,25 @@
-{% load veille_tags %}<div style="font-family:Arial,sans-serif;font-size:14px;color:#1f2328;max-width:720px">
-<h2 style="color:#b3261e">Veille appels d'offres – {% now "d/m/Y" %}</h2>
-{% if avis %}<p>{{ avis|length }} appel(s) d'offres au-dessus de {{ profil.seuil_digest }}/100 :</p>
-{% for a in avis %}
-<div style="border:1px solid #e1ded8;border-radius:6px;padding:10px;margin-bottom:10px">
-  <strong style="color:#fff;background:{% if a.score >= 70 %}#1f7a3a{% elif a.score >= 45 %}#b26a00{% else %}#b3261e{% endif %};padding:2px 6px;border-radius:4px">{{ a.score }}</strong>
-  <strong>{{ a.recommandation|libelle_reco }}</strong> –
-  <a href="{{ base_url }}/avis/{{ a.pk }}/">{{ a.objet }}</a><br>
-  <span style="color:#626a73">{{ a.acheteur }}{% if a.date_limite %} · date limite {{ a.date_limite|date:"d/m/Y" }} (J-{{ a.jours_restants }}){% endif %}{% if a.montant_estime %} · {{ a.montant_estime|floatformat:0 }} € HT{% endif %}</span>
-  {% if a.resume %}<p style="margin:6px 0">{{ a.resume }}</p>{% endif %}
-  {% if a.score_details.pourquoi %}<p style="margin:6px 0;color:#626a73">{{ a.score_details.pourquoi }}</p>{% endif %}
+{% load veille_tags %}<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#16221D;max-width:680px;margin:0 auto">
+<div style="background:#16221D;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0">
+  <span style="display:inline-block;width:14px;height:14px;background:#0A7F4F;border:2px solid #fff;border-radius:3px;vertical-align:-2px"></span>
+  <strong style="font-size:17px;margin-left:6px">Veille AO</strong> <span style="color:#9FB0A8">– {% now "l j F" %}</span>
 </div>
+<div style="background:#F1F4F2;padding:18px 20px;border-radius:0 0 8px 8px">
+{% if avis %}<p style="margin:0 0 14px">{{ avis|length }} appel{{ avis|length|pluralize }} d'offres à trier (score {{ profil.seuil_digest }} et plus).</p>
+{% for a in avis %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #D8DFDB;border-radius:8px;margin-bottom:10px"><tr>
+  <td width="64" valign="top" style="padding:14px 0 14px 14px">
+    <div style="width:46px;height:46px;line-height:46px;text-align:center;border-radius:8px;font-weight:bold;font-size:20px;color:{% if a.score >= 45 and a.score < 70 %}#16221D{% else %}#fff{% endif %};background:{% if a.score >= 70 %}#0A7F4F{% elif a.score >= 45 %}#E0A100{% else %}#C62828{% endif %};box-shadow:inset 0 0 0 3px {% if a.score >= 70 %}#0A7F4F{% elif a.score >= 45 %}#E0A100{% else %}#C62828{% endif %},inset 0 0 0 5px #fff">{{ a.score }}</div>
+  </td>
+  <td valign="top" style="padding:14px">
+    <a href="{{ base_url }}/avis/{{ a.pk }}/" style="color:#16221D;font-weight:bold;font-size:16px;text-decoration:none">{{ a.objet }}</a>
+    <div style="color:#55635D;font-size:13px;margin-top:2px">{{ a.acheteur }}{% if a.date_limite %} – date limite {{ a.date_limite|date:"j F" }} ({{ a.jours_restants|j_moins }}){% endif %}{% if a.montant_estime %} – {{ a.montant_estime|euros }}{% endif %}</div>
+    {% if a.resume %}<p style="margin:8px 0 0">{{ a.resume }}</p>{% endif %}
+    {% if a.score_details.pourquoi %}<p style="margin:6px 0 0;color:#55635D;font-size:14px">{{ a.recommandation|libelle_reco }} : {{ a.score_details.pourquoi }}</p>{% endif %}
+  </td>
+</tr></table>
 {% endfor %}{% endif %}
-{% if echeances %}<h3>Dates limites proches (réponses en cours)</h3><ul>{% for a in echeances %}<li>{{ a.date_limite|date:"d/m H:i" }} – <a href="{{ base_url }}/avis/{{ a.pk }}/">{{ a.objet|truncatechars:100 }}</a></li>{% endfor %}</ul>{% endif %}
-{% if pieces %}<h3>Pièces administratives à renouveler</h3><ul>{% for p in pieces %}<li>{{ p }} – expire le {{ p.date_expiration|date:"d/m/Y" }}</li>{% endfor %}</ul>{% endif %}
+{% if echeances %}<p style="margin:18px 0 6px;font-weight:bold;color:#C62828">Dates limites dans moins de 10 jours</p><ul style="margin:0;padding-left:20px">{% for a in echeances %}<li><a href="{{ base_url }}/avis/{{ a.pk }}/reponse/" style="color:#1D5FA8">{{ a.objet|truncatechars:90 }}</a> – {{ a.date_limite|date:"j/m H\hi" }}</li>{% endfor %}</ul>{% endif %}
+{% if pieces %}<p style="margin:18px 0 6px;font-weight:bold;color:#8A6200">Pièces administratives à renouveler</p><ul style="margin:0;padding-left:20px">{% for p in pieces %}<li>{{ p }} – expire le {{ p.date_expiration|date:"j/m/Y" }}</li>{% endfor %}</ul>{% endif %}
+<p style="margin:20px 0 0"><a href="{{ base_url }}/" style="display:inline-block;background:#0A7F4F;color:#fff;padding:10px 16px;border-radius:7px;text-decoration:none;font-weight:bold">Ouvrir la veille</a></p>
+</div>
 </div>
