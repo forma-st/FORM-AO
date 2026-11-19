@@ -1,4 +1,4 @@
-# Agent d'aide à la prospection — Cahier des charges (v0.5)
+# Agent d'aide à la prospection — Cahier des charges (v0.6)
 
 Module **interne** de FORMA'ST, testé d'abord seul, puis intégré en tout ou partie au **CRM interne** (développé avec Claude Code) et à l'**application AO** (Veille AO, ce dépôt).
 
@@ -9,11 +9,14 @@ Module **interne** de FORMA'ST, testé d'abord seul, puis intégré en tout ou p
 > **v0.4** : comparatif avec Koban, Neocamino, Salesforce, HubSpot, Pipedrive, lemlist / La Growth Machine et d'autres ([BENCHMARK_PROSPECTION.md](BENCHMARK_PROSPECTION.md)) ; améliorations retenues en 3.18 ; ergonomie précisée en 7.1.
 >
 > **v0.5** : reprise du meilleur de Sellsy, Axonaut, HubSpot, Furious et Attio (3.19).
+>
+> **v0.6** : recentrage sur l'**aide à la prospection**, en outil **interne et propriétaire**. La facturation reste dans l'outil existant (relié à Penny Line) ; la charge et les tournées des formateurs restent dans **Planif ST** et l'optimiseur de tournées. Devis, rentabilité, prévisions de chiffre d'affaires et capacité retirés du périmètre (3.0 et 3.19).
 
 Maquette fonctionnelle : [`maquettes/prospection.html`](maquettes/prospection.html) (données fictives).
 
 | Paramètre | Valeur retenue (à valider) |
 |---|---|
+| Nature | **Outil interne et propriétaire** de FORMA'ST : code, données et réglages maîtrisés, hébergés chez nous, non commercialisé |
 | Objectif | Trouver, qualifier et contacter des entreprises et organismes ayant un **besoin réel** en formation santé-sécurité, puis transmettre au CRM des rendez-vous qualifiés |
 | Offre vendue | SST et MAC SST, incendie / évacuation / UMFI, gestes et postures / TMS, QVT / RPS, digital sécurité |
 | Cibles | Privé (PME et ETI multi-sites en priorité, grands comptes) et public (collectivités, établissements de santé, bailleurs) |
@@ -33,14 +36,16 @@ Maquette fonctionnelle : [`maquettes/prospection.html`](maquettes/prospection.ht
 4. **Conforme par construction (RGPD, CNIL, CGU LinkedIn).** Base légale, information, opposition et durée de conservation sont gérées par l'outil, pas par la mémoire des utilisateurs.
 5. **Zéro double saisie.** Un prospect existe une seule fois (clé SIREN / SIRET), quelles que soient ses sources. Ce qui est saisi dans l'agent remonte au CRM, et inversement.
 6. **Réutiliser l'existant.** Profil entreprise, catalogue, formateurs, références, bibliothèque de contenus, client IA, envoi d'e-mails, tâches de fond et digest de Veille AO.
-7. **Coût maîtrisé et mesuré.** Chaque appel IA et chaque crédit d'enrichissement est compté et affiché par prospect, par source et par mois.
+7. **Propriétaire et sans dépendance.** Code et données appartiennent à FORMA'ST, hébergés sur notre serveur en France. Les seuls services extérieurs sont l'API d'IA, les sources publiques et, en option, l'enrichissement de contacts ; chacun est remplaçable et l'outil fonctionne (en mode dégradé) sans eux. Pas d'abonnement SaaS par utilisateur.
+8. **Coût maîtrisé et mesuré.** Chaque appel IA et chaque crédit d'enrichissement est compté et affiché par prospect, par source et par mois.
 
 ### Ce que l'agent ne fait pas
 
 - Pas de collecte automatisée de LinkedIn (voir 3.1.3).
 - Pas d'envoi de masse : plafond quotidien par boîte d'envoi, jours ouvrés uniquement.
 - Pas de prospection vers des particuliers (B2C).
-- Pas de signature de devis ni de saisie de prix hors catalogue : le prix reste humain, comme pour les AO.
+- **Pas de devis, de facturation ni de trésorerie** : c'est le rôle de l'outil de facturation existant (relié à Penny Line), alimenté par le CRM. L'agent affiche seulement un potentiel estimé à partir des tarifs du catalogue.
+- **Pas de planification ni de charge des formateurs** : c'est le rôle de Planif ST et de l'optimiseur de tournées. L'agent peut seulement lire les sessions planifiées (3.14.6).
 
 ---
 
@@ -66,7 +71,7 @@ Chaque action est journalisée (qui, quoi, quand, avant/après). Double authenti
 | # | Source | Données utiles | Mode | Coût | Priorité |
 |---|---|---|---|---|---|
 | S1 | **Bases fournies** (fichiers clients, CCI, salons, achats de fichiers, exports d'autres outils) | Tout | Import CSV / XLSX avec correspondance des colonnes | Gratuit | **MVP** |
-| S2 | **Base clients interne / CRM** | Clients, stagiaires formés, dates de formation, devis perdus | Synchronisation CRM | Gratuit | **MVP** |
+| S2 | **Base clients interne / CRM** | Clients, stagiaires formés, dates de formation, opportunités perdues | Synchronisation CRM | Gratuit | **MVP** |
 | S3 | **API Recherche d'entreprises** (DINUM, déjà utilisée pour le profil) | SIREN, SIRET, NAF, tranche d'effectif, établissements, dirigeants, conventions collectives (IDCC), date de création, état | API publique | Gratuit | **MVP** |
 | S4 | **Veille AO** (données déjà collectées) | Acheteurs publics actifs en formation, titulaires (concurrents), attributions, avis écartés mais acheteur pertinent | Interne | Gratuit | **MVP** |
 | S5 | **BODACC** (même plateforme open data que le BOAMP) | Créations, nouveaux établissements, transferts de siège, changements de dirigeant, procédures collectives (exclusion) | API open data | Gratuit | P3 |
@@ -148,7 +153,7 @@ Trois sous-scores sur 100, combinés par des poids réglables (par défaut 45 / 
 
 - Paliers : **A** ≥ 70, **B** 50 à 69, **C** < 50. Seuls les A et B entrent dans les séquences automatiques.
 - L'IA produit une **explication en une phrase** (« Entrepôt ICPE de 240 salariés, offre d'emploi de responsable HSE il y a 6 jours, aucun contact identifié »).
-- **Recalibrage** (P4) : à partir des résultats réels (réponse, RDV, devis, gagné), proposition de nouveaux poids, appliquée seulement après validation.
+- **Recalibrage** (P4) : à partir des résultats réels (réponse, RDV, opportunité gagnée ou perdue dans le CRM), proposition de nouveaux poids, appliquée seulement après validation.
 
 ### 3.4 Signaux et déclencheurs
 
@@ -190,7 +195,6 @@ Chaque signal garde sa **source vérifiable** (lien, date, extrait). Un signal s
 | **Script d'appel** | Ouverture en 20 s, 3 questions de découverte, réponses aux 6 objections courantes (« on a déjà un prestataire », « pas de budget », « on fait en interne »…) | Adapté au segment et au rôle |
 | **Relances** | Nouvel angle à chaque étape (preuve, contenu utile, question fermée, message de fin) | Jamais « je me permets de relancer » seul |
 | **Préparation de RDV** | Fiche d'une page : contexte, besoin estimé, questions, offre à pousser, prix indicatifs du catalogue | — |
-| **Proposition express** | Devis brouillon depuis le catalogue (formation, durée, groupe, prix intra) | Envoyé au CRM pour validation, jamais au client directement |
 
 Garde-fous : rien n'est inventé (référence, chiffre, nom), toute donnée manquante est signalée `[À COMPLÉTER]` comme dans les mémoires ; liste de mots interdits (« urgent », « gratuit », promesses de résultats) ; ton réglable (direct, institutionnel pour le public, chaleureux pour la réactivation) ; l'utilisateur peut améliorer un texte par une consigne (« plus court », « insiste sur l'UMFI »).
 
@@ -233,8 +237,8 @@ Moteur **Quand → Si → Alors**, activable recette par recette, avec journal d
 4. Offre d'emploi QSE détectée → signal + tâche LinkedIn « identifier le DRH ».
 5. Avis d'attribution d'un marché de formation à un concurrent → acheteur ajouté au radar, tâche à 9 mois de l'échéance.
 6. Réponse « pas maintenant » → tâche datée + reprise automatique de la séquence à la date.
-7. RDV fixé → opportunité dans le CRM, fiche de préparation, devis brouillon, rappel la veille.
-8. Devis envoyé sans réponse à J+7 → tâche de relance téléphonique.
+7. RDV fixé → opportunité dans le CRM, fiche de préparation, rappel la veille.
+8. Opportunité perdue dans le CRM → motif noté, reprise du prospect en nurturing à 11 mois.
 9. Prospect sans interaction depuis 120 jours → passage en nurturing trimestriel.
 10. Chaque lundi 8 h → digest commercial (tâches de la semaine, nouveaux A, réponses en attente, RDV).
 11. Chaque nuit → rafraîchissement SIRENE des prospects actifs (fermeture, déménagement, effectif).
@@ -394,7 +398,7 @@ L'application AO fournit déjà : les acheteurs publics actifs, les avis d'attri
 | Compte prospect (avant qualification) | Agent | Créé dans le CRM au statut « RDV fixé » ou sur demande |
 | Compte client | CRM | Lu par l'agent (exclusion, réactivation) |
 | Contact | Agent avant transmission, CRM ensuite | Dernier modifié gagne, conflit signalé |
-| Opportunité / devis | CRM | Créée par l'agent, mise à jour par le CRM |
+| Opportunité | CRM | Créée par l'agent au RDV fixé, suivie ensuite dans le CRM (devis et facturation hors agent) |
 | Activités (e-mails, appels, notes) | Agent | Visibles dans la chronologie du CRM |
 | Formations réalisées | CRM (ou `HistoriqueFormation` en mode autonome) | Lues par l'agent pour les recyclages |
 | Opposition | Agent et CRM | Une seule liste partagée, effet immédiat |
@@ -402,6 +406,13 @@ L'application AO fournit déjà : les acheteurs publics actifs, les avis d'attri
 | Profil, catalogue, références, bibliothèque | Application AO | Lus par l'agent et, au besoin, par le CRM (API AO) |
 
 **Événements** (webhooks signés entre applications) émis par l'agent : `prospect.cree`, `prospect.qualifie`, `prospect.score_change`, `reponse.recue`, `rdv.fixe`, `opposition.enregistree`. Reçus : `client.cree`, `opportunite.gagnee`, `opportunite.perdue`, `formation.realisee`, `ao.resultat`.
+
+#### 3.14.6 Autres outils internes : ce qui reste en dehors de l'agent
+
+| Outil | Rôle | Lien avec l'agent |
+|---|---|---|
+| **Outil de facturation** (relié à Penny Line) | Devis, factures, encaissements, comptabilité | **Aucun lien direct.** Le CRM reste l'unique intermédiaire ; l'agent ne lit ni n'écrit de devis ou de factures |
+| **Planif ST** et **optimiseur de tournées** | Planning des sessions, charge et déplacements des formateurs | **Lecture seule, optionnelle (P2)** : sessions planifiées (date, lieu, prestation, client) pour proposer des prospects proches d'une session (« Autour de votre prochaine session »). L'agent ne crée ni ne modifie de session ; une demande de dates passe par le CRM ou par Planif ST |
 
 ### 3.15 Possibilités complémentaires (non demandées, recommandées)
 
@@ -416,13 +427,13 @@ L'application AO fournit déjà : les acheteurs publics actifs, les avis d'attri
 9. **Salons** (Préventica) : import des listes, séquence avant salon (prise de RDV sur le stand) et après salon.
 10. **Webinaires courts** (30 min) « DUERP et obligations de formation » : inscription = contact consentant et qualifié.
 11. **Vente additionnelle pendant les formations** : le formateur note sur une fiche mobile les besoins repérés sur site (extincteurs, autres équipes) → signal dans l'agent.
-12. **Analyse des devis perdus** : relance à 11 mois, motif de perte, prix du concurrent si connu.
+12. **Reprise des opportunités perdues** (lues dans le CRM) : motif de perte, relance à 11 mois, concurrent noté si connu.
 13. **Contenu LinkedIn hebdomadaire** proposé par l'agent (3.1.3, n° 5).
 14. **Intégration Teams** : notifications et commandes simples (« /prospect clinique des Tilleuls ») dans un canal.
 
 ### 3.16 Module de messagerie
 
-Brique commune, réutilisable plus tard par le CRM et l'application AO (envoi des digests, des devis). Les réglages précis (serveurs, domaine, comptes) seront définis plus tard ; le module est conçu pour les accepter sans changement de code.
+Brique commune, réutilisable plus tard par le CRM et l'application AO (envoi des digests). Les réglages précis (serveurs, domaine, comptes) seront définis plus tard ; le module est conçu pour les accepter sans changement de code.
 
 | Fonction | Détail |
 |---|---|
@@ -444,7 +455,7 @@ Tables ajoutées : `BoiteEnvoi` (§5), `FileEnvoi` (message, boîte, prévu_le, 
 
 En mode autonome, l'agent a sa propre table d'historique pour calculer les recyclages. En mode CRM, la même interface lit l'historique du CRM et cette table sert seulement de reprise.
 
-**Table `HistoriqueFormation`** : compte (SIREN), établissement, prestation (lien vers le catalogue), date de session, nombre de stagiaires, liste des stagiaires (nom, prénom, fonction ; facultatif), formateur, résultat (certificat SST délivré oui / non), date d'échéance calculée, source (import, saisie, CRM), facture / devis lié.
+**Table `HistoriqueFormation`** : compte (SIREN), établissement, prestation (lien vers le catalogue), date de session, nombre de stagiaires, liste des stagiaires (nom, prénom, fonction ; facultatif), formateur, résultat (certificat SST délivré oui / non), date d'échéance calculée, source (import, saisie, CRM, Planif ST), référence de la session dans Planif ST si disponible.
 
 **Règles d'échéance** (paramétrables par prestation) :
 
@@ -475,29 +486,24 @@ Détail et sources : [BENCHMARK_PROSPECTION.md](BENCHMARK_PROSPECTION.md).
 | **Contrôle avant envoi** | Note sur 100 recalculée pendant la frappe : longueur (60 à 170 mots), personnalisation, accroche sur le signal, une seule question, mots qui déclenchent les filtres anti-spam, lien d'opposition, champs entre crochets restants. En dessous de 60, l'envoi automatique est refusé | P1 |
 | **Campagnes** | Calendrier annuel des temps forts (budget de janvier, recyclages du printemps, chaleur, saisonniers, rentrée, semaine européenne de la santé et sécurité au travail en octobre, budget de fin d'année) ; préparation par l'IA (objet, e-mail, post, liste), validation, programmation. Posts LinkedIn de la semaine proposés, publiés à la main | P3 |
 | **Capture de contacts entrants** | Guide « obligations de formation par effectif », simulateur « Combien de SST vous faut-il ? », formulaires du site → prospect créé avec consentement, source et besoin chiffré | P3 |
-| **Autour de la prochaine session** | Prospects à moins de 25 km d'une formation planifiée, pour proposer un passage le même jour (géocodage des adresses SIRENE) | P2 |
+| **Autour de la prochaine session** | Prospects à moins de 25 km d'une session lue dans Planif ST, pour proposer un passage le même jour (géocodage des adresses SIRENE) | P2 |
 | **Enrichissement en cascade** | Sources gratuites d'abord (SIRENE, site web, annuaire public), puis Pappers en option (CA, dirigeants), puis service d'e-mails vérifiés ; arrêt à la première réponse fiable ; coût par contact affiché | P2 |
 | **Téléphonie** | Appel en un clic (Teams Phone ou opérateur), enchaînement d'appels, résumé du compte rendu par l'IA ; enregistrement seulement avec information et accord de la personne | P4 |
-| **Score prédictif des opportunités** | Probabilité de signature, une fois 6 mois de résultats disponibles | P4 |
 
-### 3.19 Reprises de Sellsy, Axonaut, HubSpot, Furious et Attio
+### 3.19 Reprises d'Attio et de HubSpot
 
 | Fonction | Description | Inspiration | Phase |
 |---|---|---|---|
 | **Colonnes IA** | L'utilisateur ajoute à une liste une colonne définie par une question (préréglées : angle d'approche, décideur à viser, risque incendie, plusieurs sites, prestataire actuel, financement ; ou question libre). L'IA la remplit pour chaque ligne, avec sa source, et la recalcule quand la donnée change. Filtrable et triable | Attio (attributs IA) | P2 |
 | **Force de la relation** | Par contact : aucune / faible / moyenne / forte, calculée sur les échanges (e-mails, appels, réponses, RDV) | Attio | P2 |
-| **Proposition express** | Depuis la fiche : lignes du catalogue préremplies avec le besoin estimé, quantités modifiables, remise, TVA ou exonération (art. 261-4-4° a du CGI, à confirmer pour FORMA'ST) ; jointe à l'e-mail, envoyée pour signature électronique, créée comme devis brouillon dans le CRM ; relance à J+7 | Sellsy, Axonaut, HubSpot | P2 |
-| **Rentabilité estimée** | Pour chaque proposition : jours formateur, distance depuis Méry-sur-Oise, frais, coût, marge et taux de marge ; alerte sous 25 % | Furious | P2 |
 | **Créneaux de rendez-vous** | Insertion en un clic de 3 créneaux libres de l'agenda Microsoft 365 et d'un lien de prise de RDV ; invitation Teams créée à la réservation | HubSpot (prise de RDV) | P2 |
 | **Guide de découverte** | Questions structurées pendant l'appel (SST déjà formés, dernier exercice, décideur, prestataire, financement, échéance) ; les réponses mettent à jour la fiche et l'écart de SST à former | HubSpot (guides d'appel) | P2 |
-| **Prévisions sur 6 mois** | Chiffre d'affaires signé, recyclages attendus d'après l'historique, pipeline pondéré par statut (5 % en séquence, 20 % a répondu, 35 % RDV, 50 % transmis au CRM ; à recalibrer) | Axonaut, HubSpot | P3 |
-| **Capacité des formateurs** | Jours disponibles par mois et par formateur, jours réservés, jours nécessaires selon les prévisions ; mois saturé → relances non urgentes repoussées, dates plus tardives ou sessions inter-entreprises proposées | Furious | P3 |
-| **Taux de transformation et charge d'avant-vente** | Par étape (contacté → réponse → RDV → devis → signé), temps passé par opportunité, délai jusqu'à la signature | Furious | P3 |
+| **Taux de transformation de la prospection** | Par étape (contacté → réponse → RDV → transmis au CRM), par source, segment et séquence ; temps commercial par RDV obtenu | HubSpot, Furious | P2 |
 | **Automatisations en schéma** | Chaque recette affichée en blocs Quand → Si → Alors ; éditeur visuel en P3 | Attio, HubSpot | P1 (affichage), P3 (éditeur) |
 
-Le devis officiel, l'acompte, la facture électronique et la trésorerie restent dans le **CRM** : l'agent prépare et transmet.
+**Écarté en v0.6** (déjà couvert par nos outils) : proposition chiffrée et devis, TVA, rentabilité, prévisions de chiffre d'affaires (outil de facturation relié à Penny Line, via le CRM) ; capacité et charge des formateurs (Planif ST, optimiseur de tournées).
 
-Tables ajoutées : `Proposition` (compte, lignes JSON, remise, exoneration_tva, total_ht, jours, cout_estime, marge, statut, crm_id), `CapaciteFormateur` (formateur, mois, jours_disponibles, jours_reserves), `ColonneIA` (liste, question, prompt, source, actif) et `ValeurIA` (colonne, compte, valeur, source, calculee_le).
+Tables ajoutées : `ColonneIA` (liste, question, prompt, source, actif) et `ValeurIA` (colonne, compte, valeur, source, calculee_le).
 
 ---
 
@@ -590,7 +596,6 @@ prospection/
 | Ma journée | Prochaines actions classées, objectif du jour, compte rendu de la nuit, prospects autour de la prochaine session |
 | Campagnes | Calendrier annuel, préparation et validation, posts LinkedIn de la semaine |
 | Pilote automatique | Niveau d'autonomie par activité, budget, plafond, journal |
-| Prévisions et capacité | CA sur 6 mois (signé, recyclages, pipeline pondéré), capacité des formateurs, taux de transformation |
 | Statistiques | Indicateurs, entonnoir, signaux récents, échéances, rendement des sources, coût IA |
 | Prospects | Liste filtrable (palier, segment, département, statut, signal), tri par score, actions groupées |
 | Fiche prospect | Score et explication, besoin estimé, signaux, contacts, rédaction IA par canal, historique |
@@ -627,7 +632,7 @@ prospection/
 | **P1 — MVP « base utile »** (4 semaines) | Module autonome dans le projet AO, passerelle AO locale ; Ma journée, vues enregistrées, vue en colonnes, recherche Ctrl+K, contrôle avant envoi ; import S1 avec dédoublonnage et rapprochement SIRENE, historique des formations (3.17) et recyclages, acheteurs de l'application AO S4, profil idéal, besoin estimé, score (adéquation + accessibilité), fiche, brief et messages IA (copier-coller), tâches, opposition | 15–20 j |
 | **P2 — « contacter »** (4 semaines) | Module de messagerie (3.16) avec mode test, pilote automatique et compte rendu de la nuit, passage de main, prospects autour des sessions, enrichissement en cascade, séquences e-mail + tâches LinkedIn et appels, relève et classement des réponses, 6 premières automatisations, tableau de bord, RGPD complet, enrichissement S11 (option), PostgreSQL | 15–20 j |
 | **P3 — « signaux »** (4 semaines) | Campagnes et capture de contacts entrants, BODACC, France Travail, Géorisques, annuaire public, DECP et radar, veille web, score d'intention, assistant conversationnel, recettes 3 à 14 | 15–20 j |
-| **P4 — « intégré »** | API AO, passerelle `crm_api` (dès que l'API du CRM existe, possible plus tôt), reprise des données du test, choix de l'emplacement final de l'agent, panneau dans la fiche compte du CRM, briques intégrées au choix (3.14.3), calendrier et prise de RDV, téléphonie et session d'appels, score prédictif des opportunités, recalibrage du score, simulateur web, extension navigateur (après avis juridique), Teams | 15–25 j |
+| **P4 — « intégré »** | API AO, passerelle `crm_api` (dès que l'API du CRM existe, possible plus tôt), reprise des données du test, choix de l'emplacement final de l'agent, panneau dans la fiche compte du CRM, briques intégrées au choix (3.14.3), calendrier et prise de RDV, téléphonie et session d'appels, lecture des sessions de Planif ST, recalibrage du score, simulateur web, extension navigateur (après avis juridique), Teams | 15–25 j |
 
 ---
 
@@ -670,7 +675,7 @@ Réglées : CRM interne développé avec Claude Code, **séparé de l'applicatio
 4. Bases fournies disponibles aujourd'hui (fichiers, origine, date d'achat, consentements) ?
 5. Historique des formations existant (tableur, factures, émargements) pour amorcer la table 3.17 ?
 6. Licence **Sales Navigator** en place ou envisagée ?
-7. Départements et segments prioritaires, capacité des formateurs par zone.
+7. Départements et segments prioritaires, zones couvertes par les formateurs (une lecture de Planif ST peut suffire).
 8. Budget mensuel acceptable pour l'enrichissement des contacts.
 9. Qui valide les messages, et à quel rythme (mode de validation par défaut) ?
 10. Validation juridique : extension navigateur LinkedIn, démarchage téléphonique des entrepreneurs individuels, pixels de suivi d'ouverture.

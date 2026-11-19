@@ -355,8 +355,8 @@ autos:[
  {id:4,on:true,nom:'Recrutement QSE détecté',q:'Signal « recrutement QSE »',si:'Effectif ≥ 50',alors:'Tâche LinkedIn « identifier le DRH », proposer la séquence Recrutement QSE',n:9},
  {id:5,on:true,nom:'Concurrent attributaire',q:"Avis d'attribution (Veille AO)",si:'Objet formation sécurité',alors:"Ajouter l'acheteur au radar, tâche à 9 mois de l'échéance",n:6},
  {id:6,on:true,nom:'Reprise « pas maintenant »',q:'Réponse classée « pas maintenant »',si:'Date de reprise trouvée',alors:'Tâche datée, reprise de la séquence à la date',n:8},
- {id:7,on:true,nom:'RDV fixé',q:'Statut → RDV fixé',si:'—',alors:'Créer l\'opportunité dans le CRM, fiche de préparation, devis brouillon, rappel la veille',n:7},
- {id:8,on:false,nom:'Relance devis',q:'Devis envoyé sans réponse depuis 7 jours',si:'Montant ≥ 1 000 €',alors:'Tâche de relance téléphonique',n:0},
+ {id:7,on:true,nom:'RDV fixé',q:'Statut → RDV fixé',si:'—',alors:'Créer l\'opportunité dans le CRM, fiche de préparation, rappel la veille',n:7},
+ {id:8,on:true,nom:'Reprise des opportunités perdues',q:'Webhook CRM : opportunité perdue',si:'Motif ≠ « hors cible »',alors:'Noter le motif et le concurrent, nurturing, reprise à 11 mois',n:2},
  {id:9,on:true,nom:'Passage en nurturing',q:'Aucune interaction depuis 120 jours',si:'Non opposé',alors:'Inscrire en « Nurturing trimestriel »',n:44},
  {id:10,on:true,nom:'Digest du lundi',q:'Chaque lundi à 8 h',si:'—',alors:'E-mail : tâches de la semaine, nouveaux A, réponses en attente, RDV',n:46},
  {id:11,on:true,nom:'Rafraîchissement SIRENE',q:'Chaque nuit',si:'Prospect actif',alors:'Mettre à jour effectif, adresse, état ; retirer les entreprises fermées',n:312},
@@ -409,7 +409,7 @@ file:[
  {id:3,pid:6,a:'j.petit@bergeshotels.example',obj:'Accueil sécurité de vos nouveaux salariés',quand:'26/11/2026 10:12',boite:1,st:'En pause (absence)'}
 ],
 mailTest:true, crmMode:'autonome',
-nbaDone:[], doneToday:2, aiCols:['angle'], devis:{},
+nbaDone:[], doneToday:2, aiCols:['angle'],
 niveaux:{recherche:'auto',enrich:'auto',redac:'proposer',reactiv:'auto',prospect:'proposer',linkedin:'manuel',tri:'auto',rdv:'proposer',crm:'auto'},
 limites:{budget:40,maxAuto:30},
 journal:[
@@ -434,7 +434,7 @@ chat:[], nextId:100
 };}
 
 let S;
-const KEY='prospection-maquette-v5';
+const KEY='prospection-maquette-v6';
 try{ S = JSON.parse(localStorage.getItem(KEY)) }catch(e){}
 if(!S || !S.prospects) S = seed();
 const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify(S)) }catch(e){} };
@@ -613,7 +613,6 @@ const VIEWS = [
   ['reponses','Réponses', ()=>S.replies.filter(r=>!r.done).length, 'inbox'],
   ['assistant','Assistant', null, 'spark'],
   ['tableau','Statistiques', null, 'chart'],
-  ['previsions','Prévisions et capacité', null, 'trend'],
   ['grp','Alimenter'],
   ['import','Import de bases', null, 'upload'],
   ['historique','Historique des formations', ()=>S.historique.filter(h=>echeance(h).etat!=='ok'&&!h.relance).length, 'clock'],
@@ -630,7 +629,7 @@ const VIEWS = [
   ['crm','Intégration CRM', null, 'link']
 ];
 function nav(){
-  $('#nav').innerHTML = `<div class="brand"><b>Prospection</b><span>FORMA'ST · agent commercial</span></div>` +
+  $('#nav').innerHTML = `<div class="brand"><b>Prospection</b><span>FORMA'ST · outil interne</span></div>` +
     VIEWS.map(v=> v[0]==='grp' ? `<div class="grp">${v[1]}</div>` :
       `<a href="#${v[0]}" class="${ui.view===v[0]||(ui.view==='fiche'&&v[0]==='prospects')?'on':''}"><span class="lbl">${ic(v[3])}<span>${v[1]}</span></span>${v[2]?`<span class="badge">${v[2]()}</span>`:''}</a>`).join('') +
     `<div class="foot"><kbd>Ctrl</kbd> <kbd>K</kbd> recherche · <kbd>J</kbd> <kbd>K</kbd> fiche suivante / précédente</div>`;
@@ -650,7 +649,7 @@ const esChip = es => ({verifie:'<span class="chip ok">vérifié</span>',probable
 function render(){
   nav();
   const v = ui.view;
-  const html = ({journee,previsions,tableau,prospects,fiche,taches,reponses,assistant,import:imp,historique,messagerie,campagnes,pilote,sources,sequences,automatisations,score:scoreV,conformite,crm})[v]?.() ?? journee();
+  const html = ({journee,tableau,prospects,fiche,taches,reponses,assistant,import:imp,historique,messagerie,campagnes,pilote,sources,sequences,automatisations,score:scoreV,conformite,crm})[v]?.() ?? journee();
   $('#view').innerHTML = topbar() + html;
   if(v==='fiche') majQualite();
   if(v==='assistant'){ const c=$('#chatbox'); if(c) c.scrollTop=c.scrollHeight; }
@@ -685,9 +684,10 @@ function tableau(){
       <p class="small muted">Taux de réponse 12,4 % · RDV / contactés 4,8 % · meilleure séquence : Réactivation MAC SST (35 % de réponses)</p>
     </div>
   </div>
-  <div class="grid g3">
+  <div class="grid g2e">
     <div class="card"><h2>Tâches du jour</h2><div class="list">${S.tasks.filter(t=>!t.fait&&t.ech<=0).slice(0,4).map(t=>`<div class="li"><span class="ty ${t.t==='qualifier'?'tache':t.t}">${t.t}</span><div class="grow small">${esc(t.titre)}</div></div>`).join('')}</div><a class="btn sm sec" href="#taches">Ouvrir la file</a></div>
     <div class="card"><h2>Recyclages clients à venir</h2><div class="list">${macs.map(p=>`<div class="li"><span class="dot ok"></span><div class="grow small"><a href="#" data-act="open" data-id="${p.id}">${esc(p.nom)}</a><br><span class="muted">${esc(p.signaux.find(g=>g.t==='mac').txt)}</span></div></div>`).join('')}</div></div>
+    <div class="card"><h2>Taux de transformation</h2>${[['Contacté → réponse',12.4],['Réponse → RDV',39],['RDV → transmis au CRM',82]].map(([l,v])=>`<div class="fc"><span class="small">${l}</span><div class="bar info" style="height:10px"><i style="width:${v}%"></i></div><b style="text-align:right">${String(v).replace('.',',')} %</b></div>`).join('')}<p class="small muted" style="margin:6px 0 0">Temps commercial par RDV obtenu : 2 h 40. Délai moyen du premier contact au RDV : 17 jours.</p></div>
     <div class="card"><h2>Rendement des sources</h2><table><thead><tr><th>Source</th><th>RDV</th><th>Coût / RDV</th></tr></thead><tbody>
       <tr><td>Base clients (recyclages)</td><td>4</td><td>0,90 €</td></tr><tr><td>Signaux BODACC</td><td>2</td><td>3,10 €</td></tr><tr><td>Veille AO / DECP</td><td>1</td><td>2,40 €</td></tr><tr><td>Fichier CCI</td><td>0</td><td>—</td></tr></tbody></table></div>
   </div>`;
@@ -793,7 +793,7 @@ function fiche(){
         ${p.decouverte?`<p class="small" style="margin:8px 0 0"><b>Découverte (appel) :</b> ${p.decouverte.sst!==''?`${p.decouverte.sst} SST déjà formés, écart <b>${Math.max(0,b.sst-(+p.decouverte.sst))}</b>`:'SST actuels inconnus'} · dernier exercice : ${esc(p.decouverte.exo)}${p.decouverte.presta?` · prestataire : ${esc(p.decouverte.presta)}`:''}</p>`:''}
         <p class="small muted" style="margin:8px 0 0">Hypothèses : recommandation INRS 10 à 15 %, R4224-15, R4227-39, R4541-8. Tarifs d'exemple, à remplacer par le catalogue.</p>
       </div>
-      ${devisCard(p)}
+
       <div class="card"><h2>Signaux</h2><div class="list">${p.signaux.map(g=>`<div class="li"><span class="dot info"></span><div class="grow small"><b>${SIGNAUX[g.t].l}</b> · poids ${SIGNAUX[g.t].w}, demi-vie ${SIGNAUX[g.t].hl} j<br>${esc(g.txt)}<br><span class="muted">${esc(g.src)} · ${fmt(ago(g.d))}</span></div></div>`).join('')||'<p class="small muted">Aucun signal. Le score repose sur l\'adéquation.</p>'}</div></div>
       <div class="card"><h2>Contacts</h2><div class="list">${p.contacts.map(x=>`<div class="li"><div class="grow small"><b>${esc(x.n)}</b> · ${esc(x.f)} <span class="chip">${x.role}</span> ${relation(p,x)}<br>${x.email?esc(x.email):'<span class="muted">e-mail inconnu</span>'} ${esChip(x.es)}${x.tel?'<br>'+esc(x.tel):''}</div></div>`).join('')||'<p class="small muted">Aucun contact. Lancez l\'enrichissement ou ajoutez-en un.</p>'}</div>
         <div class="row" style="margin-top:6px"><input type="text" id="nc-n" placeholder="Nom" style="flex:1;min-width:110px"><input type="text" id="nc-f" placeholder="Fonction" style="flex:1;min-width:110px"><button class="btn sm sec" data-act="addc">Ajouter</button></div></div>
@@ -849,51 +849,6 @@ const AICOLS={
 };
 /* ---- Force de la relation (inspiré d'Attio) ---- */
 function relation(p,c){ const n=p.hist.length, rep=S.replies.some(r=>r.pid===p.id&&r.de===c.n&&r.cl!=='Opposition'); const lvl = c.es==='bloque'?['bad','opposé'] : rep&&n>=2?['ok','forte'] : rep||n>=2?['info','moyenne'] : n?['warn','faible'] : ['','aucune']; return `<span class="chip ${lvl[0]}" title="Calculée d'après les échanges (e-mails, appels, réponses)">relation ${lvl[1]}</span>`; }
-/* ---- Proposition express (inspiré de Sellsy, Axonaut, HubSpot ; rentabilité inspirée de Furious) ---- */
-const CATA={sst:{l:'SST initial · 2 j, 4 à 10 pers.',pu:1450,j:2},mac:{l:'MAC SST · 1 j',pu:820,j:1},gp:{l:'Gestes et postures · 1 j',pu:980,j:1},evac:{l:"Exercice d'évacuation · ½ j",pu:690,j:.5},ext:{l:'Extincteurs sur feux réels (UMFI) · ½ j',pu:750,j:.5}};
-const BASE=[49.06,2.19]; // Méry-sur-Oise
-function devisDe(p){ if(!S.devis[p.id]){ const b=besoin(p); S.devis[p.id]={q:{sst:p.client?0:Math.min(b.sSess,6),mac:p.client?Math.ceil(b.sSess/2):0,gp:Math.min(b.gSess,6),evac:Math.min(b.exo,4),ext:p.icpe?1:0},remise:0,exo:true}; } return S.devis[p.id]; }
-function calcDevis(p){ const d=devisDe(p); let ht=0,jours=0,sess=0; for(const [k,q] of Object.entries(d.q)){ ht+=q*CATA[k].pu; jours+=q*CATA[k].j; sess+=q; }
-  const rem=ht*d.remise/100, net=ht-rem, tva=d.exo?0:net*.2; const dist=COORDS[p.ville]?km(BASE,COORDS[p.ville]):300;
-  const cout=jours*380+sess*dist*2*0.45; const marge=net-cout; return {ht,rem,net,tva,ttc:net+tva,jours,sess,dist,cout,marge,pct:net?Math.round(marge/net*100):0}; }
-function devisCard(p){ const d=devisDe(p), c=calcDevis(p);
-  return `<div class="card"><div class="row between"><h2>Proposition express</h2><span class="small muted">depuis le catalogue</span></div>
-  <div class="tw"><table class="dv"><thead><tr><th>Prestation</th><th>Qté</th><th>Total HT</th></tr></thead><tbody>${Object.entries(CATA).map(([k,v])=>`<tr><td class="small">${v.l}<div class="muted">${eur(v.pu)} la session</div></td><td><input type="number" min="0" max="50" id="dq-${k}" data-dq="${k}" value="${d.q[k]}" aria-label="Quantité ${esc(v.l)}"></td><td class="small">${eur(d.q[k]*v.pu)}</td></tr>`).join('')}</tbody></table></div>
-  <div class="row" style="margin-top:8px"><label class="f">Remise %<input type="number" min="0" max="30" id="dv-rem" data-dv="remise" value="${d.remise}" style="width:70px"></label><label class="row small" style="align-self:flex-end"><input type="checkbox" id="dv-exo" data-dv="exo" ${d.exo?'checked':''}> Exonéré de TVA (art. 261-4-4° a du CGI, à confirmer)</label></div>
-  <div class="tot"><span>Total HT</span><b>${eur(c.ht)}</b>${c.rem?`<span>Remise</span><b>− ${eur(c.rem)}</b>`:''}<span>TVA</span><b>${c.tva?eur(c.tva):'exonéré'}</b><span><b style="text-align:left">Total à payer</b></span><b>${eur(c.ttc)}</b></div>
-  <div class="confirm small" style="margin-top:10px"><b>Rentabilité estimée</b> : ${String(c.jours).replace('.',',')} jour${c.jours>1?'s':''} formateur, ${Math.round(c.dist)} km depuis Méry-sur-Oise · coûts ${eur(c.cout)} · marge <b>${eur(c.marge)}</b> <span class="chip ${c.pct>=45?'ok':c.pct>=25?'warn':'bad'}">${c.pct} %</span></div>
-  <div class="row" style="margin-top:10px"><button class="btn sm" data-act="devcrm">Créer le devis dans le CRM</button><button class="btn sm sec" data-act="devmail">Joindre à l'e-mail</button><button class="btn sm sec" data-act="devsign">Envoyer pour signature</button></div>
-  <p class="small muted" style="margin:6px 0 0">Tarifs, coût formateur (380 €/j) et frais (0,45 €/km) d'exemple. Le devis officiel, l'acompte et la facture restent dans le CRM.</p></div>`; }
-
-/* ---- Prévisions et capacité (inspiré d'Axonaut, HubSpot et Furious) ---- */
-const MOIS=['Déc. 2026','Janv. 2027','Févr. 2027','Mars 2027','Avr. 2027','Mai 2027'];
-function previsions(){
-  const signe=[8200,6400,3100,1800,600,0], reserve=[22,26,9,6,2,0], dispo=32;
-  const rec=MOIS.map(()=>0);
-  S.historique.forEach(h=>{ const e=echeance(h); const m=(e.d.getFullYear()-2026)*12+e.d.getMonth()-11; if(m>=0&&m<6){ const cat=/MAC|SST/.test(h.prest)?CATA.mac:/vacuation/.test(h.prest)?CATA.evac:/xtinct/.test(h.prest)?CATA.ext:CATA.gp; rec[m]+=Math.ceil(h.n/10)*cat.pu; } });
-  const P={'En séquence':.05,'A répondu':.2,'RDV fixé':.35,'Transmis au CRM':.5}, pond=MOIS.map(()=>0);
-  S.prospects.forEach(p=>{ const w=P[p.statut]; if(!w) return; const v=besoin(p).an1*w; pond[1]+=v*.4; pond[2]+=v*.35; pond[3]+=v*.25; });
-  const tot=MOIS.map((_,i)=>signe[i]+rec[i]+pond[i]), max=Math.max(...tot,1);
-  const besoinJ=MOIS.map((_,i)=>Math.round(reserve[i]+(rec[i]+pond[i])/720));
-  return head('Prévisions et capacité','Chiffre d\'affaires attendu sur 6 mois et jours formateurs nécessaires : ne pas vendre ce qu\'on ne peut pas assurer.') + `
-  <div class="kpis">
-    <div class="kpi"><span class="l">Signé à réaliser</span><span class="v">${eur(signe.reduce((a,b)=>a+b))}</span></div>
-    <div class="kpi"><span class="l">Recyclages attendus</span><span class="v">${eur(rec.reduce((a,b)=>a+b))}</span><span class="small muted">depuis l'historique</span></div>
-    <div class="kpi"><span class="l">Pipeline pondéré</span><span class="v">${eur(pond.reduce((a,b)=>a+b))}</span><span class="small muted">probabilité par statut</span></div>
-    <div class="kpi"><span class="l">Mois saturés</span><span class="v" style="color:${besoinJ.some(j=>j>dispo)?'var(--bad)':'var(--ok)'}">${besoinJ.filter(j=>j>dispo).length}</span><span class="small muted">au-delà de ${dispo} j / mois</span></div>
-  </div>
-  <div class="card"><div class="row between"><h2>Chiffre d'affaires par mois</h2><div class="leg"><span><i style="background:var(--ok)"></i>Signé</span><span><i style="background:var(--info)"></i>Recyclages</span><span><i style="background:var(--warn)"></i>Pipeline pondéré</span></div></div>
-    ${MOIS.map((m,i)=>`<div class="fc"><span>${m}</span><div class="stack" style="width:${Math.max(4,tot[i]/max*100)}%" title="${eur(tot[i])}"><i style="width:${signe[i]/tot[i]*100||0}%;background:var(--ok)"></i><i style="width:${rec[i]/tot[i]*100||0}%;background:var(--info)"></i><i style="width:${pond[i]/tot[i]*100||0}%;background:var(--warn)"></i></div><b style="text-align:right">${eur(tot[i])}</b></div>`).join('')}</div>
-  <div class="grid g2e">
-    <div class="card"><h2>Capacité des formateurs</h2><p class="small muted" style="margin-top:0">2 formateurs · ${dispo} jours disponibles par mois (exemple)</p>
-      ${MOIS.map((m,i)=>`<div class="fc"><span>${m}</span><div class="bar ${besoinJ[i]>dispo?'':besoinJ[i]>dispo*.8?'warn':'ok'}" style="height:10px"><i style="width:${Math.min(100,besoinJ[i]/dispo*100)}%"></i></div><span class="small">${besoinJ[i]} / ${dispo} j ${besoinJ[i]>dispo?'<span class="chip bad">saturé</span>':''}</span></div>`).join('')}
-      <p class="small muted">Si un mois sature, l'agent repousse les relances non urgentes et propose des dates plus tard ou une session inter-entreprises.</p></div>
-    <div class="card"><h2>Taux de transformation</h2>
-      ${[['Contacté → réponse',12.4],['Réponse → RDV',39],['RDV → devis',70],['Devis → signé',45]].map(([l,v])=>`<div class="fc"><span class="small">${l}</span><div class="bar info" style="height:10px"><i style="width:${v}%"></i></div><b style="text-align:right">${String(v).replace('.',',')} %</b></div>`).join('')}
-      <p class="small muted">Charge d'avant-vente moyenne : 3 h 10 par opportunité (appels, RDV, devis). Délai moyen du premier contact à la signature : 38 jours.</p></div>
-  </div>`;
-}
-
 /* ---- Ma journée ---- */
 const COORDS={'Cergy':[49.036,2.063],'Eaubonne':[48.992,2.278],'Nantes':[47.218,-1.554],'Beauvais':[49.43,2.081],'Sarcelles':[48.997,2.378],'Paris':[48.857,2.352],'Crépy-en-Valois':[49.234,2.888],'Gonesse':[48.987,2.449],'Argenteuil':[48.947,2.248],'Créteil':[48.79,2.455],'Versailles':[48.805,2.12],'Saint-Denis':[48.936,2.357],'Roissy-en-France':[49.004,2.517],'Nanterre':[48.892,2.207],'Chartres':[48.446,1.489],'Lille':[50.629,3.057],'Pontoise':[49.051,2.101],'Rouen':[49.443,1.1],'Meaux':[48.96,2.879],'Rungis':[48.747,2.35],'Taverny':[49.026,2.222],'Poissy':[48.929,2.046]};
 function km(a,b){ const R=6371, t=x=>x*Math.PI/180, dl=t(b[0]-a[0]), dg=t(b[1]-a[1]); const h=Math.sin(dl/2)**2+Math.cos(t(a[0]))*Math.cos(t(b[0]))*Math.sin(dg/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
@@ -920,7 +875,7 @@ function journee(){
       <div class="card"><div class="row between"><h2>Objectif du jour</h2><b>${S.doneToday} / ${goal}</b></div><div class="prog" style="margin-top:8px"><i style="width:${pct}%"></i></div>
         <p class="small muted" style="margin:8px 0 0">Cette semaine : 2 RDV fixés sur 3 visés · 5 réponses · 41 e-mails partis.</p></div>
       <div class="card"><h2>Cette nuit, l'agent a…</h2><div class="list night">${S.journal.map(j=>`<div class="li"><span class="muted">${ic(j.ic)}</span><div class="grow small"><b>${j.h}</b> · ${esc(j.txt)}</div></div>`).join('')}</div><a class="small" href="#pilote">Régler ce qu'il fait seul</a></div>
-      <div class="card"><div class="row" style="gap:6px">${ic('pin')}<h2>Autour de votre prochaine session</h2></div><p class="small" style="margin:4px 0 8px">${SESSION.quand} · ${SESSION.quoi} · ${esc(SESSION.ou)}. Prospects à moins de 25 km : proposez un passage le même jour.</p>
+      <div class="card"><div class="row" style="gap:6px">${ic('pin')}<h2>Autour de votre prochaine session</h2></div><p class="small" style="margin:4px 0 8px">${SESSION.quand} · ${SESSION.quoi} · ${esc(SESSION.ou)}. Session lue dans Planif ST. Prospects à moins de 25 km : proposez un passage le même jour.</p>
         <div class="list">${near.map(({p,d})=>`<div class="li"><div class="grow small"><a href="#" data-act="open" data-id="${p.id}"><b>${esc(p.nom)}</b></a><br><span class="muted">${esc(p.ville)} · ${Math.round(d)} km · ${esc(p.statut)}</span></div>${tierChip(score(p))}</div>`).join('')}</div></div>
     </div>
   </div>`;
@@ -1330,7 +1285,11 @@ function crm(){
       <div class="kpi" style="border-color:var(--accent)"><span class="l">Agent de prospection</span><b>Prospects, score, signaux, séquences, messagerie, tâches</b><span class="small muted">Test : dans le projet AO · cible : dans le CRM</span></div>
       <div class="kpi"><span class="l">CRM interne (séparé)</span><b>Clients, contacts, opportunités, formations réalisées</b><span class="small muted">API CRM en lecture et écriture · webhooks</span></div>
     </div>
-    <p class="small muted" style="margin:8px 0 0">Clé commune : SIREN. Jeton par application, webhooks signés et rejouables sans doublon, liste d'opposition synchronisée dans les deux sens.</p></div>
+    <p class="small muted" style="margin:8px 0 0">Clé commune : SIREN. Jeton par application, webhooks signés et rejouables sans doublon, liste d'opposition synchronisée dans les deux sens.</p>
+    <div class="grid g2e" style="margin-top:10px">
+      <div class="kpi"><span class="l">Planif ST et optimiseur de tournées</span><b>Lecture seule, en option</b><span class="small muted">Sessions planifiées (date, lieu, client) pour proposer des prospects proches. Planning et charge des formateurs restent dans Planif ST.</span></div>
+      <div class="kpi"><span class="l">Outil de facturation (relié à Penny Line)</span><b>Hors périmètre</b><span class="small muted">Devis, factures et encaissements passent par le CRM et l'outil de facturation. L'agent n'y accède pas.</span></div>
+    </div></div>
   <div class="grid g2">
     <div class="card"><h2>Aperçu du panneau intégré (niveau 3)</h2>
       <div class="crm"><div class="h">CRM interne › Comptes › ${esc(p.nom)}</div><div style="padding:12px" class="grid g2e">
@@ -1347,7 +1306,7 @@ function crm(){
     <tr><td>Compte prospect</td><td>Compte (statut prospect)</td><td>Agent</td><td>→ au RDV fixé ou sur demande</td></tr>
     <tr><td>Compte client</td><td>Compte client</td><td>CRM</td><td>← lecture (exclusion, recyclages)</td></tr>
     <tr><td>Contact</td><td>Contact</td><td>Agent puis CRM</td><td>↔ dernier modifié gagne, conflit signalé</td></tr>
-    <tr><td>Proposition express</td><td>Opportunité / devis brouillon</td><td>CRM</td><td>→ création, ← mise à jour</td></tr>
+    <tr><td>Prospect qualifié (RDV fixé)</td><td>Opportunité</td><td>CRM</td><td>→ création, ← gagnée / perdue</td></tr>
     <tr><td>E-mails, appels, notes</td><td>Activités (chronologie)</td><td>Agent</td><td>→</td></tr>
     <tr><td>Formations réalisées</td><td>Sessions / stagiaires</td><td>CRM</td><td>← (dates de MAC SST)</td></tr>
     <tr><td>Opposition</td><td>Opposition / désabonnement</td><td>Les deux</td><td>↔ immédiat</td></tr></tbody></table></div>
@@ -1431,9 +1390,6 @@ document.addEventListener('click',e=>{
     case 'pal': openPal(); break;
     case 'delai': S.aiCols=S.aiCols.filter(x=>x!==k); save(); render(); break;
     case 'slots': { const t=$('#g-out'); const ins="\n\nJe vous propose trois créneaux de 20 minutes (Teams ou téléphone) :\n· jeudi 26/11 à 10 h\n· vendredi 27/11 à 14 h 30\n· lundi 30/11 à 11 h\nOu choisissez directement le vôtre : [lien de prise de rendez-vous]"; const v=t.value; const pos=v.indexOf('\n\nBien cordialement'); t.value= pos>0? v.slice(0,pos)+ins+v.slice(pos) : v+ins; ui.gen.texte=t.value; majQualite(); toast('Créneaux libres de votre agenda Microsoft 365 insérés.'); break; }
-    case 'devcrm': { const c=calcDevis(p); addHist(p,`Devis brouillon créé dans le CRM : ${eur(c.ttc)}, ${c.sess} sessions`); crmLog('devis.cree',`${p.nom} · ${eur(c.ttc)}`); save(); render(); toast('Devis brouillon créé dans le CRM, avec le besoin estimé et le brief.'); break; }
-    case 'devmail': { const c=calcDevis(p); const wasEmail=ui.canal==='email'; ui.canal='email'; if(!wasEmail||!ui.gen) ui.gen=gen(p,mainContact(p),'email',ui.ton,ui.consigne); const ins=`\n\nVous trouverez ci-joint une proposition pour ${c.sess} session${c.sess>1?'s':''} (${String(c.jours).replace('.',',')} jour${c.jours>1?'s':''} de formation), soit ${eur(c.ttc)}${calcDevis(p).tva?' TTC':' (exonéré de TVA)'}. Elle est ajustable à vos effectifs et à vos dates.`; const pos=ui.gen.texte.indexOf('\n\nBien cordialement'); ui.gen.texte = pos>0? ui.gen.texte.slice(0,pos)+ins+ui.gen.texte.slice(pos) : ui.gen.texte+ins; render(); toast('Proposition jointe au brouillon d\'e-mail (PDF généré à l\'envoi).'); break; }
-    case 'devsign': { addHist(p,'Proposition envoyée pour signature électronique ; relance automatique à J+7'); save(); render(); toast('Lien de signature envoyé. Relance prévue à J+7 si non signé.'); break; }
     case 'theme': toggleTheme(); break;
     case 'pview': ui.pview=k; render(); break;
     case 'sv': { ui.sv=k; const f={q:'',tier:'',seg:'',dep:'',statut:'',sig:false,nc:false}; if(k==='mesA') f.tier='A'; if(k==='signaux') f.sig=true; if(k==='sanscontact') f.nc=true; if(k==='public') f.seg='collectivite'; if(k==='clients') f.statut='Client'; ui.filt=f; render(); break; }
@@ -1458,8 +1414,6 @@ document.addEventListener('change',e=>{
   if(el.dataset.filt){ const k=el.dataset.filt; ui.filt[k]= el.type==='checkbox'?el.checked:el.value; if(k!=='q') render(); return; }
   if(el.dataset.w){ const k=el.dataset.w; S.weights[k]= k==='prio'?el.value:+el.value; save(); render(); return; }
   if(el.dataset.lim){ S.limites[el.dataset.lim]=+el.value; save(); render(); return; }
-  if(el.dataset.dq){ const d=devisDe(byId(ui.pid)); d.q[el.dataset.dq]=Math.max(0,+el.value||0); save(); render(); return; }
-  if(el.dataset.dv){ const d=devisDe(byId(ui.pid)); if(el.dataset.dv==='exo') d.exo=el.checked; else d.remise=Math.min(30,Math.max(0,+el.value||0)); save(); render(); return; }
   switch(a){
     case 'sel': { const id=+el.dataset.id; el.checked?ui.sel.add(id):ui.sel.delete(id); render(); break; }
     case 'selall': filtered().forEach(({p})=> el.checked?ui.sel.add(p.id):ui.sel.delete(p.id)); render(); break;

@@ -50,29 +50,28 @@ But : situer l'agent FORMA'ST face aux outils du marché, reprendre leurs meille
 | 10 | **Capture de contacts entrants** : guide à télécharger, simulateur « Combien de SST ? », formulaires | Koban, Neocamino, HubSpot | Formulaires sur le site de FORMA'ST → prospect créé avec consentement et besoin chiffré | Campagnes (février) | P3 |
 | 11 | **Scoring comportemental** du site web (après consentement aux cookies) | Koban (suivi des visiteurs) | Signal « intérêt sur le site » ; uniquement pour les visiteurs identifiés qui ont consenti | Signal existant | P4 |
 | 12 | **Tests A/B** d'objets et d'accroches | lemlist, La Growth Machine | Déjà prévu en §3.7 ; résultats par étape | — | P2 |
-| 13 | **Prospects autour d'une session** | Spécifique FORMA'ST | « Autour de votre prochaine session » : prospects à moins de 25 km d'une formation prévue, pour un passage le même jour | ✅ | P2 |
+| 13 | **Prospects autour d'une session** | Spécifique FORMA'ST | « Autour de votre prochaine session » : prospects à moins de 25 km d'une session lue dans Planif ST, pour un passage le même jour | ✅ | P2 |
 | 14 | **Enrichissement en cascade** | Outils d'enrichissement | Sources gratuites d'abord (SIRENE, site web, annuaire public), puis Pappers pour le CA et les dirigeants, puis service d'e-mails vérifiés ; arrêt dès qu'une source répond ; coût affiché | — | P2 |
 | 15 | **Téléphonie intégrée** : appel en un clic, enchaînement, résumé par l'IA | Ringover, Aircall, Modjo | Session d'appels (déjà en maquette) ; P4 : appel depuis le navigateur via Microsoft Teams Phone ou un opérateur, résumé IA avec information des personnes appelées | Session d'appels ✅ | P4 |
-| 16 | **Du devis à la facture** | Sellsy, Axonaut, Koban | Proposition express → devis dans le CRM ; facturation laissée au CRM | — | P4 |
-| 17 | **Score prédictif des affaires** | HubSpot, Salesforce | Probabilité de signature d'une opportunité (âge, réponses, montant, segment) après 6 mois de données | — | P4 |
+| 16 | ~~Du devis à la facture~~ | Sellsy, Axonaut, Koban | **Hors périmètre** : outil de facturation existant relié à Penny Line | — | — |
+| 17 | ~~Score prédictif des affaires~~ | HubSpot, Salesforce | **Hors périmètre** : le suivi des opportunités reste dans le CRM | — | — |
 | 18 | **Thème clair / sombre**, interface utilisable sur mobile | Standard | Bascule de thème, file du jour et fiche lisibles sur téléphone | ✅ | P1 |
 
 ---
 
-## 3 bis. Le meilleur de Sellsy, Axonaut, HubSpot, Furious et Attio
+## 3 bis. Sellsy, Axonaut, HubSpot, Furious et Attio
 
-| Outil | Ce qu'il fait le mieux | Repris dans l'agent | Où | Maquette | Phase |
-|---|---|---|---|---|---|
-| **Sellsy** (FR) | Du devis à la facture dans un seul outil ; pipeline à étapes personnalisables ; relances automatiques ; plateforme agréée pour la facture électronique ; IA (Mistral) | **Proposition express** : devis brouillon depuis le catalogue et le besoin estimé, joint à l'e-mail, envoyé au CRM ; relance automatique du devis à J+7 | Agent → CRM (le devis officiel et la facture restent dans le CRM) | ✅ Fiche | P2 |
-| **Axonaut** (FR) | Tout-en-un pour TPE : devis personnalisés rapides, acomptes, facturation à l'avancement, trésorerie prévisionnelle reliée à la banque | **Prévisions** sur 6 mois : signé, recyclages attendus (historique), pipeline pondéré ; acomptes et facturation laissés au CRM | Agent (prévision) / CRM (facturation) | ✅ Prévisions | P3 |
-| **HubSpot** | Lien de prise de RDV relié à l'agenda Office ; **guides d'appel** (playbooks) qui remplissent la fiche ; devis à modèles ; séquences déclenchées par les automatisations ; chronologie unique | **Insérer 3 créneaux** libres + lien de RDV dans l'e-mail ; **guide de découverte** dans la session d'appels (SST déjà formés, dernier exercice, décideur, prestataire, financement, échéance) qui recalcule l'écart à former | Agent | ✅ Fiche, session d'appels | P2 |
-| **Furious** (FR) | ERP des sociétés de services : charge d'avant-vente, taux de transformation, **rentabilité par projet en temps réel**, alertes de charge | **Rentabilité estimée** de chaque proposition (jours formateur, déplacement depuis Méry-sur-Oise, marge) ; **capacité des formateurs** par mois avec alerte de saturation ; taux de transformation par étape et charge d'avant-vente | Agent | ✅ Fiche, Prévisions | P3 |
-| **Attio** | **Attributs IA** (une question → une colonne remplie par l'IA pour chaque ligne), listes de travail, modèle de données souple, **force de la relation**, automatisations sur un canevas visuel, assistant « Ask Attio » | **Colonnes IA** dans la liste (angle d'approche, décideur à viser, risque incendie, multi-sites, prestataire actuel, financement), avec leur source ; **force de la relation** par contact ; automatisations affichées en schéma Quand → Si → Alors ; l'assistant existe déjà | Agent | ✅ Prospects, fiche, automatisations | P1–P2 |
+L'agent est un **outil interne et propriétaire, centré sur l'aide à la prospection**. Les fonctions de gestion déjà couvertes par nos outils ne sont pas reprises :
+- devis, facturation, trésorerie → outil de facturation existant, relié à Penny Line ;
+- charge, planning et tournées des formateurs → Planif ST et l'optimiseur de tournées.
 
-Règles de transposition :
-- **Le CRM garde la facturation** (devis officiel, acompte, facture électronique, trésorerie) : Sellsy et Axonaut montrent que c'est un métier à part, soumis à la réforme de la facture électronique. L'agent prépare, le CRM émet.
-- **Les colonnes IA citent leur source** et sont recalculées quand la donnée change ; elles ne servent jamais à écrire un fait dans un message sans vérification.
-- **La capacité prime sur le pipeline** : un mois saturé déclenche le report des relances non urgentes plutôt que des promesses intenables.
+| Outil | Ce qu'il fait le mieux | Repris dans l'agent | Maquette | Phase |
+|---|---|---|---|---|
+| **Attio** | Attributs IA (une question → une colonne remplie par l'IA pour chaque ligne), listes de travail, force de la relation, automatisations sur un canevas visuel | **Colonnes IA** avec leur source ; **force de la relation** par contact ; automatisations en schéma Quand → Si → Alors | ✅ Prospects, fiche, automatisations | P1–P2 |
+| **HubSpot** | Lien de prise de RDV relié à l'agenda Office ; guides d'appel qui remplissent la fiche ; séquences déclenchées par les automatisations | **3 créneaux libres** + lien de RDV insérés dans l'e-mail ; **guide de découverte** dans la session d'appels | ✅ Fiche, session d'appels | P2 |
+| **Furious** | Taux de transformation et charge d'avant-vente | **Taux de transformation de la prospection** dans Statistiques (la charge des formateurs reste dans Planif ST) | ✅ Statistiques | P2 |
+| **Sellsy** | Du devis à la facture, facture électronique | Non repris : outil de facturation existant | — | — |
+| **Axonaut** | Devis, acomptes, trésorerie prévisionnelle | Non repris : outil de facturation existant | — | — |
 
 ## 4. Idées écartées
 
