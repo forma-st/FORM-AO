@@ -1,3 +1,4 @@
+import os
 from datetime import timedelta
 from types import SimpleNamespace
 from unittest import mock
@@ -10,6 +11,11 @@ from django.utils import timezone
 from .models import AvisMarche, Entreprise, Prestation, ProfilVeille
 from .services import boamp, digest, prefiltre, scoring, ted
 from .services.texte import mots_cles_trouves, normaliser
+
+
+# Les tests ne doivent jamais appeler la vraie API Claude.
+for _cle in ("VEILLE_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY"):
+    os.environ.pop(_cle, None)
 
 
 def profil(**kw):
@@ -587,3 +593,65 @@ class ProfilTests(TestCase):
         # redirection externe refusée
         r = self.client.post("/profil/?suivant=//evil.example", {"email": "ao@forma-st.fr"})
         self.assertRedirects(r, "/profil/", fetch_redirect_response=False)
+
+
+# ---------------------------------------------------------------------------
+# Ergonomie : tri en un clic, onglets, collecte, mémoire modifiable, connexion
+# ---------------------------------------------------------------------------
+
+
+@override_settings(MEDIA_ROOT=MEDIA_TEST)
+class ErgonomieTests(TestCase):
+    def setUp(self):
+        self.client.force_login(User.objects.create_superuser("matthieu", "m@example.com", "x"))
+        Entreprise.objects.create(raison_sociale="FORMA'ST")
+        p = profil()
+        self.a = avis(objet="Formations SST", acheteur="Ville", profil=p, prefiltre_ok=True, score=80, statut="A_QUALIFIER")
+        self.a.save()
+
+    def test_tri_en_un_clic_et_onglets(self):
+        r = self.client.get("/?onglet=a_trier")
+        self.assertContains(r, "Formations SST")
+        r = self.client.post(f"/avis/{self.a.pk}/decider/", {"decision": "NO_GO", "motif": "trop loin", "suivant": "/?onglet=a_trier"})
+        self.assertRedirects(r, "/?onglet=a_trier", fetch_redirect_response=False)
+        self.a.refresh_from_db()
+        self.assertEqual((self.a.statut, self.a.decision_motif), ("NO_GO", "trop loin"))
+        self.assertNotContains(self.client.get("/?onglet=a_trier"), 'class="ligne-titre"')  # hors du message flash
+        self.assertContains(self.client.get("/?onglet=ecartes"), "Formations SST")
+        self.client.post(f"/avis/{self.a.pk}/decider/", {"decision": "GO"})
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.statut, "GO")
+        # la recherche couvre tous les onglets
+        self.assertContains(self.client.get("/?q=SST"), "Formations SST")
+        # redirection externe refusée
+        r = self.client.post(f"/avis/{self.a.pk}/decider/", {"decision": "GO", "suivant": "https://evil.example/"})
+        self.assertRedirects(r, "/", fetch_redirect_response=False)
+
+    def test_changer_statut_pipeline(self):
+        self.client.post(f"/avis/{self.a.pk}/statut/", {"statut": "DEPOSE"})
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.statut, "DEPOSE")
+        self.assertContains(self.client.get("/pipeline/"), "Formations SST")
+        self.assertEqual(self.client.post(f"/avis/{self.a.pk}/statut/", {"statut": "N_IMPORTE"}).status_code, 404)
+
+    def test_collecter_maintenant_en_arriere_plan(self):
+        with mock.patch("veille.views.lancer") as lancer:
+            r = self.client.post("/collecter/")
+        self.assertEqual(r.status_code, 302)
+        lancer.assert_called_once()
+
+    def test_memoire_modifiable(self):
+        m = Memoire.objects.create(avis=self.a, statut="OK", contenu="## Section\n[À COMPLÉTER : durée]")
+        r = self.client.post(f"/memoire/{m.pk}/", {"contenu": "## Section\nDurée : 3h30."})
+        self.assertEqual(r.status_code, 302)
+        m.refresh_from_db()
+        self.assertEqual(m.nb_a_completer, 0)
+        self.assertIn("3h30", _texte_docx(self.client.get(f"/memoire/{m.pk}/word/").content))
+
+    def test_connexion(self):
+        self.client.logout()
+        r = self.client.get("/")
+        self.assertRedirects(r, "/connexion/?next=/", fetch_redirect_response=False)
+        self.assertContains(self.client.get("/connexion/"), "Se connecter")
+        r = self.client.post("/connexion/", {"username": "matthieu", "password": "x"})
+        self.assertRedirects(r, "/", fetch_redirect_response=False)

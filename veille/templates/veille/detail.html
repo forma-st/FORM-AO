@@ -2,64 +2,59 @@
 {% load veille_tags %}
 {% block titre %}{{ a.objet|truncatechars:60 }}{% endblock %}
 {% block contenu %}
-<p class="doux"><a href="{% url 'tableau' %}">← Retour</a></p>
-<h1>{{ a.objet }}</h1>
-<p class="doux">
-  {{ a.acheteur }} · {{ a.get_source_display }} {{ a.source_id }} · {{ a.get_nature_display }}
-  {% if a.url %}· <a href="{{ a.url }}" target="_blank" rel="noopener">voir l'avis officiel</a>{% endif %}
-</p>
-<p><a class="bouton" href="{% url 'reponse' a.pk %}">Préparer la réponse : DCE, analyse, dossier, mémoire →</a></p>
-
-<div class="grille">
+{% include "veille/_avis_entete.html" %}
+<div class="colonnes">
   <div>
-    <div class="carte">
-      <span class="score {{ a.score|couleur_score }}" style="font-size:20px">{{ a.score|default_if_none:"?" }}</span>
-      <strong style="margin-left:8px">{{ a.recommandation|libelle_reco }}</strong>
-      {% if a.score_modele %}<span class="doux"> · {{ a.score_modele }}, {{ a.score_le|date:"d/m H:i" }}</span>{% endif %}
-      {% if d.pourquoi %}<p>{{ d.pourquoi }}</p>{% endif %}
-      {% if a.resume %}<p><strong>Le besoin :</strong> {{ a.resume }}</p>{% endif %}
-
+    <section class="panneau">
+      <div class="avis-verdict">
+        <div class="plaque grande {{ a.score|couleur_score }}">{{ a.score|default_if_none:"?" }}</div>
+        <div>
+          <span class="verdict {{ a.recommandation }}">{{ a.recommandation|libelle_reco }}</span>
+          {% if d.pourquoi %}<p style="margin:4px 0 0">{{ d.pourquoi }}</p>{% endif %}
+          {% if a.score_modele == "règles" %}<p class="doux" style="margin:4px 0 0">Score provisoire calculé par règles : relancez-le pour l'avis de l'IA.</p>{% endif %}
+        </div>
+      </div>
+      {% if a.resume %}<h3>Le besoin</h3><p>{{ a.resume }}</p>{% endif %}
       {% if d.criteres %}
-      <h2>Critères</h2>
-      {% for c in d.criteres %}
-        <div class="critere"><span class="eval-{{ c.evaluation }}" style="min-width:110px">{{ c.evaluation }}</span><div><strong>{{ c.critere }}</strong> – {{ c.commentaire }}</div></div>
-      {% endfor %}
+      <h3>Critères de décision</h3>
+      <ul class="criteres">
+        {% for c in d.criteres %}<li><span class="picto {{ c.evaluation }}" aria-hidden="true">{% if c.evaluation == "favorable" %}✓{% elif c.evaluation == "eliminatoire" %}✕{% elif c.evaluation == "defavorable" %}!{% else %}–{% endif %}</span>
+          <div><strong>{{ c.critere }}</strong> <span class="doux">({{ c.evaluation }})</span><br>{{ c.commentaire }}</div></li>{% endfor %}
+      </ul>
       {% endif %}
-
-      {% if d.prestations_concernees %}<h2>Nos prestations concernées</h2><ul>{% for p in d.prestations_concernees %}<li>{{ p }}</li>{% endfor %}</ul>
-      <p class="doux">Part du besoin couverte : {{ d.part_du_besoin_couverte }}</p>{% endif %}
-      {% if d.lots_a_viser %}<h2>Lots à viser</h2><ul>{% for p in d.lots_a_viser %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
-      {% if d.exigences_bloquantes %}<h2>Exigences bloquantes</h2><ul>{% for p in d.exigences_bloquantes %}<li class="urgent">{{ p }}</li>{% endfor %}</ul>{% endif %}
-      {% if d.points_de_vigilance %}<h2>Points de vigilance</h2><ul>{% for p in d.points_de_vigilance %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
-      {% if d.questions_a_verifier %}<h2>À vérifier dans le DCE</h2><ul>{% for p in d.questions_a_verifier %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
-      {% if d.concurrence_estimee %}<p class="doux">Concurrence estimée : {{ d.concurrence_estimee }}</p>{% endif %}
-
-      <form method="post" style="margin-top:12px">{% csrf_token %}
-        <button name="action" value="scorer" class="secondaire">{% if a.score is None %}Calculer le score{% else %}Recalculer le score{% endif %}</button>
-        {% if not a.prefiltre_ok %}<button name="action" value="repecher" class="secondaire">Repêcher dans la veille</button>{% endif %}
+      {% if d.exigences_bloquantes %}<h3>Exigences bloquantes</h3><ul class="simple">{% for p in d.exigences_bloquantes %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+      {% if d.prestations_concernees %}<h3>Nos prestations concernées</h3><ul class="simple">{% for p in d.prestations_concernees %}<li>{{ p }}</li>{% endfor %}</ul><p class="doux">Part du besoin couverte : {{ d.part_du_besoin_couverte }}</p>{% endif %}
+      {% if d.lots_a_viser %}<h3>Lots à viser</h3><ul class="simple">{% for p in d.lots_a_viser %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+      {% if d.points_de_vigilance %}<h3>Points de vigilance</h3><ul class="simple">{% for p in d.points_de_vigilance %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+      {% if d.questions_a_verifier %}<h3>À vérifier dans le dossier de consultation</h3><ul class="simple">{% for p in d.questions_a_verifier %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+      <form method="post" class="actions">{% csrf_token %}
+        <button name="action" value="scorer" class="btn secondaire petit">{% if a.score is None %}Calculer le score{% else %}Recalculer le score{% endif %}</button>
+        {% if not a.prefiltre_ok %}<button name="action" value="repecher" class="btn secondaire petit">Remettre dans la veille</button>{% endif %}
+        {% if a.score_le %}<span class="doux">Évalué le {{ a.score_le|date:"j/m à H\hi" }}{% if a.score_modele and a.score_modele != "règles" %} par l'IA{% endif %}</span>{% endif %}
       </form>
-    </div>
-
-    <h2>Texte de l'avis</h2>
-    <pre class="texte">{{ a.texte|default:"(pas de texte détaillé)" }}</pre>
+    </section>
+    <section>
+      <h2>Texte de l'avis</h2>
+      <pre class="texte">{{ a.texte|default:"Pas de texte détaillé : consultez l'avis officiel." }}</pre>
+    </section>
   </div>
 
-  <div>
-    <div class="carte">
-      <p><strong>Date limite :</strong> {% if a.date_limite %}{{ a.date_limite|date:"d/m/Y H:i" }} <span class="{% if a.jours_restants < 10 %}urgent{% endif %}">(J-{{ a.jours_restants }})</span>{% else %}non précisée{% endif %}</p>
-      <p><strong>Procédure :</strong> {{ a.procedure|default:"—" }}</p>
-      <p><strong>Montant estimé :</strong> {% if a.montant_estime %}{{ a.montant_estime|floatformat:0 }} € HT{% else %}—{% endif %}</p>
-      <p><strong>Lieu :</strong> {{ a.lieu_execution|default:a.departements|default:"—" }}</p>
-      <p><strong>CPV :</strong> {{ a.cpv|default:"—" }}</p>
-      <p class="doux">Veille : {% if a.prefiltre_ok %}retenu ({{ a.mots_cles_trouves }}){% else %}écarté – {{ a.prefiltre_motif }}{% endif %}</p>
-    </div>
-    <div class="carte">
-      <h2 style="margin-top:0">Suivi</h2>
-      <form method="post">{% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Enregistrer</button>
-      </form>
-    </div>
-  </div>
+  <aside class="collant">
+    <section class="panneau">
+      <dl class="donnees">
+        <dt>Date limite</dt><dd>{% if a.date_limite %}<strong>{{ a.date_limite|date:"j F Y, H\hi" }}</strong> ({{ a.jours_restants|j_moins }}){% else %}non précisée{% endif %}</dd>
+        <dt>Procédure</dt><dd>{{ a.procedure|default:"—" }}</dd>
+        <dt>Montant</dt><dd>{{ a.montant_estime|euros|default:"non précisé" }}</dd>
+        <dt>Lieu</dt><dd>{{ a.lieu_execution|default:a.departements|default:"—" }}</dd>
+        <dt>Concurrence</dt><dd>{{ d.concurrence_estimee|default:"—" }}</dd>
+        <dt>Veille</dt><dd class="petit">{% if a.prefiltre_ok %}{{ a.mots_cles_trouves|default:"retenu" }}{% else %}écarté : {{ a.prefiltre_motif }}{% endif %}</dd>
+      </dl>
+      <p style="margin:16px 0 0"><a class="btn" href="{% url 'reponse' a.pk %}" style="width:100%">Préparer la réponse</a></p>
+    </section>
+    <section class="panneau">
+      <h3>Suivi</h3>
+      <form method="post" class="formulaire">{% csrf_token %}{{ form.as_p }}<button class="btn secondaire">Enregistrer le suivi</button></form>
+    </section>
+  </aside>
 </div>
 {% endblock %}

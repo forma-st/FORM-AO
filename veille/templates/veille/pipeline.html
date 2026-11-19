@@ -1,20 +1,30 @@
 {% extends "veille/base.html" %}
 {% load veille_tags %}
-{% block titre %}Pipeline{% endblock %}
+{% block titre %}Réponses{% endblock %}
 {% block contenu %}
-<h1>Pipeline des réponses</h1>
+<div class="entete-page"><div><h1>Réponses en cours</h1><p class="doux">De la qualification au résultat. Changez l'étape d'un dossier avec le menu sur sa fiche.</p></div></div>
 <div class="kanban">
-{% for titre, avis in colonnes %}
-  <div class="colonne">
-    <h3>{{ titre }} ({{ avis|length }})</h3>
+{% for code, titre, avis in colonnes %}
+  <section class="colonne" aria-label="{{ titre }}">
+    <h2>{{ titre }} <span class="doux">{{ avis|length }}</span></h2>
     {% for a in avis %}
-      <div class="ticket">
-        <span class="score {{ a.score|couleur_score }}">{{ a.score|default_if_none:"?" }}</span>
-        <a href="{% url 'detail' a.pk %}">{{ a.objet|truncatechars:90 }}</a>
-        <div class="doux">{{ a.acheteur|truncatechars:40 }}{% if a.date_limite %} · {{ a.date_limite|date:"d/m" }}{% endif %}{% if a.responsable %} · {{ a.responsable }}{% endif %}</div>
-      </div>
-    {% empty %}<p class="doux">—</p>{% endfor %}
-  </div>
+      <article class="ticket">
+        <div class="plaque mini {{ a.score|couleur_score }}">{{ a.score|default_if_none:"?" }}</div>
+        <div>
+          <a href="{% url 'reponse' a.pk %}">{{ a.objet|truncatechars:80 }}</a>
+          <div class="doux">{{ a.acheteur|truncatechars:40 }}{% if a.date_limite %}, {{ a.jours_restants|j_moins }}{% endif %}{% if a.responsable %}, {{ a.responsable }}{% endif %}</div>
+          <form method="post" action="{% url 'changer_statut' a.pk %}">{% csrf_token %}
+            <input type="hidden" name="suivant" value="{% url 'pipeline' %}">
+            <label class="sr" for="st-{{ a.pk }}">Étape</label>
+            <select id="st-{{ a.pk }}" name="statut" onchange="this.form.submit()">
+              {% for c, l in statuts %}{% if c != "DETECTE" and c != "ECARTE" %}<option value="{{ c }}" {% if c == a.statut %}selected{% endif %}>{{ l }}</option>{% endif %}{% endfor %}
+            </select>
+            <noscript><button class="btn petit secondaire">OK</button></noscript>
+          </form>
+        </div>
+      </article>
+    {% empty %}<p class="doux" style="padding:4px">Aucun dossier.</p>{% endfor %}
+  </section>
 {% endfor %}
 </div>
 {% endblock %}

@@ -5,6 +5,14 @@ Le cahier des charges complet est dans [SPEC.md](SPEC.md).
 
 ## Ce qui marche aujourd'hui
 
+### Interface
+
+- **Tri en un clic** : sur chaque avis, des boutons Go et No-Go (avec un motif, qui aide à mieux trier ensuite). Des onglets « À trier », « Go », « En cours », « Résultats », « No-Go », et une recherche sur tous les avis.
+- **Préparer la réponse** en 4 étapes : déposer le DCE, l'analyser, rédiger le mémoire, assembler le dossier.
+- **Mémoire modifiable** dans le navigateur ; le fichier Word reprend les modifications.
+- **Collecter maintenant** : la collecte se lance à la demande, sans attendre le lendemain matin.
+- Charte graphique inspirée de la signalétique de sécurité. Les polices sont hébergées sur le serveur (aucun appel à Google Fonts). L'affichage s'adapte au téléphone.
+
 ### Phase 1 – veille
 
 - **Collecte automatique** : BOAMP (tous les avis, environ 300 à 500 par jour) et TED (acheteurs français, codes CPV formation et prévention), avec dédoublonnage entre les deux.
@@ -91,7 +99,7 @@ Le fichier `data/seed_formast.json` contient des données internes (prix, CV, bi
 
 ## Clé API Anthropic
 
-L'application lit la clé dans la variable `ANTHROPIC_API_KEY`. Elle peut venir du fichier `.env` ou de l'environnement du serveur.
+L'application lit la clé dans la variable `VEILLE_ANTHROPIC_API_KEY` (prioritaire) ou `ANTHROPIC_API_KEY`. Elle peut venir du fichier `.env` ou de l'environnement du serveur.
 - **Serveur de production** : dans `.env`, ajouter la ligne `ANTHROPIC_API_KEY=sk-ant-…`, puis redémarrer l'application.
 - **Session cloud Claude Code** (pour les tests) : ajouter une variable d'environnement `ANTHROPIC_API_KEY` dans les réglages de l'environnement. Elle est lisible par toute personne et toute commande qui utilise cet environnement.
 

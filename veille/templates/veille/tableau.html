@@ -1,55 +1,83 @@
 {% extends "veille/base.html" %}
 {% load veille_tags %}
+{% block titre %}Appels d'offres{% endblock %}
+{% block entete %}{% if collecte_en_cours %}<meta http-equiv="refresh" content="30">{% endif %}{% endblock %}
 {% block contenu %}
-<h1>Appels d'offres à regarder</h1>
-<p class="doux">
-  {{ stats.total }} avis collectés, {{ stats.retenus }} retenus par la veille, {{ stats.go }} recommandés « Go ».
-  {% if derniere_collecte %}Dernière collecte : {{ derniere_collecte.source }} le {{ derniere_collecte.debut|date:"d/m à H:i" }}{% if derniere_collecte.erreur %} <span class="urgent">(erreur)</span>{% endif %}.{% endif %}
-</p>
+<div class="entete-page">
+  <div>
+    <h1>Appels d'offres</h1>
+    <p class="doux">
+      {% if collecte_en_cours %}Collecte en cours…{% elif derniere_collecte %}Mis à jour le {{ derniere_collecte.fin|date:"j F à H\hi" }}{% endif %}
+      {% if nouveaux %} – {{ nouveaux }} nouveau{{ nouveaux|pluralize:"x" }} depuis hier{% endif %}
+    </p>
+  </div>
+  <div class="actions" style="margin:0">
+    <form method="post" action="{% url 'collecter' %}">{% csrf_token %}<button class="btn secondaire" {% if collecte_en_cours %}disabled{% endif %}>Collecter maintenant</button></form>
+    <a class="btn secondaire" href="{% url 'ajouter' %}">Ajouter une consultation privée</a>
+  </div>
+</div>
 
-{% if pieces %}
-<div class="carte">
-  <strong>Pièces administratives à renouveler :</strong>
-  {% for p in pieces %}{{ p }} (expire le {{ p.date_expiration|date:"d/m/Y" }}){% if not forloop.last %}, {% endif %}{% endfor %}
+{% if echeances or pieces %}
+<div class="aujourdhui">
+  {% if echeances %}
+  <div class="signal urgent">
+    <strong>Dates limites dans moins de 10 jours</strong>
+    <ul>{% for e in echeances %}<li><a href="{% url 'reponse' e.pk %}">{{ e.objet|truncatechars:60 }}</a> – {{ e.date_limite|date:"j/m H\hi" }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  {% if pieces %}
+  <div class="signal attention">
+    <strong>Pièces à renouveler</strong>
+    <ul>{% for p in pieces %}<li>{{ p }} – {{ p.date_expiration|date:"j/m/Y" }}</li>{% endfor %}</ul>
+    <a class="petit" href="{% url 'coffre_fort' %}">Ouvrir le coffre-fort</a>
+  </div>
+  {% endif %}
 </div>
 {% endif %}
 
-<form class="filtres" method="get">
-  <input type="search" name="q" value="{{ filtres.q }}" placeholder="Rechercher (objet, acheteur…)">
-  <select name="reco">
-    <option value="">Toutes recommandations</option>
-    <option value="GO" {% if filtres.reco == "GO" %}selected{% endif %}>Go</option>
-    <option value="A_ETUDIER" {% if filtres.reco == "A_ETUDIER" %}selected{% endif %}>À étudier</option>
-    <option value="NO_GO" {% if filtres.reco == "NO_GO" %}selected{% endif %}>No-Go</option>
-  </select>
-  <select name="statut">
-    <option value="">Statuts actifs</option>
-    {% for code, lib in statuts %}<option value="{{ code }}" {% if filtres.statut == code %}selected{% endif %}>{{ lib }}</option>{% endfor %}
-  </select>
-  <select name="ouverts">
-    <option value="1">Encore ouverts</option>
-    <option value="0" {% if filtres.ouverts == "0" %}selected{% endif %}>Tous</option>
-  </select>
-  <button type="submit">Filtrer</button>
-</form>
+<div class="barre">
+  <nav class="onglets" aria-label="Filtrer par statut">
+    {% for cle, libelle, n in onglets %}<a href="?onglet={{ cle }}" {% if cle == onglet and not q %}aria-current="page"{% endif %}>{{ libelle }}<span>{{ n }}</span></a>{% endfor %}
+  </nav>
+  <form class="recherche" method="get" role="search">
+    <input type="hidden" name="onglet" value="{{ onglet }}">
+    <label class="sr" for="q">Rechercher</label>
+    <input type="search" id="q" name="q" value="{{ q }}" placeholder="Rechercher un objet, un acheteur…">
+  </form>
+</div>
+{% if q %}<p class="doux" style="margin-top:10px">Résultats pour « {{ q }} » dans tous les avis retenus. <a href="?onglet={{ onglet }}">Effacer</a></p>{% endif %}
 
-<table>
-  <thead><tr><th>Score</th><th>Objet</th><th class="masquer-mobile">Acheteur</th><th>Date limite</th><th class="masquer-mobile">Statut</th></tr></thead>
-  <tbody>
-  {% for a in avis %}
-    <tr>
-      <td><span class="score {{ a.score|couleur_score }}">{{ a.score|default_if_none:"?" }}</span><br><span class="doux">{{ a.recommandation|libelle_reco }}</span></td>
-      <td><a href="{% url 'detail' a.pk %}">{{ a.objet|truncatechars:140 }}</a>
-        <div class="doux">{{ a.get_source_display }}{% if a.departements %} · dép. {{ a.departements|truncatechars:30 }}{% endif %}{% if a.montant_estime %} · {{ a.montant_estime|floatformat:0 }} € HT{% endif %}</div>
-        {% if a.resume %}<div class="doux">{{ a.resume|truncatechars:220 }}</div>{% endif %}
-      </td>
-      <td class="masquer-mobile">{{ a.acheteur|truncatechars:60 }}</td>
-      <td>{% if a.date_limite %}{{ a.date_limite|date:"d/m/Y" }}<br><span class="doux {% if a.jours_restants < 10 %}urgent{% endif %}">J-{{ a.jours_restants }}</span>{% else %}—{% endif %}</td>
-      <td class="masquer-mobile"><span class="pastille">{{ a.get_statut_display }}</span></td>
-    </tr>
-  {% empty %}
-    <tr><td colspan="5">Aucun avis pour ces filtres. Lancez une collecte : <code>python manage.py veille_quotidienne</code></td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<ul class="liste">
+{% for a in avis %}
+  {% with d=a.score_details %}
+  <li class="ligne">
+    <div class="plaque {{ a.score|couleur_score }}" title="Score {{ a.score|default_if_none:'non calculé' }}/100">{{ a.score|default_if_none:"?" }}</div>
+    <div>
+      <a class="ligne-titre" href="{% url 'detail' a.pk %}">{{ a.objet|truncatechars:150 }}</a>
+      <div class="ligne-meta">{{ a.acheteur|default:"Acheteur non précisé" }}{% if a.departements %}, {{ a.departements|departements }}{% endif %}</div>
+      {% if a.resume %}<p class="ligne-resume">{{ a.resume|truncatechars:240 }}</p>{% endif %}
+      <div class="faits">
+        <span class="fait verdict {{ a.recommandation }}">{{ a.recommandation|libelle_reco }}</span>
+        {% if d.concurrence_estimee == "faible" %}<span class="fait bon">Concurrence faible</span>{% elif d.concurrence_estimee == "forte" %}<span class="fait mauvais">Concurrence forte</span>{% endif %}
+        {% if d.exigences_bloquantes %}<span class="fait mauvais">{{ d.exigences_bloquantes|length }} exigence{{ d.exigences_bloquantes|length|pluralize }} bloquante{{ d.exigences_bloquantes|length|pluralize }}</span>{% endif %}
+        {% if a.montant_estime %}<span class="fait">{{ a.montant_estime|euros }}</span>{% endif %}
+        <span class="fait">{{ a.get_source_display }}</span>
+        {% if a.statut != "DETECTE" and a.statut != "A_QUALIFIER" %}<span class="fait">{{ a.get_statut_display }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="echeance {% if a.jours_restants is not None and a.jours_restants < 10 %}urgent{% endif %}">
+      {% if a.date_limite %}<b>{{ a.jours_restants|j_moins }}</b><span>{{ a.date_limite|date:"j M" }}</span>{% else %}<span>Date limite non précisée</span>{% endif %}
+    </div>
+    {% include "veille/_decision.html" with suivant=request.get_full_path %}
+  </li>
+  {% endwith %}
+{% empty %}
+  <li class="vide">
+    {% if q %}<strong>Aucun avis ne correspond à « {{ q }} »</strong>Essayez un autre mot, ou ajoutez la consultation à la main.
+    {% elif onglet == "a_trier" %}<strong>Tout est trié</strong>Les nouveaux avis arriveront avec la collecte de demain matin, ou tout de suite avec « Collecter maintenant ».
+    {% elif onglet == "go" %}<strong>Aucun appel d'offres en Go</strong>Classez un avis en Go depuis l'onglet « À trier » pour préparer sa réponse.
+    {% else %}<strong>Rien ici pour l'instant</strong>{% endif %}
+  </li>
+{% endfor %}
+</ul>
 {% endblock %}

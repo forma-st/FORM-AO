@@ -1,0 +1,28 @@
+{% comment %}Boutons de tri en un clic. Variables : a (avis), suivant (URL de retour).{% endcomment %}
+<div class="decision">
+  {% if a.statut != "GO" %}
+  <form method="post" action="{% url 'decider' a.pk %}">{% csrf_token %}
+    <input type="hidden" name="suivant" value="{{ suivant }}"><input type="hidden" name="decision" value="GO">
+    <button class="btn petit">Go</button>
+  </form>
+  {% endif %}
+  {% if a.statut != "NO_GO" %}
+  <details class="nogo-motif">
+    <summary class="btn nogo petit">No-Go</summary>
+    <div class="pop">
+      <form method="post" action="{% url 'decider' a.pk %}">{% csrf_token %}
+        <input type="hidden" name="suivant" value="{{ suivant }}"><input type="hidden" name="decision" value="NO_GO">
+        <label for="motif-{{ a.pk }}">Pourquoi ? (aide à mieux trier ensuite)</label>
+        <input id="motif-{{ a.pk }}" name="motif" placeholder="ex. hors métier, trop gros, délai trop court">
+        <button class="btn nogo petit">Classer No-Go</button>
+      </form>
+    </div>
+  </details>
+  {% endif %}
+  {% if a.statut == "GO" or a.statut == "NO_GO" %}
+  <form method="post" action="{% url 'decider' a.pk %}">{% csrf_token %}
+    <input type="hidden" name="suivant" value="{{ suivant }}"><input type="hidden" name="decision" value="A_QUALIFIER">
+    <button class="btn secondaire petit" title="Remettre dans « À trier »">Annuler</button>
+  </form>
+  {% endif %}
+</div>

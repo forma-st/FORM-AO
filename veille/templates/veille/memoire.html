@@ -1,9 +1,22 @@
 {% extends "veille/base.html" %}
+{% load veille_tags %}
 {% block titre %}Mémoire technique{% endblock %}
 {% block contenu %}
-<p class="doux"><a href="{% url 'reponse' m.avis.pk %}">← Retour à la réponse</a></p>
-<h1>Mémoire technique – brouillon du {{ m.cree_le|date:"d/m/Y H:i" }}</h1>
-<p class="doux">{{ m.avis.objet }} · {{ m.nb_a_completer }} point(s) à compléter · {{ m.modele }}</p>
-{% if m.statut == "OK" %}<p><a class="bouton" href="{% url 'memoire_docx' m.pk %}">Télécharger en Word</a></p>{% endif %}
-<div class="carte"><pre class="texte" style="max-height:none">{{ m.contenu }}</pre></div>
+{% include "veille/_avis_entete.html" %}
+<div class="entete-page">
+  <div>
+    <h2 style="margin:0">Mémoire technique, brouillon du {{ m.cree_le|date:"j F à H\hi" }}</h2>
+    <p class="doux">{{ m.nb_a_completer }} point{{ m.nb_a_completer|pluralize }} à compléter, surlignés en jaune dans le fichier Word.{% if m.consignes %} Consignes données : « {{ m.consignes|truncatechars:120 }} »{% endif %}</p>
+  </div>
+  {% if m.statut == "OK" %}<a class="btn" href="{% url 'memoire_docx' m.pk %}">Télécharger en Word</a>{% endif %}
+</div>
+{% if m.statut == "OK" %}
+<form method="post" class="formulaire">{% csrf_token %}
+  <p><label for="contenu">Texte du mémoire</label>
+  <span class="helptext">« ## » marque un titre de section, « - » une liste, « | » un tableau. Le fichier Word reprend vos modifications.</span>
+  <textarea id="contenu" name="contenu" class="editeur">{{ m.contenu }}</textarea></p>
+  <div class="actions"><button class="btn">Enregistrer les modifications</button><a href="{% url 'reponse' m.avis.pk %}">Retour à la réponse</a></div>
+</form>
+{% elif m.statut == "EN_COURS" %}<div class="attente">Rédaction en cours…</div>
+{% else %}<ul class="messages"><li class="error">La rédaction a échoué : {{ m.erreur }}</li></ul>{% endif %}
 {% endblock %}
