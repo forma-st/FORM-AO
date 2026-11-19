@@ -141,6 +141,63 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
   .hide-m{display:none}
 }
+/* --- v4 : barre supérieure, icônes, palette, journée, colonnes --- */
+.ic{width:17px;height:17px;flex:none}
+.nav a .lbl{display:flex;align-items:center;gap:10px;min-width:0}
+.nav a .ic{opacity:.75} .nav a.on .ic{opacity:1}
+.nav .foot{margin-top:auto;padding:12px 10px 0;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
+.topbar{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.search{flex:1;max-width:460px;display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--muted);cursor:pointer;text-align:left;min-width:0}
+.search span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+kbd{font:11px var(--font-body);padding:1px 6px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;background:var(--surface-2);color:var(--muted)}
+.iconbtn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;text-decoration:none}
+.iconbtn .dotc{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--accent);color:var(--accent-fg);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+.pal-back{position:fixed;inset:0;background:rgba(10,10,12,.45);z-index:60;display:flex;justify-content:center;align-items:flex-start;padding:calc(12vh + env(safe-area-inset-top,0px)) 16px 16px}
+.pal{width:min(640px,100%);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden}
+.pal input{width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:14px 16px;font-size:15px;background:var(--surface);outline:none}
+.pal ul{list-style:none;margin:0;padding:6px;max-height:52vh;overflow:auto}
+.pal li{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:7px;cursor:pointer}
+.pal li.on{background:var(--accent-soft);color:var(--accent)}
+.pal li .k{margin-left:auto;font-size:11px;color:var(--muted)}
+.pal .ft{display:flex;gap:14px;padding:8px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);flex-wrap:wrap}
+.hello{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.hello h1{font-size:26px}
+.night{display:flex;flex-direction:column;gap:6px}
+.night .li{padding:6px 0}
+.nba{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.nba:last-child{border-bottom:0}
+.nba .ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);color:var(--muted)}
+.nba .ico.hot{background:var(--accent-soft);color:var(--accent)}
+.nba .why{font-size:12.5px;color:var(--muted);margin-top:2px}
+.nba .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.prog{height:8px;border-radius:4px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--ok)}
+.seg-ctl{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg-ctl button{border:0;background:var(--surface);padding:5px 10px;cursor:pointer;font-size:12.5px;color:var(--muted);border-right:1px solid var(--line)}
+.seg-ctl button:last-child{border-right:0}
+.seg-ctl button.on{background:var(--accent);color:var(--accent-fg)}
+.seg-ctl button[disabled]{cursor:not-allowed;opacity:.45}
+.views{display:flex;gap:6px;flex-wrap:wrap}
+.views button{border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:4px 12px;cursor:pointer;font-size:13px;color:var(--fg)}
+.views button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.kb{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:10px;overflow-x:auto;padding-bottom:6px}
+.kcol{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:8px;min-height:260px;display:flex;flex-direction:column;gap:8px}
+.kcol.over{border-color:var(--accent);background:var(--accent-soft)}
+.kcol h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:flex;justify-content:space-between;padding:2px 4px}
+.kc{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 10px;cursor:grab;display:flex;flex-direction:column;gap:4px}
+.kc:hover{border-color:var(--muted)}
+.kc.drag{opacity:.4}
+.gauge{flex:none}
+.sticky{position:sticky;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:5;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+.qc{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:4px 14px;margin-top:8px;font-size:12.5px}
+.qc span{display:flex;gap:6px;align-items:flex-start}
+.qc .y{color:var(--ok)} .qc .n{color:var(--warn)}
+.months{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.camp{display:flex;flex-direction:column;gap:6px}
+.camp .m{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.lvl td:first-child{min-width:220px}
+@media (max-width:760px){ .search kbd,.hide-s{display:none} .nba{grid-template-columns:34px minmax(0,1fr)} .nba .acts{grid-column:1 / -1;justify-content:flex-start} .nav .foot{display:none} }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -149,6 +206,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   <main class="main"><div class="wrap" id="view"></div></main>
 </div>
 <div class="toast" id="toast" hidden></div>
+<div id="pal"></div>
 
 <script>
 /* ============ Données fictives ============ */
@@ -329,16 +387,37 @@ file:[
  {id:2,pid:2,a:'s.lemaire@cliniquehp.example',obj:'Évacuation horizontale : 3 questions',quand:'19/11/2026 09:41',boite:0,st:'Programmé'},
  {id:3,pid:6,a:'j.petit@bergeshotels.example',obj:'Accueil sécurité de vos nouveaux salariés',quand:'26/11/2026 10:12',boite:1,st:'En pause (absence)'}
 ],
-mailTest:true, crmMode:'autonome', v3:true,
+mailTest:true, crmMode:'autonome',
+nbaDone:[], doneToday:2,
+niveaux:{recherche:'auto',enrich:'auto',redac:'proposer',reactiv:'auto',prospect:'proposer',linkedin:'manuel',tri:'auto',rdv:'proposer',crm:'auto'},
+limites:{budget:40,maxAuto:30},
+journal:[
+ {h:'02:04',ic:'radar',txt:"BODACC : 21 nouveaux établissements lus, 3 retenus dans vos segments (dont Conserverie du Valois)."},
+ {h:'02:20',ic:'users',txt:"SIRENE : 312 fiches rafraîchies, 2 entreprises fermées retirées des séquences."},
+ {h:'03:05',ic:'spark',txt:"5 brouillons d'e-mails préparés pour des prospects A, en attente de votre validation."},
+ {h:'07:40',ic:'inbox',txt:"2 réponses relevées et classées ; 1 opposition appliquée sur tous les canaux."},
+ {h:'08:00',ic:'mail',txt:"Réactivation MAC SST : 3 e-mails envoyés automatiquement (modèle validé, mode test)."}
+],
+campagnes:[
+ {id:1,mois:'Décembre 2026',titre:'Bilan sécurité et plan de formation 2027',seg:'Clients et prospects A',canaux:'E-mail · post LinkedIn',etat:'Prête',cible:84},
+ {id:2,mois:'Janvier 2027',titre:'Budgets 2027 : les formations obligatoires à prévoir',seg:'PME de 50 à 250 salariés',canaux:'E-mail · guide PDF à télécharger',etat:'Brouillon',cible:212},
+ {id:3,mois:'Février 2027',titre:'Simulateur « Combien de SST vous faut-il ? »',seg:'Tous segments',canaux:'Page web · formulaire · LinkedIn',etat:'À préparer',cible:0},
+ {id:4,mois:'Mars 2027',titre:'Recyclages MAC SST du printemps',seg:'Clients (historique)',canaux:'E-mail · appel',etat:'À préparer',cible:23},
+ {id:5,mois:'Mai 2027',titre:'Prévention chaleur et travail en extérieur',seg:'Logistique, BTP',canaux:'E-mail · post LinkedIn',etat:'À préparer',cible:96},
+ {id:6,mois:'Juin 2027',titre:'Saisonniers : accueil sécurité en une demi-journée',seg:'Hôtellerie, commerce, centres aquatiques',canaux:'E-mail',etat:'À préparer',cible:58},
+ {id:7,mois:'Septembre 2027',titre:'Rentrée : former les nouveaux arrivants',seg:'Logistique, santé',canaux:'E-mail · LinkedIn',etat:'À préparer',cible:140},
+ {id:8,mois:'Octobre 2027',titre:'Semaine européenne de la santé et sécurité au travail',seg:'Tous segments',canaux:'Webinaire de 30 min · LinkedIn',etat:'À préparer',cible:0},
+ {id:9,mois:'Novembre 2027',titre:"Fin d'année : le budget formation à consommer",seg:'Clients et prospects B',canaux:'E-mail · appel',etat:'À préparer',cible:120}
+],
 chat:[], nextId:100
 };}
 
 let S;
-const KEY='prospection-maquette-v3';
+const KEY='prospection-maquette-v4';
 try{ S = JSON.parse(localStorage.getItem(KEY)) }catch(e){}
 if(!S || !S.prospects) S = seed();
 const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify(S)) }catch(e){} };
-const ui = {view:'tableau', pid:1, canal:'email', ton:'direct', consigne:'', cidx:0, gen:null, seq:1, rep:1, tfilter:'tous', session:null, imp:null, filt:{q:'',tier:'',seg:'',dep:'',statut:'',sig:false}, sel:new Set(), pending:null};
+const ui = {view:'journee', pview:'liste', sv:'tous', pal:null, pid:1, canal:'email', ton:'direct', consigne:'', cidx:0, gen:null, seq:1, rep:1, tfilter:'tous', session:null, imp:null, filt:{q:'',tier:'',seg:'',dep:'',statut:'',sig:false,nc:false}, sel:new Set(), pending:null};
 
 /* ============ Calculs ============ */
 const W = ()=>S.weights;
@@ -475,30 +554,69 @@ function brief(p){
 
 /* ============ Rendu ============ */
 const $ = s => document.querySelector(s);
+const ICONS={
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+ users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.7 3.1 2.5 3.5 5.2"/>',
+ check:'<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M8 12.5l2.7 2.7L16 9.5"/>',
+ inbox:'<path d="M3.5 13.5l2.4-8h12.2l2.4 8v5a1.5 1.5 0 0 1-1.5 1.5h-14A1.5 1.5 0 0 1 3.5 18.5z"/><path d="M3.5 13.5h5l1.5 2.5h4l1.5-2.5h5"/>',
+ spark:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
+ chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+ upload:'<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>',
+ clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+ radar:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6-6"/>',
+ calendar:'<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+ steps:'<path d="M5 6h14M5 12h10M5 18h6"/><circle cx="19" cy="18" r="2"/>',
+ zap:'<path d="M13 2.5L5 13.5h6l-1 8 8-11h-6z"/>',
+ bot:'<rect x="4.5" y="7.5" width="15" height="11" rx="3"/><path d="M12 3.5v4M9 12.5h.01M15 12.5h.01M9.5 15.5h5"/>',
+ mail:'<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.5 7l8.5 6 8.5-6"/>',
+ sliders:'<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
+ shield:'<path d="M12 3l7.5 3v5.5c0 4.6-3.2 8.2-7.5 9.5-4.3-1.3-7.5-4.9-7.5-9.5V6z"/><path d="M9 12l2 2 4-4"/>',
+ link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+ search:'<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+ moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+ bell:'<path d="M6 9.5a6 6 0 0 1 12 0c0 5 2 6.5 2 6.5H4s2-1.5 2-6.5"/><path d="M10 19.5a2 2 0 0 0 4 0"/>',
+ phone:'<path d="M5 3.5h3.5l1.5 4.5-2.2 1.5a11 11 0 0 0 6.7 6.7L16 14l4.5 1.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.1 1.5 1.5 0 0 1 5 3.5z"/>',
+ pin:'<path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.5"/>',
+ kanban:'<rect x="3.5" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="16.5" y="4" width="4" height="13" rx="1.5"/>',
+ list:'<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+ arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>'
+};
+const ic=(n,cls='')=>`<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||''}</svg>`;
 const VIEWS = [
-  ['grp','Pilotage'],
-  ['tableau','Tableau de bord'],
-  ['prospects','Prospects', ()=>S.prospects.filter(p=>!['Écarté','Opposé','Client'].includes(p.statut)).length],
-  ['taches','Tâches du jour', ()=>S.tasks.filter(t=>!t.fait&&t.ech<=0).length],
-  ['reponses','Réponses', ()=>S.replies.filter(r=>!r.done).length],
-  ['assistant','Assistant'],
+  ['grp','Au quotidien'],
+  ['journee','Ma journée', ()=>nbaList().length, 'sun'],
+  ['prospects','Prospects', ()=>S.prospects.filter(p=>!['Écarté','Opposé','Client'].includes(p.statut)).length, 'users'],
+  ['taches','Tâches', ()=>S.tasks.filter(t=>!t.fait&&t.ech<=0).length, 'check'],
+  ['reponses','Réponses', ()=>S.replies.filter(r=>!r.done).length, 'inbox'],
+  ['assistant','Assistant', null, 'spark'],
+  ['tableau','Statistiques', null, 'chart'],
   ['grp','Alimenter'],
-  ['import','Import de bases'],
-  ['historique','Historique des formations', ()=>S.historique.filter(h=>echeance(h).etat!=='ok'&&!h.relance).length],
-  ['sources','Sources et signaux'],
+  ['import','Import de bases', null, 'upload'],
+  ['historique','Historique des formations', ()=>S.historique.filter(h=>echeance(h).etat!=='ok'&&!h.relance).length, 'clock'],
+  ['sources','Sources et signaux', null, 'radar'],
   ['grp','Automatiser'],
-  ['sequences','Séquences'],
-  ['automatisations','Automatisations', ()=>S.autos.filter(a=>a.on).length],
-  ['messagerie','Messagerie', ()=>S.file.filter(m=>m.st==='Programmé').length],
+  ['campagnes','Campagnes', ()=>S.campagnes.filter(c=>c.etat==='Brouillon').length, 'calendar'],
+  ['sequences','Séquences', null, 'steps'],
+  ['automatisations','Automatisations', ()=>S.autos.filter(a=>a.on).length, 'zap'],
+  ['pilote','Pilote automatique', null, 'bot'],
+  ['messagerie','Messagerie', ()=>S.file.filter(m=>m.st==='Programmé').length, 'mail'],
   ['grp','Paramètres'],
-  ['score','Réglage du score'],
-  ['conformite','Conformité RGPD'],
-  ['crm','Intégration CRM']
+  ['score','Réglage du score', null, 'sliders'],
+  ['conformite','Conformité RGPD', null, 'shield'],
+  ['crm','Intégration CRM', null, 'link']
 ];
 function nav(){
-  $('#nav').innerHTML = `<div class="brand"><b>Prospection</b><span>FORMA'ST · module de Veille AO</span></div>` +
+  $('#nav').innerHTML = `<div class="brand"><b>Prospection</b><span>FORMA'ST · agent commercial</span></div>` +
     VIEWS.map(v=> v[0]==='grp' ? `<div class="grp">${v[1]}</div>` :
-      `<a href="#${v[0]}" class="${ui.view===v[0]||(ui.view==='fiche'&&v[0]==='prospects')?'on':''}"><span>${v[1]}</span>${v[2]?`<span class="badge">${v[2]()}</span>`:''}</a>`).join('');
+      `<a href="#${v[0]}" class="${ui.view===v[0]||(ui.view==='fiche'&&v[0]==='prospects')?'on':''}"><span class="lbl">${ic(v[3])}<span>${v[1]}</span></span>${v[2]?`<span class="badge">${v[2]()}</span>`:''}</a>`).join('') +
+    `<div class="foot"><kbd>Ctrl</kbd> <kbd>K</kbd> recherche · <kbd>J</kbd> <kbd>K</kbd> fiche suivante / précédente</div>`;
+}
+function topbar(){
+  const n=S.replies.filter(r=>!r.done).length;
+  return `<div class="topbar"><button class="search" data-act="pal" aria-label="Rechercher">${ic('search')}<span>Rechercher un prospect, un écran, une action…</span><kbd>Ctrl K</kbd></button>
+  <div class="row" style="flex-wrap:nowrap"><button class="iconbtn" data-act="theme" aria-label="Changer de thème" title="Thème clair / sombre">${ic('moon')}</button>
+  <a class="iconbtn" href="#reponses" aria-label="${n} réponses à traiter" title="Réponses à traiter">${ic('bell')}${n?`<span class="dotc">${n}</span>`:''}</a>
+  <span class="avatar" title="J. Morel (fictif)">JM</span></div></div>`;
 }
 function head(t,sub,right=''){ return `<div class="top"><div class="t"><h1>${t}</h1>${sub?`<div class="sub">${sub}</div>`:''}</div><div class="row">${right}<span class="demo">Maquette · données fictives</span></div></div>`; }
 const tierChip = s => `<span class="tier ${s.tier}" title="Palier ${s.tier}">${s.tier}</span>`;
@@ -508,12 +626,13 @@ const esChip = es => ({verifie:'<span class="chip ok">vérifié</span>',probable
 function render(){
   nav();
   const v = ui.view;
-  const html = ({tableau,prospects,fiche,taches,reponses,assistant,import:imp,historique,messagerie,sources,sequences,automatisations,score:scoreV,conformite,crm})[v]?.() ?? tableau();
-  $('#view').innerHTML = html;
+  const html = ({journee,tableau,prospects,fiche,taches,reponses,assistant,import:imp,historique,messagerie,campagnes,pilote,sources,sequences,automatisations,score:scoreV,conformite,crm})[v]?.() ?? journee();
+  $('#view').innerHTML = topbar() + html;
+  if(v==='fiche') majQualite();
   if(v==='assistant'){ const c=$('#chatbox'); if(c) c.scrollTop=c.scrollHeight; }
 }
 function go(v,pid){ if(pid) ui.pid=+pid; ui.gen=null; if(location.hash!=='#'+v){ ui.view=v; location.hash=v; } else { ui.view=v; render(); } window.scrollTo(0,0); }
-window.addEventListener('hashchange',()=>{ const h=location.hash.slice(1); ui.view = h||'tableau'; render(); });
+window.addEventListener('hashchange',()=>{ const h=location.hash.slice(1); ui.view = h||'journee'; render(); });
 
 /* ---- Tableau de bord ---- */
 function tableau(){
@@ -524,7 +643,7 @@ function tableau(){
   const sig=S.prospects.flatMap(p=>p.signaux.map(g=>({p,g}))).sort((a,b)=>a.g.d-b.g.d).slice(0,6);
   const fun=[['Prospects actifs',412],['Contactés',186],['Ont répondu',23],['RDV fixés',9],['Opportunités CRM',5],['Gagnés',2]];
   const macs=S.prospects.filter(p=>p.signaux.some(g=>g.t==='mac'));
-  return head('Tableau de bord','Novembre 2026 · objectif : 10 RDV qualifiés par mois') + `
+  return head('Statistiques','Novembre 2026 · objectif : 10 RDV qualifiés par mois') + `
   <div class="kpis">
     <div class="kpi"><span class="l">Prospects actifs</span><span class="v">${act.length}</span><span class="small muted">dans la maquette</span></div>
     <div class="kpi"><span class="l">Palier A</span><span class="v">${A.length}</span><span class="small muted">priorité de la semaine</span></div>
@@ -555,13 +674,15 @@ function filtered(){
   const f=ui.filt, q=f.q.toLowerCase();
   return S.prospects.map(p=>({p,s:score(p)})).filter(({p,s})=>
     (!q || (p.nom+' '+p.ville+' '+p.naf+' '+p.contacts.map(c=>c.n).join(' ')).toLowerCase().includes(q)) &&
-    (!f.tier || s.tier===f.tier) && (!f.seg || p.seg===f.seg) && (!f.dep || p.dep===f.dep) && (!f.statut || p.statut===f.statut) && (!f.sig || p.signaux.length)
+    (!f.tier || s.tier===f.tier) && (!f.seg || p.seg===f.seg) && (!f.dep || p.dep===f.dep) && (!f.statut || p.statut===f.statut) && (!f.sig || p.signaux.length) && (!f.nc || !mainContact(p) || mainContact(p).role==='standard')
   ).sort((a,b)=>b.s.t-a.s.t);
 }
 function prospects(){
   const rows=filtered(), f=ui.filt, deps=[...new Set(S.prospects.map(p=>p.dep))].sort();
   const opt=(arr,v)=>arr.map(([k,l])=>`<option value="${k}" ${v===k?'selected':''}>${l}</option>`).join('');
-  return head('Prospects', `${rows.length} résultat${rows.length>1?'s':''} · triés par score`, `<a class="btn sec" href="#import">Importer</a><button class="btn" data-act="newp">Nouveau prospect</button>`) + `
+  const SV=[['tous','Tous'],['mesA','Palier A'],['signaux','Avec signal'],['sanscontact','Sans contact'],['public','Acheteurs publics'],['clients','Clients']];
+  return head('Prospects', `${rows.length} résultat${rows.length>1?'s':''} · triés par score`, `<div class="seg-ctl" role="group" aria-label="Affichage"><button data-act="pview" data-k="liste" class="${ui.pview==='liste'?'on':''}">Liste</button><button data-act="pview" data-k="kanban" class="${ui.pview==='kanban'?'on':''}">Colonnes</button></div><a class="btn sec" href="#import">Importer</a><button class="btn" data-act="newp">Nouveau prospect</button>`) + `
+  <div class="views" role="group" aria-label="Vues enregistrées">${SV.map(([k,l])=>`<button data-act="sv" data-k="${k}" class="${ui.sv===k?'on':''}">${l}</button>`).join('')}</div>
   <div class="card"><div class="row">
     <input type="text" id="f-q" placeholder="Nom, ville, NAF, contact…" value="${esc(f.q)}" data-filt="q" style="flex:1;min-width:180px">
     <select id="f-tier" data-filt="tier"><option value="">Tous paliers</option>${opt([['A','Palier A'],['B','Palier B'],['C','Palier C']],f.tier)}</select>
@@ -573,7 +694,7 @@ function prospects(){
   ${ui.sel.size?`<div class="confirm row between"><span><b>${ui.sel.size}</b> sélectionné${ui.sel.size>1?'s':''}</span><div class="row">
     <select id="bulk-seq">${S.sequences.map(s=>`<option value="${s.id}">${esc(s.nom)}</option>`).join('')}</select>
     <button class="btn sm" data-act="bulkseq">Inscrire en séquence</button><button class="btn sm sec" data-act="bulkcrm">Envoyer au CRM</button><button class="btn sm ghost" data-act="bulkclear">Désélectionner</button></div></div>`:''}
-  <div class="tw"><table><thead><tr><th><input type="checkbox" id="selall" aria-label="Tout sélectionner" data-act="selall"></th><th>Prospect</th><th class="hide-m">Segment</th><th>Score</th><th>Signal principal</th><th class="hide-m">Contact</th><th>Statut</th><th class="hide-m">Responsable</th></tr></thead><tbody>
+  ${ui.pview==='kanban'?kanban(rows):`<div class="tw"><table><thead><tr><th><input type="checkbox" id="selall" aria-label="Tout sélectionner" data-act="selall"></th><th>Prospect</th><th class="hide-m">Segment</th><th>Score</th><th>Signal principal</th><th class="hide-m">Contact</th><th>Statut</th><th class="hide-m">Responsable</th></tr></thead><tbody>
   ${rows.map(({p,s})=>{const g=topSig(p),c=mainContact(p);return `<tr class="click" data-act="open" data-id="${p.id}">
     <td data-stop="1"><input type="checkbox" data-act="sel" data-id="${p.id}" ${ui.sel.has(p.id)?'checked':''} aria-label="Sélectionner ${esc(p.nom)}"></td>
     <td><b>${esc(p.nom)}</b><div class="small muted">${esc(p.ville)} (${p.dep}) · ${p.eff} sal.${p.sites>1?' · '+p.sites+' sites':''}</div></td>
@@ -582,7 +703,14 @@ function prospects(){
     <td class="small">${g?`<b>${SIGNAUX[g.t].l}</b><div class="muted">il y a ${g.d} j · ${esc(g.src)}</div>`:'<span class="muted">—</span>'}</td>
     <td class="hide-m small">${c?`${esc(c.n)}<div class="muted">${esc(c.f)}</div>`:'<span class="chip warn">à trouver</span>'}</td>
     <td>${statutChip(p.statut)}</td><td class="hide-m small">${esc(p.owner||'—')}</td></tr>`}).join('') || `<tr><td colspan="8" class="muted">Aucun prospect ne correspond à ces filtres.</td></tr>`}
-  </tbody></table></div>`;
+  </tbody></table></div>`}`;
+}
+const KCOLS=['Nouveau','À qualifier','À contacter','En séquence','A répondu','RDV fixé','Transmis au CRM'];
+function kanban(rows){
+  return `<div class="kb">${KCOLS.map(st=>{const it=rows.filter(r=>r.p.statut===st);return `<div class="kcol" data-statut="${st}"><h3><span>${st}</span><span>${it.length}</span></h3>
+    ${it.map(({p,s})=>{const g=topSig(p);return `<div class="kc" draggable="true" data-kid="${p.id}" data-act="open" data-id="${p.id}"><div class="row between" style="flex-wrap:nowrap"><b class="small">${esc(p.nom)}</b>${tierChip(s)}</div>
+      <span class="small muted">${esc(p.ville)} · ${p.eff} sal. · score ${s.t}</span>${g?`<span class="small">${SIGNAUX[g.t].l}</span>`:''}</div>`}).join('')||'<span class="small muted" style="padding:4px">Déposez une carte ici</span>'}</div>`}).join('')}</div>
+  <p class="small muted">Glissez une carte d'une colonne à l'autre pour changer son statut. Les colonnes Client, Pas maintenant, Écarté et Opposé restent dans la vue Liste.</p>`;
 }
 
 /* ---- Fiche ---- */
@@ -593,9 +721,9 @@ function fiche(){
   if(!ui.gen) ui.gen=gen(p,c,ui.canal,ui.ton,ui.consigne);
   const opp = p.statut==='Opposé';
   return head(esc(p.nom), `${esc(p.ville)} (${p.dep}) · SIREN ${p.siren||'à rapprocher'} · NAF ${p.naf} · responsable : ${esc(p.owner||'non assigné')}`,
-   `<button class="btn ghost" data-act="back">← Liste</button>`) + `
-  <div class="card row between">
-    <div class="row">${tierChip(s)}<span style="font-family:var(--font-display);font-size:22px;font-weight:600">${s.t}<span class="small muted"> / 100</span></span>
+   (()=>{const ids=filtered().map(x=>x.p.id), i=ids.indexOf(p.id); return `<button class="btn ghost" data-act="back">← Liste</button><div class="seg-ctl"><button data-act="fnav" data-k="-1" ${i>0?'':'disabled'} aria-label="Fiche précédente" title="Précédente (K)">‹</button><button disabled style="opacity:1;cursor:default">${i>=0?i+1:'–'} / ${ids.length}</button><button data-act="fnav" data-k="1" ${i>=0&&i<ids.length-1?'':'disabled'} aria-label="Fiche suivante" title="Suivante (J)">›</button></div>`;})()) + `
+  <div class="card row between sticky">
+    <div class="row">${gauge(s)}<div><div class="row">${tierChip(s)}<b>Palier ${s.tier}</b></div><div class="small muted">${p.signaux.length} signal${p.signaux.length>1?'s':''} · ${p.contacts.length} contact${p.contacts.length>1?'s':''}</div></div>
       <select id="st-sel" data-act="statut" aria-label="Statut">${STATUTS.map(x=>`<option ${x===p.statut?'selected':''}>${x}</option>`).join('')}</select></div>
     <div class="row">
       <button class="btn sm sec" data-act="enrich" ${opp?'disabled':''}>Enrichir les contacts</button>
@@ -621,6 +749,7 @@ function fiche(){
         </div>
         <div class="small b" style="margin-bottom:4px">${esc(ui.gen.titre)}</div>
         <textarea id="g-out" rows="14" class="out">${esc(ui.gen.texte)}</textarea>
+        <div class="row between" style="margin-top:8px"><b class="small">Contrôle avant envoi</b><span id="qc-score"></span></div><div class="qc" id="qc"></div>
         <div class="row" style="margin-top:8px"><button class="btn sm sec" data-act="copy">Copier</button>
           ${ui.canal==='email'||ui.canal==='relance'?`<button class="btn sm" data-act="valider" ${opp||!c||!c.email?'disabled':''}>Valider et programmer l'envoi</button>`:`<button class="btn sm" data-act="tachecanal">Créer la tâche ${ui.canal==='appel'?'d\'appel':'LinkedIn'}</button>`}
           ${c&&!c.email?'<span class="small muted">Pas d\'e-mail : lancez l\'enrichissement.</span>':''}</div>
@@ -647,6 +776,139 @@ function fiche(){
     </div>
   </div>`;
 }
+
+function gauge(s,size=58){ const r=23, c=2*Math.PI*r, col=s.tier==='A'?'var(--ok)':s.tier==='B'?'var(--warn)':'var(--muted)';
+  return `<svg class="gauge" width="${size}" height="${size}" viewBox="0 0 58 58" role="img" aria-label="Score ${s.t} sur 100"><circle cx="29" cy="29" r="${r}" fill="none" stroke="var(--line)" stroke-width="6"/><circle cx="29" cy="29" r="${r}" fill="none" stroke="${col}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(c*s.t/100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 29 29)"/><text x="29" y="34" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="16" font-weight="600" fill="var(--fg)">${s.t}</text></svg>`; }
+
+/* ---- Qualité du message ---- */
+const MOTS_SIG={site:/établissement|ouvr|bâtiment/i,qse:/HSE|QSE|prévention/i,recrut:/recrut|postes|nouveaux salariés/i,dirigeant:/fonction/i,marche:/marché/i,ao:/consultation/i,mac:/MAC|recyclage/i,presse:/annonce|évolution/i,web:/guide/i,ouvert:/./};
+function qualite(txt,canal,p){
+  if(canal==='appel') return null;
+  const c=[]; const corps=txt.split('\n—\n')[0];
+  if(canal==='linkedin'){
+    c.push([txt.length<=300,`${txt.length} / 300 caractères`]);
+    c.push([!/https?:\/\//.test(txt),'Pas de lien dans une invitation']);
+    c.push([/Bonjour \S/.test(txt),'Salutation personnalisée']);
+    c.push([!/gratuit|promo|urgent/i.test(txt),'Pas de ton promotionnel']);
+  } else {
+    const mots=corps.split(/\s+/).filter(Boolean).length, q=(corps.match(/\?/g)||[]).length, g=topSig(p);
+    c.push([mots>=60&&mots<=170,`${mots} mots (idéal : 60 à 170)`]);
+    c.push([corps.includes(p.nom)||p.contacts.some(x=>corps.includes(x.n)),"Personnalisé (entreprise ou contact cité)"]);
+    c.push([!g||MOTS_SIG[g.t].test(corps),g?`Accroche sur le signal « ${SIGNAUX[g.t].l.toLowerCase()} »`:'Accroche sur le secteur']);
+    c.push([q===1,q===1?'Une seule question, claire':`${q} questions (en garder une)`]);
+    c.push([!/gratuit|urgent|promo|exceptionnel|garanti|!!/i.test(corps),'Pas de mots qui déclenchent les filtres anti-spam']);
+    c.push([/opposition/i.test(txt),"Lien d'opposition présent"]);
+    { const m=txt.match(/\[(?!lien)[^\]]+\]/g)||[]; c.push([!m.length, m.length?`À compléter : ${[...new Set(m)].slice(0,3).join(', ')}`:'Aucun champ à compléter']); }
+  }
+  const ok=c.filter(x=>x[0]).length; return {pct:Math.round(ok/c.length*100),c};
+}
+function majQualite(){
+  const t=$('#g-out'), box=$('#qc'), sc=$('#qc-score'); if(!t||!box) return;
+  const q=qualite(t.value,ui.canal,byId(ui.pid));
+  if(!q){ box.innerHTML='<span class="muted">Le script d\'appel n\'est pas contrôlé : il sert de guide.</span>'; sc.innerHTML=''; return; }
+  sc.innerHTML=`<span class="chip ${q.pct>=85?'ok':q.pct>=60?'warn':'bad'}">${q.pct} / 100</span>`;
+  box.innerHTML=q.c.map(([ok,l])=>`<span><b class="${ok?'y':'n'}">${ok?'✓':'!'}</b>${esc(l)}</span>`).join('');
+}
+
+/* ---- Ma journée ---- */
+const COORDS={'Cergy':[49.036,2.063],'Eaubonne':[48.992,2.278],'Nantes':[47.218,-1.554],'Beauvais':[49.43,2.081],'Sarcelles':[48.997,2.378],'Paris':[48.857,2.352],'Crépy-en-Valois':[49.234,2.888],'Gonesse':[48.987,2.449],'Argenteuil':[48.947,2.248],'Créteil':[48.79,2.455],'Versailles':[48.805,2.12],'Saint-Denis':[48.936,2.357],'Roissy-en-France':[49.004,2.517],'Nanterre':[48.892,2.207],'Chartres':[48.446,1.489],'Lille':[50.629,3.057],'Pontoise':[49.051,2.101],'Rouen':[49.443,1.1],'Meaux':[48.96,2.879],'Rungis':[48.747,2.35],'Taverny':[49.026,2.222],'Poissy':[48.929,2.046]};
+function km(a,b){ const R=6371, t=x=>x*Math.PI/180, dl=t(b[0]-a[0]), dg=t(b[1]-a[1]); const h=Math.sin(dl/2)**2+Math.cos(t(a[0]))*Math.cos(t(b[0]))*Math.sin(dg/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
+const SESSION={quand:'Vendredi 20/11, 9 h',quoi:'MAC SST',ou:'Boulangeries Marceau, Versailles',pid:11,geo:COORDS['Versailles']};
+const court=p=>{const s=score(p),g=topSig(p),c=mainContact(p);return `Palier ${s.tier} (${s.t})${g?` · ${SIGNAUX[g.t].l.toLowerCase()} il y a ${g.d} j`:''}${c?` · ${c.f.toLowerCase()}`:' · aucun contact'}`;};
+function nbaList(){
+  const it=[];
+  S.replies.filter(r=>!r.done).forEach(r=>{const p=byId(r.pid); it.push({k:'r'+r.id,ic:'inbox',hot:r.cl==='Intéressé',prio:r.cl==='Intéressé'?100:70,titre:`Traiter la réponse de ${r.de}`,sous:p.nom,why:`Classée « ${r.cl} » (${r.conf} %) : ${r.info}.`,act:['Traiter','gorep',r.id]});});
+  S.tasks.filter(t=>!t.fait&&t.ech<=0&&byId(t.pid)).forEach(t=>{const p=byId(t.pid); it.push({k:'t'+t.id,ic:t.t==='appel'?'phone':t.t==='linkedin'?'users':t.t==='email'?'mail':'check',hot:t.ech<0,prio:t.ech<0?90:80,titre:t.titre,sous:p.nom,why:t.ech<0?`En retard de ${-t.ech} j · ${court(p)}`:`Aujourd'hui · ${court(p)}`,act:['Ouvrir avec le texte','open',p.id,t.t==='appel'?'appel':t.t==='linkedin'?'linkedin':'email'],tid:t.id});});
+  S.historique.filter(h=>echeance(h).etat!=='ok'&&!h.relance).forEach(h=>it.push({k:'h'+h.id,ic:'clock',hot:echeance(h).etat==='retard',prio:75,titre:`Relancer ${h.nom} : ${h.prest}`,sous:`${h.n} stagiaire${h.n>1?'s':''}`,why:`Échéance ${fmt(echeance(h).d)} (${echeance(h).j<0?'dépassée':'dans '+echeance(h).j+' j'}).`,act:['Créer la relance','relance',h.id]}));
+  S.prospects.filter(p=>['Nouveau','À qualifier','À contacter'].includes(p.statut)&&p.signaux.length&&score(p).tier==='A').forEach(p=>it.push({k:'p'+p.id,ic:'spark',hot:false,prio:60+score(p).t/10,titre:`Premier contact : ${p.nom}`,sous:p.ville,why:court(p),act:['Rédiger','open',p.id,'email']}));
+  return it.filter(x=>!S.nbaDone.includes(x.k)).sort((a,b)=>b.prio-a.prio);
+}
+function journee(){
+  const list=nbaList(), goal=8, pct=Math.min(100,Math.round(S.doneToday/goal*100));
+  const near=S.prospects.filter(p=>COORDS[p.ville]&&!['Opposé','Écarté','Client'].includes(p.statut)).map(p=>({p,d:km(SESSION.geo,COORDS[p.ville])})).filter(x=>x.d<=25).sort((a,b)=>score(b.p).t-score(a.p).t).slice(0,4);
+  return `<div class="hello"><div><div class="sub">Mercredi 18 novembre 2026</div><h1>Bonjour Julie, ${list.length} action${list.length>1?'s':''} vous attendent</h1></div><span class="demo">Maquette · données fictives</span></div>
+  <div class="grid g2">
+    <div class="card"><div class="row between"><h2>Prochaines actions</h2><span class="small muted">triées par l'agent : réponses chaudes, retards, échéances, prospects A</span></div>
+      <div>${list.slice(0,8).map(x=>`<div class="nba"><span class="ico ${x.hot?'hot':''}">${ic(x.ic)}</span><div style="min-width:0"><b>${esc(x.titre)}</b> <span class="small muted">· ${esc(x.sous)}</span><div class="why">${esc(x.why)}</div></div>
+        <div class="acts"><button class="btn sm" data-act="${x.act[1]}" data-id="${x.act[2]}" ${x.act[3]?`data-canal="${x.act[3]}"`:''}>${x.act[0]}</button>${x.tid?`<button class="btn sm ghost" data-act="nbadone" data-k="${x.k}" data-id="${x.tid}">Fait</button>`:''}<button class="btn sm ghost" data-act="nbasnooze" data-k="${x.k}" title="Reporter à demain">Demain</button></div></div>`).join('')||'<p class="muted">Tout est à jour. Profitez-en pour préparer une campagne.</p>'}</div>
+      ${list.length>8?`<p class="small muted">${list.length-8} autres actions dans <a href="#taches">Tâches</a>.</p>`:''}</div>
+    <div class="grid" style="gap:16px;align-content:start">
+      <div class="card"><div class="row between"><h2>Objectif du jour</h2><b>${S.doneToday} / ${goal}</b></div><div class="prog" style="margin-top:8px"><i style="width:${pct}%"></i></div>
+        <p class="small muted" style="margin:8px 0 0">Cette semaine : 2 RDV fixés sur 3 visés · 5 réponses · 41 e-mails partis.</p></div>
+      <div class="card"><h2>Cette nuit, l'agent a…</h2><div class="list night">${S.journal.map(j=>`<div class="li"><span class="muted">${ic(j.ic)}</span><div class="grow small"><b>${j.h}</b> · ${esc(j.txt)}</div></div>`).join('')}</div><a class="small" href="#pilote">Régler ce qu'il fait seul</a></div>
+      <div class="card"><div class="row" style="gap:6px">${ic('pin')}<h2>Autour de votre prochaine session</h2></div><p class="small" style="margin:4px 0 8px">${SESSION.quand} · ${SESSION.quoi} · ${esc(SESSION.ou)}. Prospects à moins de 25 km : proposez un passage le même jour.</p>
+        <div class="list">${near.map(({p,d})=>`<div class="li"><div class="grow small"><a href="#" data-act="open" data-id="${p.id}"><b>${esc(p.nom)}</b></a><br><span class="muted">${esc(p.ville)} · ${Math.round(d)} km · ${esc(p.statut)}</span></div>${tierChip(score(p))}</div>`).join('')}</div></div>
+    </div>
+  </div>`;
+}
+
+/* ---- Pilote automatique ---- */
+const NIVEAUX=[
+ ['recherche','Trouver et créer des prospects','Lit BODACC, SIRENE, offres d\'emploi, veille AO ; crée les fiches et les signaux'],
+ ['enrich','Enrichir les contacts','Recherche d\'e-mails vérifiés, dans la limite du budget'],
+ ['redac','Rédiger les premiers messages','Brouillons personnalisés sur le signal et le besoin estimé'],
+ ['reactiv','Envoyer les relances aux clients','Recyclages MAC SST, exercices semestriels (clients connus)'],
+ ['prospect','Envoyer les séquences de prospection','Nouveaux contacts ; l\'automatique exige un modèle validé'],
+ ['linkedin','Agir sur LinkedIn','Toujours manuel : l\'agent prépare le texte, vous l\'envoyez',true],
+ ['tri','Trier les réponses','Classement, arrêt des séquences, oppositions, absences'],
+ ['rdv','Proposer des rendez-vous','Créneaux libres de l\'agenda Microsoft 365 envoyés aux prospects intéressés'],
+ ['crm','Mettre à jour le CRM','Comptes, contacts, activités et opportunités au RDV fixé']
+];
+function pilote(){
+  const L=[['manuel','Je le fais'],['proposer',"L'agent propose"],['auto','Automatique']];
+  return head('Pilote automatique',"Choisissez ce que l'agent fait seul. Les garde-fous (opposition, plafonds, plages horaires, budget) s'appliquent toujours.") + `
+  <div class="tw"><table class="lvl"><thead><tr><th>Activité</th><th>Niveau</th></tr></thead><tbody>${NIVEAUX.map(([k,l,d,lock])=>`<tr><td><b>${l}</b><div class="small muted">${d}</div></td><td><div class="seg-ctl" role="group" aria-label="${esc(l)}">${L.map(([v,t])=>`<button data-act="lvl" data-k="${k}" data-v="${v}" class="${S.niveaux[k]===v?'on':''}" ${lock&&v!=='manuel'?'disabled':''}>${t}</button>`).join('')}</div></td></tr>`).join('')}</tbody></table></div>
+  <div class="grid g2e">
+    <div class="card"><h2>Limites</h2><div class="grid" style="gap:12px">
+      <label class="f" for="lim-b"><span class="row between"><span>Budget IA et enrichissement par mois</span><b>${S.limites.budget} €</b></span><input type="range" id="lim-b" min="10" max="150" step="5" value="${S.limites.budget}" data-lim="budget"></label>
+      <label class="f" for="lim-m"><span class="row between"><span>Envois automatiques par jour, toutes boîtes</span><b>${S.limites.maxAuto}</b></span><input type="range" id="lim-m" min="0" max="80" step="5" value="${S.limites.maxAuto}" data-lim="maxAuto"></label>
+      <p class="small muted" style="margin:0">Consommé ce mois : 18,40 € d'IA et 6,20 € d'enrichissement. Au-delà du budget, l'agent repasse en « propose ».</p></div></div>
+    <div class="card"><h2>Journal de l'agent</h2><div class="list">${S.journal.map(j=>`<div class="li"><span class="muted">${ic(j.ic)}</span><div class="grow small"><b>${j.h}</b> · ${esc(j.txt)}</div></div>`).join('')}</div><p class="small muted">Chaque action garde sa raison et ses sources. Les envois et mises à jour du CRM sont réversibles pendant 10 minutes.</p></div>
+  </div>`;
+}
+
+/* ---- Campagnes ---- */
+const POSTS=[
+ "Combien de sauveteurs secouristes du travail faut-il dans votre entreprise ? L'INRS recommande 10 à 15 % de l'effectif, et un recyclage tous les 24 mois. Nous avons préparé un tableau simple par taille d'entreprise : je vous le partage en commentaire.",
+ "Exercice d'évacuation : le Code du travail en demande un au moins tous les 6 mois. Ce que nous voyons le plus souvent sur le terrain : des serre-files non désignés et des points de rassemblement trop proches du bâtiment. Trois vérifications à faire avant le prochain exercice ⬇️",
+ "Retour d'expérience : former 30 caristes en deux semaines sans arrêter les quais. Sessions de 7 h en horaires décalés, gestes et postures sur leurs propres postes, et notre unité mobile incendie sur le parking."
+];
+function campagnes(){
+  const chip=e=>({'Prête':'ok','Brouillon':'warn','À préparer':'','Envoyée':'info'}[e]);
+  return head('Campagnes','Calendrier marketing de l\'année : temps forts réglementaires et saisonniers, préparés par l\'agent, validés par vous.') + `
+  <div class="months">${S.campagnes.map(c=>`<div class="card camp"><span class="m">${c.mois}</span><b>${esc(c.titre)}</b><span class="small muted">${esc(c.seg)} · ${esc(c.canaux)}</span>
+    <div class="row between"><span class="chip ${chip(c.etat)}">${c.etat}</span><span class="small muted">${c.cible?c.cible+' destinataires':'contenu'}</span></div>
+    <div class="row">${c.etat==='À préparer'?`<button class="btn sm" data-act="prepcamp" data-id="${c.id}">Préparer avec l'IA</button>`:c.etat==='Brouillon'?`<button class="btn sm" data-act="valcamp" data-id="${c.id}">Relire et valider</button>`:c.etat==='Prête'?`<button class="btn sm sec" data-act="sendcamp" data-id="${c.id}">Programmer</button>`:'<span class="small muted">Programmée</span>'}</div></div>`).join('')}</div>
+  <div class="card"><div class="row between"><h2>Posts LinkedIn de la semaine</h2><span class="small muted">Proposés par l'agent. À publier vous-même depuis votre compte.</span></div>
+    <div class="grid g3">${POSTS.map((t,i)=>`<div class="out" style="min-height:0;display:flex;flex-direction:column;gap:8px"><span>${esc(t)}</span><button class="btn sm sec" data-act="copypost" data-i="${i}" style="align-self:flex-start">Copier</button></div>`).join('')}</div></div>`;
+}
+
+/* ---- Palette de commandes ---- */
+const normq=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function palItems(){
+  const q=normq(ui.pal.q||'');
+  const acts=[
+    {l:'Importer un fichier',ic:'upload',k:'Action',run:()=>go('import')},
+    {l:'Nouveau prospect',ic:'users',k:'Action',run:()=>{ go('prospects'); setTimeout(()=>document.querySelector('[data-act=newp]')?.click(),60); }},
+    {l:"Lancer la session d'appels",ic:'phone',k:'Action',run:()=>{ ui.session=true; go('taches'); }},
+    {l:'Changer de thème',ic:'moon',k:'Action',run:toggleTheme}
+  ];
+  const views=VIEWS.filter(v=>v[0]!=='grp').map(v=>({l:v[1],ic:v[3],k:'Écran',run:()=>go(v[0])}));
+  const ps=S.prospects.map(p=>({l:p.nom,sub:`${p.ville} · ${score(p).tier} ${score(p).t}`,ic:'users',k:'Prospect',run:()=>{ui.canal='email';go('fiche',p.id);}}));
+  const all=[...acts,...views,...ps];
+  return (q? all.filter(x=>normq(x.l+' '+(x.sub||'')).includes(q)) : [...views.slice(0,6),...acts]).slice(0,9);
+}
+function renderPal(){
+  if(!ui.pal){ $('#pal').innerHTML=''; return; }
+  const it=palItems(); ui.pal.i=Math.min(ui.pal.i,Math.max(0,it.length-1));
+  const list=it.map((x,i)=>`<li class="${i===ui.pal.i?'on':''}" data-pi="${i}">${ic(x.ic)}<span>${esc(x.l)}${x.sub?` <span class="small muted">· ${esc(x.sub)}</span>`:''}</span><span class="k">${x.k}</span></li>`).join('')||'<li>Aucun résultat</li>';
+  if(!$('#pal-in')){ $('#pal').innerHTML=`<div class="pal-back" data-pal="back"><div class="pal" role="dialog" aria-label="Recherche"><input id="pal-in" placeholder="Rechercher un prospect, un écran, une action…" autocomplete="off"><ul id="pal-ul">${list}</ul><div class="ft"><span><kbd>↑</kbd> <kbd>↓</kbd> naviguer</span><span><kbd>Entrée</kbd> ouvrir</span><span><kbd>Échap</kbd> fermer</span></div></div></div>`; $('#pal-in').value=ui.pal.q; $('#pal-in').focus(); }
+  else $('#pal-ul').innerHTML=list;
+}
+function openPal(){ ui.pal={q:'',i:0}; renderPal(); }
+function closePal(){ ui.pal=null; renderPal(); }
+function runPal(i){ const x=palItems()[i]; closePal(); if(x) x.run(); }
+function toggleTheme(){ const root=document.documentElement; const dark = root.dataset.theme ? root.dataset.theme==='dark' : matchMedia('(prefers-color-scheme: dark)').matches; root.dataset.theme = dark?'light':'dark'; try{localStorage.setItem('pm-theme',root.dataset.theme)}catch(e){} }
 
 /* ---- Tâches ---- */
 function taches(){
@@ -1013,6 +1275,7 @@ document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]'); if(!el) return;
   if(e.target.closest('[data-stop]') && el.dataset.act==='open') return;
   const a=el.dataset.act, id=el.dataset.id, k=el.dataset.k, p=byId(ui.pid);
+  if(el.tagName==='A' && el.getAttribute('href')==='#') e.preventDefault();
   if(['open','back','newp','enrich','inscrire','tache','tocrm','canal','regen','copy','valider','tachecanal','addc','ecarter','opposer','tf','session','endsession','out','rep','ract','sugg','confirm','cancel','clearchat','sample','doimport','seq','addseq','up','down','delstep','addstep','addauto','simu','resetw','addopp','delopp','purge','export','crmmode','relance','relances','addhist','flush','cancelmail','bulkseq','bulkcrm','bulkclear'].includes(a)) e.preventDefault();
   switch(a){
     case 'open': ui.canal=el.dataset.canal||'email'; ui.cidx=0; ui.consigne=''; go('fiche',id); break;
@@ -1056,7 +1319,7 @@ document.addEventListener('click',e=>{
     case 'clearchat': S.chat=[]; ui.pending=null; save(); render(); break;
     case 'sample': loadCSV(SAMPLE,'exemple.csv'); toast('Fichier d\'exemple chargé : 8 lignes.'); break;
     case 'doimport': { let n=0; ui.imp.rows.filter(r=>r.st==='Nouveau'||r.st==='À vérifier').forEach(r=>{ const seg=nafSeg(r.naf||''); const np=P(++S.nextId,r.nom===r.nom.toUpperCase()?r.nom.toLowerCase().replace(/(^|[\s-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase()):r.nom,r.ville||'—',cpDep(r.cp),seg,(r.naf||'').replace(/^(\d\d)(\d\d)/,'$1.$2'),r.eff||20,1,{statut:r.st==='À vérifier'?'À qualifier':'Nouveau',src:'Import '+ui.imp.name,siren:r.siret&&luhn(r.siret)?r.siret.slice(0,9).replace(/(\d{3})(\d{3})(\d{3})/,'$1 $2 $3'):'',owner:'',contacts:r.contact?[C(r.contact,r.fonction||'—',/qse|hse|drh|dir|g[ée]rant|responsable/i.test(r.fonction)?'decideur':'utilisateur',/@(gmail|hotmail|yahoo|orange|free|wanadoo|outlook|laposte)\./.test(r.email)?'':r.email,r.email&&!/@(gmail|hotmail|yahoo|orange|free|wanadoo|outlook|laposte)\./.test(r.email)?'probable':'absent',r.tel)]:[]}); np.hist.push({d:fmt(TODAY),txt:'Créé par import ('+ui.imp.name+')'}); S.prospects.push(np); n++; });
-      ui.imp=null; save(); toast(`${n} prospects importés. Scores calculés ; rapprochement SIRENE en cours.`); ui.filt={q:'',tier:'',seg:'',dep:'',statut:'',sig:false}; go('prospects'); break; }
+      ui.imp=null; save(); toast(`${n} prospects importés. Scores calculés ; rapprochement SIRENE en cours.`); ui.filt={q:'',tier:'',seg:'',dep:'',statut:'',sig:false,nc:false}; ui.sv='tous'; go('prospects'); break; }
     case 'seq': ui.seq=+id; render(); break;
     case 'addseq': { const n=$('#newseq').value.trim(); if(!n){toast('Donnez un nom à la séquence.');break;} const ns={id:++S.nextId,nom:n,mode:'Premier envoi validé',plafond:40,inscrits:0,steps:[{t:'email',j:0,titre:'Premier e-mail (à rédiger)',env:0,ouv:0,rep:0}]}; S.sequences.push(ns); ui.seq=ns.id; save(); render(); toast('Séquence créée.'); break; }
     case 'up': case 'down': { const q=S.sequences.find(s=>s.id===ui.seq), i=+el.dataset.i, j=a==='up'?i-1:i+1; [q.steps[i],q.steps[j]]=[q.steps[j],q.steps[i]]; const js=q.steps.map(s=>s.j).sort((x,y)=>x-y); q.steps.forEach((s,x)=>s.j=js[x]); save(); render(); break; }
@@ -1072,8 +1335,21 @@ document.addEventListener('click',e=>{
     case 'bulkseq': { const sid=$('#bulk-seq').value; let n=0; ui.sel.forEach(i=>{ if(inscrire(byId(i),sid)) n++; }); ui.sel.clear(); save(); render(); toast(`${n} prospect${n>1?'s':''} inscrit${n>1?'s':''}.`); break; }
     case 'bulkcrm': ui.sel.forEach(i=>{ const pp=byId(i); pp.statut='Transmis au CRM'; crmLog('prospect.qualifie',pp.nom); }); toast(`${ui.sel.size} prospect(s) envoyé(s) au CRM.`); ui.sel.clear(); save(); render(); break;
     case 'bulkclear': ui.sel.clear(); render(); break;
+    case 'pal': openPal(); break;
+    case 'theme': toggleTheme(); break;
+    case 'pview': ui.pview=k; render(); break;
+    case 'sv': { ui.sv=k; const f={q:'',tier:'',seg:'',dep:'',statut:'',sig:false,nc:false}; if(k==='mesA') f.tier='A'; if(k==='signaux') f.sig=true; if(k==='sanscontact') f.nc=true; if(k==='public') f.seg='collectivite'; if(k==='clients') f.statut='Client'; ui.filt=f; render(); break; }
+    case 'fnav': { const ids=filtered().map(x=>x.p.id), i=ids.indexOf(ui.pid), n=ids[i+ +k]; if(n){ ui.cidx=0; ui.consigne=''; go('fiche',n); } break; }
+    case 'gorep': ui.rep=+id; go('reponses'); break;
+    case 'nbasnooze': S.nbaDone.push(k); save(); render(); toast('Reporté à demain.'); break;
+    case 'nbadone': { S.nbaDone.push(k); const t=S.tasks.find(x=>x.id===+id); if(t) t.fait=true; S.doneToday++; save(); render(); toast('Bien joué. Action suivante en tête de liste.'); break; }
+    case 'lvl': S.niveaux[k]=el.dataset.v; S.journal.unshift({h:new Date().toTimeString().slice(0,5),ic:'bot',txt:`Réglage modifié : « ${NIVEAUX.find(n=>n[0]===k)[1]} » → ${({manuel:'je le fais',proposer:"l'agent propose",auto:'automatique'})[el.dataset.v]}.`}); save(); render(); toast('Niveau enregistré.'); break;
+    case 'prepcamp': { const c=S.campagnes.find(x=>x.id===+id); c.etat='Brouillon'; save(); render(); toast(c.cible?`Brouillon prêt : objet, e-mail, post LinkedIn et liste de ${c.cible} destinataires.`:'Brouillon prêt : textes et page à relire.'); break; }
+    case 'valcamp': { const c=S.campagnes.find(x=>x.id===+id); c.etat='Prête'; save(); render(); toast('Campagne validée.'); break; }
+    case 'sendcamp': { const c=S.campagnes.find(x=>x.id===+id); c.etat='Envoyée'; save(); render(); toast(S.mailTest?'Campagne programmée (mode test : envois redirigés).':'Campagne programmée en début de mois, plafonds respectés.'); break; }
+    case 'copypost': { const t=POSTS[+el.dataset.i]; (navigator.clipboard?.writeText(t)||Promise.reject()).then(()=>toast('Post copié.')).catch(()=>toast('Copie refusée par le navigateur : sélectionnez le texte.')); break; }
     case 'crmmode': S.crmMode=k; save(); render(); toast(k==='autonome'?'Mode autonome : tables locales du module.':'Mode CRM interne : clients et historique lus par l\'API du CRM.'); break;
-    case 'relance': case 'relances': { const list=a==='relance'?[S.historique.find(h=>h.id===+id)]:S.historique.filter(h=>echeance(h).etat!=='ok'&&!h.relance); list.forEach(h=>{ h.relance=true; addTask('appel',h.pid||0,`Relance ${h.prest} : ${h.nom} (${h.n} stagiaire${h.n>1?'s':''}, échéance ${fmt(echeance(h).d)})`,0); }); save(); render(); toast(`${list.length} relance${list.length>1?'s':''} créée${list.length>1?'s':''} dans les tâches.`); break; }
+    case 'relance': case 'relances': { const list=a==='relance'?[S.historique.find(h=>h.id===+id)]:S.historique.filter(h=>echeance(h).etat!=='ok'&&!h.relance); list.forEach(h=>{ h.relance=true; addTask('appel',h.pid||0,`Relance ${h.prest} : ${h.nom} (${h.n} stagiaire${h.n>1?'s':''}, échéance ${fmt(echeance(h).d)})`,0); }); save(); render(); if(ui.view==='journee'){S.doneToday++; save(); render();} toast(`${list.length} relance${list.length>1?'s':''} créée${list.length>1?'s':''} dans les tâches.`); break; }
     case 'addhist': { const nom=$('#h-nom').value.trim(); if(!nom){toast('Indiquez le compte.');break;} const pp=S.prospects.find(x=>x.nom.toLowerCase()===nom.toLowerCase()); S.historique.push({id:++S.nextId,nom,pid:pp?pp.id:0,prest:$('#h-prest').value,date:$('#h-date').value||'2026-11-10',n:+$('#h-n').value||1,formateur:'—',src:'Saisie'}); save(); render(); toast('Session enregistrée, échéance calculée.'); break; }
     case 'flush': { let n=0; S.file.forEach(m=>{ if(m.st==='Programmé'){ m.st=S.mailTest?'Envoyé (redirigé test)':'Envoyé'; n++; const pp=byId(m.pid); if(pp) addHist(pp,`E-mail envoyé${S.mailTest?' (mode test, redirigé)':''} : ${m.obj}`); } }); S.boites[0].auj+=n; save(); render(); toast(`${n} message${n>1?'s':''} ${S.mailTest?'redirigé'+(n>1?'s':'')+' vers l\'adresse de test':'envoyé'+(n>1?'s':'')}.`); break; }
     case 'cancelmail': { const m=S.file.find(x=>x.id===+id); m.st='Annulé'; save(); render(); toast('Envoi annulé.'); break; }
@@ -1083,6 +1359,7 @@ document.addEventListener('change',e=>{
   const el=e.target, a=el.dataset.act, p=byId(ui.pid);
   if(el.dataset.filt){ const k=el.dataset.filt; ui.filt[k]= el.type==='checkbox'?el.checked:el.value; if(k!=='q') render(); return; }
   if(el.dataset.w){ const k=el.dataset.w; S.weights[k]= k==='prio'?el.value:+el.value; save(); render(); return; }
+  if(el.dataset.lim){ S.limites[el.dataset.lim]=+el.value; save(); render(); return; }
   switch(a){
     case 'sel': { const id=+el.dataset.id; el.checked?ui.sel.add(id):ui.sel.delete(id); render(); break; }
     case 'selall': filtered().forEach(({p})=> el.checked?ui.sel.add(p.id):ui.sel.delete(p.id)); render(); break;
@@ -1103,6 +1380,8 @@ document.addEventListener('input',e=>{
   const el=e.target;
   if(el.dataset.filt==='q'){ ui.filt.q=el.value; const pos=el.selectionStart; render(); const n=$('#f-q'); n.focus(); n.setSelectionRange(pos,pos); }
   if(el.dataset.w && el.type==='range'){ const o=$('#wv-'+el.dataset.w); if(o) o.textContent=el.value; }
+  if(el.id==='g-out'){ if(ui.gen) ui.gen.texte=el.value; majQualite(); }
+  if(el.id==='pal-in'){ ui.pal.q=el.value; ui.pal.i=0; renderPal(); }
 });
 document.addEventListener('submit',e=>{
   if(e.target.id!=='chatform') return; e.preventDefault();
@@ -1115,7 +1394,23 @@ document.addEventListener('dragover',e=>{ const d=e.target.closest('#drop'); if(
 document.addEventListener('dragleave',e=>{ const d=e.target.closest('#drop'); if(d) d.classList.remove('over'); });
 document.addEventListener('drop',e=>{ const d=e.target.closest('#drop'); if(!d) return; e.preventDefault(); const f=e.dataTransfer.files[0]; if(f){ const rd=new FileReader(); rd.onload=()=>loadCSV(String(rd.result),f.name); rd.readAsText(f);} });
 
-ui.view = location.hash.slice(1) || 'tableau';
+document.addEventListener('keydown',e=>{
+  const typing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||'');
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); ui.pal?closePal():openPal(); return; }
+  if(ui.pal){ const n=palItems().length;
+    if(e.key==='Escape'){ closePal(); } else if(e.key==='ArrowDown'){ e.preventDefault(); ui.pal.i=(ui.pal.i+1)%Math.max(1,n); renderPal(); } else if(e.key==='ArrowUp'){ e.preventDefault(); ui.pal.i=(ui.pal.i-1+n)%Math.max(1,n); renderPal(); } else if(e.key==='Enter'){ e.preventDefault(); runPal(ui.pal.i); }
+    return; }
+  if(typing) return;
+  if(e.key==='/'){ e.preventDefault(); openPal(); }
+  if(ui.view==='fiche'&&(e.key==='j'||e.key==='k')){ const b=document.querySelector(`[data-act=fnav][data-k="${e.key==='j'?1:-1}"]`); if(b&&!b.disabled) b.click(); }
+});
+document.addEventListener('mousedown',e=>{ if(!ui.pal) return; const li=e.target.closest('[data-pi]'); if(li){ e.preventDefault(); runPal(+li.dataset.pi); return; } if(e.target.dataset.pal==='back') closePal(); });
+document.addEventListener('dragstart',e=>{ const c=e.target.closest?.('[data-kid]'); if(!c) return; e.dataTransfer.setData('text/plain',c.dataset.kid); e.dataTransfer.effectAllowed='move'; c.classList.add('drag'); });
+document.addEventListener('dragend',e=>{ e.target.classList?.remove('drag'); document.querySelectorAll('.kcol.over').forEach(x=>x.classList.remove('over')); });
+document.addEventListener('dragover',e=>{ const c=e.target.closest?.('.kcol'); if(c){ e.preventDefault(); document.querySelectorAll('.kcol.over').forEach(x=>x!==c&&x.classList.remove('over')); c.classList.add('over'); } });
+document.addEventListener('drop',e=>{ const c=e.target.closest?.('.kcol'); if(!c) return; e.preventDefault(); const p=byId(e.dataTransfer.getData('text/plain')); if(!p) return; const st=c.dataset.statut; if(p.statut!==st){ if(st==='En séquence'&&!mainContact(p)){ toast('Ajoutez d\'abord un contact.'); render(); return; } p.statut=st; addHist(p,'Statut → '+st+' (glisser-déposer)'); if(st==='RDV fixé') crmLog('rdv.fixe',p.nom+' → opportunité créée'); save(); toast(`${p.nom} → ${st}${st==='RDV fixé'?' · opportunité créée dans le CRM':''}.`); } render(); });
+try{ const th=localStorage.getItem('pm-theme'); if(th) document.documentElement.dataset.theme=th; }catch(e){}
+ui.view = location.hash.slice(1) || 'journee';
 if(ui.view==='fiche' && !byId(ui.pid)) ui.view='prospects';
 render();
 </script>

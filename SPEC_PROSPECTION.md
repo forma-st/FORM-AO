@@ -1,10 +1,12 @@
-# Agent d'aide à la prospection — Cahier des charges (v0.3)
+# Agent d'aide à la prospection — Cahier des charges (v0.4)
 
 Module **interne** de FORMA'ST, testé d'abord seul, puis intégré en tout ou partie au **CRM interne** (développé avec Claude Code) et à l'**application AO** (Veille AO, ce dépôt).
 
 > **v0.2 (18/11/2026)** : le CRM est un outil interne, l'intégration se fait donc directement (3.14) ; ajout du module de messagerie (3.16) et d'une base « historique des formations » en attendant la connexion au CRM (3.17).
 >
 > **v0.3** : le CRM est une application **séparée** de l'outil AO. Les échanges passent par des API internes ; architecture, emplacement de l'agent et contrats d'API précisés en 3.14.2.
+>
+> **v0.4** : comparatif avec Koban, Neocamino, Salesforce, HubSpot, Pipedrive, lemlist / La Growth Machine et d'autres ([BENCHMARK_PROSPECTION.md](BENCHMARK_PROSPECTION.md)) ; améliorations retenues en 3.18 ; ergonomie précisée en 7.1.
 
 Maquette fonctionnelle : [`maquettes/prospection.html`](maquettes/prospection.html) (données fictives).
 
@@ -455,6 +457,27 @@ En mode autonome, l'agent a sa propre table d'historique pour calculer les recyc
 
 **Usages** : recyclages (recette 2), tableau « échéances à venir », calcul du CA récurrent, références citables par secteur, preuve d'antériorité dans les messages (« nous avons formé 12 de vos salariés en janvier 2025 »).
 
+### 3.18 Améliorations issues du comparatif
+
+Détail et sources : [BENCHMARK_PROSPECTION.md](BENCHMARK_PROSPECTION.md).
+
+| Amélioration | Description | Phase |
+|---|---|---|
+| **Ma journée** | Écran d'accueil : liste des prochaines actions classée par l'agent (réponses « intéressé », tâches en retard, échéances clients, prospects A sans contact), chacune avec sa raison en une ligne et trois boutons (action, Fait, Demain). Objectif d'actions du jour | P1 |
+| **Compte rendu de la nuit** | Ce que l'agent a fait seul depuis la veille, avec un lien vers chaque élément | P2 |
+| **Pilote automatique** | Pour chaque activité (recherche, enrichissement, rédaction, relances clients, séquences de prospection, LinkedIn, tri des réponses, RDV, CRM) : *je le fais* / *l'agent propose* / *automatique*. LinkedIn est bloqué en manuel. Budget mensuel (IA + enrichissement) et plafond d'envois automatiques ; au-delà, retour en « propose ». Journal avec raisons et sources ; annulation possible 10 minutes | P2 |
+| **Passage de main** | Réponse « intéressé » : séquence arrêtée, notification Teams immédiate, 3 créneaux proposés depuis l'agenda, fiche de préparation | P2 |
+| **Vue en colonnes** | Prospects en colonnes par statut, changement de statut par glisser-déposer (mêmes règles qu'un changement manuel : un contact est exigé pour « En séquence », l'opportunité CRM est créée à « RDV fixé ») | P1 |
+| **Vues enregistrées** | Filtres nommés, partagés dans l'équipe (Palier A, Avec signal, Sans contact, Acheteurs publics, Clients…) | P1 |
+| **Recherche universelle** | Ctrl+K ou « / » : prospects, écrans, actions ; J / K pour passer à la fiche suivante ou précédente de la liste filtrée | P1 |
+| **Contrôle avant envoi** | Note sur 100 recalculée pendant la frappe : longueur (60 à 170 mots), personnalisation, accroche sur le signal, une seule question, mots qui déclenchent les filtres anti-spam, lien d'opposition, champs entre crochets restants. En dessous de 60, l'envoi automatique est refusé | P1 |
+| **Campagnes** | Calendrier annuel des temps forts (budget de janvier, recyclages du printemps, chaleur, saisonniers, rentrée, semaine européenne de la santé et sécurité au travail en octobre, budget de fin d'année) ; préparation par l'IA (objet, e-mail, post, liste), validation, programmation. Posts LinkedIn de la semaine proposés, publiés à la main | P3 |
+| **Capture de contacts entrants** | Guide « obligations de formation par effectif », simulateur « Combien de SST vous faut-il ? », formulaires du site → prospect créé avec consentement, source et besoin chiffré | P3 |
+| **Autour de la prochaine session** | Prospects à moins de 25 km d'une formation planifiée, pour proposer un passage le même jour (géocodage des adresses SIRENE) | P2 |
+| **Enrichissement en cascade** | Sources gratuites d'abord (SIRENE, site web, annuaire public), puis Pappers en option (CA, dirigeants), puis service d'e-mails vérifiés ; arrêt à la première réponse fiable ; coût par contact affiché | P2 |
+| **Téléphonie** | Appel en un clic (Teams Phone ou opérateur), enchaînement d'appels, résumé du compte rendu par l'IA ; enregistrement seulement avec information et accord de la personne | P4 |
+| **Score prédictif des opportunités** | Probabilité de signature, une fois 6 mois de résultats disponibles | P4 |
+
 ---
 
 ## 4. Exigences non fonctionnelles
@@ -543,7 +566,10 @@ prospection/
 
 | Écran | Contenu |
 |---|---|
-| Tableau de bord | Indicateurs, entonnoir, signaux récents, échéances, coût IA |
+| Ma journée | Prochaines actions classées, objectif du jour, compte rendu de la nuit, prospects autour de la prochaine session |
+| Campagnes | Calendrier annuel, préparation et validation, posts LinkedIn de la semaine |
+| Pilote automatique | Niveau d'autonomie par activité, budget, plafond, journal |
+| Statistiques | Indicateurs, entonnoir, signaux récents, échéances, rendement des sources, coût IA |
 | Prospects | Liste filtrable (palier, segment, département, statut, signal), tri par score, actions groupées |
 | Fiche prospect | Score et explication, besoin estimé, signaux, contacts, rédaction IA par canal, historique |
 | Import | Dépôt de fichier, correspondance des colonnes, aperçu, rapport de dédoublonnage |
@@ -560,14 +586,26 @@ prospection/
 
 ---
 
+### 7.1 Principes d'ergonomie
+
+1. **L'accueil est une liste d'actions, pas un tableau de bord.** Les chiffres sont dans « Statistiques » ; l'accueil dit quoi faire maintenant et pourquoi.
+2. **Chaque suggestion donne sa raison** en une ligne (palier, signal, âge du signal, contact) et ses sources sont à un clic.
+3. **Un geste par action courante** : rédiger, appeler, reporter, marquer comme fait, changer de statut (glisser-déposer).
+4. **Le texte est prêt quand la tâche s'ouvre** : la fiche s'ouvre sur le bon canal (e-mail, LinkedIn, script d'appel).
+5. **Clavier** : Ctrl+K / « / » pour tout trouver, J / K entre les fiches, Échap pour fermer.
+6. **Barre d'actions de la fiche toujours visible** (score, statut, séquence, CRM) pendant le défilement.
+7. **Ce qui demande attention se voit** : jauge de score colorée par palier, pastilles d'état, compteurs dans le menu.
+8. **Clair et sombre**, mêmes contrastes ; utilisable au téléphone pour la file du jour, la fiche et les appels.
+9. **Rien d'irréversible sans confirmation** ; les actions automatiques restent annulables quelques minutes.
+
 ## 8. Phasage et charge estimée
 
 | Phase | Contenu | Charge |
 |---|---|---|
-| **P1 — MVP « base utile »** (4 semaines) | Module autonome dans le projet AO, passerelle AO locale ; import S1 avec dédoublonnage et rapprochement SIRENE, historique des formations (3.17) et recyclages, acheteurs de l'application AO S4, profil idéal, besoin estimé, score (adéquation + accessibilité), fiche, brief et messages IA (copier-coller), tâches, opposition | 15–20 j |
-| **P2 — « contacter »** (4 semaines) | Module de messagerie (3.16) avec mode test, séquences e-mail + tâches LinkedIn et appels, relève et classement des réponses, 6 premières automatisations, tableau de bord, RGPD complet, enrichissement S11 (option), PostgreSQL | 15–20 j |
-| **P3 — « signaux »** (4 semaines) | BODACC, France Travail, Géorisques, annuaire public, DECP et radar, veille web, score d'intention, assistant conversationnel, recettes 3 à 14 | 15–20 j |
-| **P4 — « intégré »** | API AO, passerelle `crm_api` (dès que l'API du CRM existe, possible plus tôt), reprise des données du test, choix de l'emplacement final de l'agent, panneau dans la fiche compte du CRM, briques intégrées au choix (3.14.3), calendrier et prise de RDV, mode session d'appels, recalibrage du score, simulateur web, extension navigateur (après avis juridique), Teams | 15–25 j |
+| **P1 — MVP « base utile »** (4 semaines) | Module autonome dans le projet AO, passerelle AO locale ; Ma journée, vues enregistrées, vue en colonnes, recherche Ctrl+K, contrôle avant envoi ; import S1 avec dédoublonnage et rapprochement SIRENE, historique des formations (3.17) et recyclages, acheteurs de l'application AO S4, profil idéal, besoin estimé, score (adéquation + accessibilité), fiche, brief et messages IA (copier-coller), tâches, opposition | 15–20 j |
+| **P2 — « contacter »** (4 semaines) | Module de messagerie (3.16) avec mode test, pilote automatique et compte rendu de la nuit, passage de main, prospects autour des sessions, enrichissement en cascade, séquences e-mail + tâches LinkedIn et appels, relève et classement des réponses, 6 premières automatisations, tableau de bord, RGPD complet, enrichissement S11 (option), PostgreSQL | 15–20 j |
+| **P3 — « signaux »** (4 semaines) | Campagnes et capture de contacts entrants, BODACC, France Travail, Géorisques, annuaire public, DECP et radar, veille web, score d'intention, assistant conversationnel, recettes 3 à 14 | 15–20 j |
+| **P4 — « intégré »** | API AO, passerelle `crm_api` (dès que l'API du CRM existe, possible plus tôt), reprise des données du test, choix de l'emplacement final de l'agent, panneau dans la fiche compte du CRM, briques intégrées au choix (3.14.3), calendrier et prise de RDV, téléphonie et session d'appels, score prédictif des opportunités, recalibrage du score, simulateur web, extension navigateur (après avis juridique), Teams | 15–25 j |
 
 ---
 
