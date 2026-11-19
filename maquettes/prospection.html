@@ -197,6 +197,27 @@ kbd{font:11px var(--font-body);padding:1px 6px;border:1px solid var(--line);bord
 .camp{display:flex;flex-direction:column;gap:6px}
 .camp .m{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
 .lvl td:first-child{min-width:220px}
+.flow{display:flex;align-items:stretch;gap:0;margin-top:8px;font-size:12.5px}
+.flow>div{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--surface-2)}
+.flow>div b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:2px}
+.flow>div.q{border-left:3px solid var(--info)} .flow>div.si{border-left:3px solid var(--warn)} .flow>div.al{border-left:3px solid var(--ok)}
+.flow>i{flex:none;width:18px;align-self:center;text-align:center;color:var(--muted);font-style:normal}
+.aic{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 4px 2px 10px;border-radius:20px;background:var(--info-soft);color:var(--info)}
+.aic button{border:0;background:none;color:inherit;cursor:pointer;padding:0 4px;font-size:13px}
+th.ai{color:var(--info)}
+.dv td,.dv th{padding:6px 8px}
+.dv input[type=number]{width:62px;padding:3px 6px}
+.tot{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;font-size:13px;margin-top:8px}
+.tot b{text-align:right}
+.fc{display:grid;grid-template-columns:110px minmax(0,1fr) 90px;gap:10px;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px solid var(--line)}
+.fc:last-child{border-bottom:0}
+.stack{display:flex;height:16px;border-radius:4px;overflow:hidden;background:var(--surface-2)}
+.stack i{display:block;height:100%}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.leg span{display:inline-flex;align-items:center;gap:5px}
+.leg i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.pb{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}
+@media (max-width:760px){ .flow{flex-direction:column} .flow>i{transform:rotate(90deg);width:auto} .fc{grid-template-columns:80px minmax(0,1fr)} .fc .hide-s{display:none} .pb{grid-template-columns:minmax(0,1fr)} }
 @media (max-width:760px){ .search kbd,.hide-s{display:none} .nba{grid-template-columns:34px minmax(0,1fr)} .nba .acts{grid-column:1 / -1;justify-content:flex-start} .nav .foot{display:none} }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -388,7 +409,7 @@ file:[
  {id:3,pid:6,a:'j.petit@bergeshotels.example',obj:'Accueil sécurité de vos nouveaux salariés',quand:'26/11/2026 10:12',boite:1,st:'En pause (absence)'}
 ],
 mailTest:true, crmMode:'autonome',
-nbaDone:[], doneToday:2,
+nbaDone:[], doneToday:2, aiCols:['angle'], devis:{},
 niveaux:{recherche:'auto',enrich:'auto',redac:'proposer',reactiv:'auto',prospect:'proposer',linkedin:'manuel',tri:'auto',rdv:'proposer',crm:'auto'},
 limites:{budget:40,maxAuto:30},
 journal:[
@@ -413,7 +434,7 @@ chat:[], nextId:100
 };}
 
 let S;
-const KEY='prospection-maquette-v4';
+const KEY='prospection-maquette-v5';
 try{ S = JSON.parse(localStorage.getItem(KEY)) }catch(e){}
 if(!S || !S.prospects) S = seed();
 const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify(S)) }catch(e){} };
@@ -579,7 +600,9 @@ const ICONS={
  pin:'<path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.5"/>',
  kanban:'<rect x="3.5" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="16.5" y="4" width="4" height="13" rx="1.5"/>',
  list:'<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
- arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>'
+ arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+ trend:'<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+ file:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h6"/>'
 };
 const ic=(n,cls='')=>`<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||''}</svg>`;
 const VIEWS = [
@@ -590,6 +613,7 @@ const VIEWS = [
   ['reponses','Réponses', ()=>S.replies.filter(r=>!r.done).length, 'inbox'],
   ['assistant','Assistant', null, 'spark'],
   ['tableau','Statistiques', null, 'chart'],
+  ['previsions','Prévisions et capacité', null, 'trend'],
   ['grp','Alimenter'],
   ['import','Import de bases', null, 'upload'],
   ['historique','Historique des formations', ()=>S.historique.filter(h=>echeance(h).etat!=='ok'&&!h.relance).length, 'clock'],
@@ -626,7 +650,7 @@ const esChip = es => ({verifie:'<span class="chip ok">vérifié</span>',probable
 function render(){
   nav();
   const v = ui.view;
-  const html = ({journee,tableau,prospects,fiche,taches,reponses,assistant,import:imp,historique,messagerie,campagnes,pilote,sources,sequences,automatisations,score:scoreV,conformite,crm})[v]?.() ?? journee();
+  const html = ({journee,previsions,tableau,prospects,fiche,taches,reponses,assistant,import:imp,historique,messagerie,campagnes,pilote,sources,sequences,automatisations,score:scoreV,conformite,crm})[v]?.() ?? journee();
   $('#view').innerHTML = topbar() + html;
   if(v==='fiche') majQualite();
   if(v==='assistant'){ const c=$('#chatbox'); if(c) c.scrollTop=c.scrollHeight; }
@@ -682,7 +706,9 @@ function prospects(){
   const opt=(arr,v)=>arr.map(([k,l])=>`<option value="${k}" ${v===k?'selected':''}>${l}</option>`).join('');
   const SV=[['tous','Tous'],['mesA','Palier A'],['signaux','Avec signal'],['sanscontact','Sans contact'],['public','Acheteurs publics'],['clients','Clients']];
   return head('Prospects', `${rows.length} résultat${rows.length>1?'s':''} · triés par score`, `<div class="seg-ctl" role="group" aria-label="Affichage"><button data-act="pview" data-k="liste" class="${ui.pview==='liste'?'on':''}">Liste</button><button data-act="pview" data-k="kanban" class="${ui.pview==='kanban'?'on':''}">Colonnes</button></div><a class="btn sec" href="#import">Importer</a><button class="btn" data-act="newp">Nouveau prospect</button>`) + `
-  <div class="views" role="group" aria-label="Vues enregistrées">${SV.map(([k,l])=>`<button data-act="sv" data-k="${k}" class="${ui.sv===k?'on':''}">${l}</button>`).join('')}</div>
+  <div class="row between"><div class="views" role="group" aria-label="Vues enregistrées">${SV.map(([k,l])=>`<button data-act="sv" data-k="${k}" class="${ui.sv===k?'on':''}">${l}</button>`).join('')}</div>
+  <div class="row">${S.aiCols.map(k=>`<span class="aic">${ic('spark')}${AICOLS[k].l}<button data-act="delai" data-k="${k}" aria-label="Retirer la colonne">×</button></span>`).join('')}
+  <select id="addai" data-act="addai" aria-label="Ajouter une colonne IA"><option value="">+ Colonne remplie par l'IA…</option>${Object.entries(AICOLS).filter(([k])=>!S.aiCols.includes(k)).map(([k,v])=>`<option value="${k}">${v.l}</option>`).join('')}</select></div></div>
   <div class="card"><div class="row">
     <input type="text" id="f-q" placeholder="Nom, ville, NAF, contact…" value="${esc(f.q)}" data-filt="q" style="flex:1;min-width:180px">
     <select id="f-tier" data-filt="tier"><option value="">Tous paliers</option>${opt([['A','Palier A'],['B','Palier B'],['C','Palier C']],f.tier)}</select>
@@ -694,7 +720,7 @@ function prospects(){
   ${ui.sel.size?`<div class="confirm row between"><span><b>${ui.sel.size}</b> sélectionné${ui.sel.size>1?'s':''}</span><div class="row">
     <select id="bulk-seq">${S.sequences.map(s=>`<option value="${s.id}">${esc(s.nom)}</option>`).join('')}</select>
     <button class="btn sm" data-act="bulkseq">Inscrire en séquence</button><button class="btn sm sec" data-act="bulkcrm">Envoyer au CRM</button><button class="btn sm ghost" data-act="bulkclear">Désélectionner</button></div></div>`:''}
-  ${ui.pview==='kanban'?kanban(rows):`<div class="tw"><table><thead><tr><th><input type="checkbox" id="selall" aria-label="Tout sélectionner" data-act="selall"></th><th>Prospect</th><th class="hide-m">Segment</th><th>Score</th><th>Signal principal</th><th class="hide-m">Contact</th><th>Statut</th><th class="hide-m">Responsable</th></tr></thead><tbody>
+  ${ui.pview==='kanban'?kanban(rows):`<div class="tw"><table><thead><tr><th><input type="checkbox" id="selall" aria-label="Tout sélectionner" data-act="selall"></th><th>Prospect</th><th class="hide-m">Segment</th><th>Score</th><th>Signal principal</th><th class="hide-m">Contact</th><th>Statut</th><th class="hide-m">Responsable</th>${S.aiCols.map(k=>`<th class="ai hide-m" title="Colonne remplie par l'IA">${ic('spark')} ${AICOLS[k].l}</th>`).join('')}</tr></thead><tbody>
   ${rows.map(({p,s})=>{const g=topSig(p),c=mainContact(p);return `<tr class="click" data-act="open" data-id="${p.id}">
     <td data-stop="1"><input type="checkbox" data-act="sel" data-id="${p.id}" ${ui.sel.has(p.id)?'checked':''} aria-label="Sélectionner ${esc(p.nom)}"></td>
     <td><b>${esc(p.nom)}</b><div class="small muted">${esc(p.ville)} (${p.dep}) · ${p.eff} sal.${p.sites>1?' · '+p.sites+' sites':''}</div></td>
@@ -702,7 +728,7 @@ function prospects(){
     <td><div class="score">${tierChip(s)}<b>${s.t}</b></div></td>
     <td class="small">${g?`<b>${SIGNAUX[g.t].l}</b><div class="muted">il y a ${g.d} j · ${esc(g.src)}</div>`:'<span class="muted">—</span>'}</td>
     <td class="hide-m small">${c?`${esc(c.n)}<div class="muted">${esc(c.f)}</div>`:'<span class="chip warn">à trouver</span>'}</td>
-    <td>${statutChip(p.statut)}</td><td class="hide-m small">${esc(p.owner||'—')}</td></tr>`}).join('') || `<tr><td colspan="8" class="muted">Aucun prospect ne correspond à ces filtres.</td></tr>`}
+    <td>${statutChip(p.statut)}</td><td class="hide-m small">${esc(p.owner||'—')}</td>${S.aiCols.map(k=>`<td class="hide-m small" title="Source : ${AICOLS[k].src}">${esc(AICOLS[k].f(p))}</td>`).join('')}</tr>`}).join('') || `<tr><td colspan="${8+S.aiCols.length}" class="muted">Aucun prospect ne correspond à ces filtres.</td></tr>`}
   </tbody></table></div>`}`;
 }
 const KCOLS=['Nouveau','À qualifier','À contacter','En séquence','A répondu','RDV fixé','Transmis au CRM'];
@@ -750,7 +776,7 @@ function fiche(){
         <div class="small b" style="margin-bottom:4px">${esc(ui.gen.titre)}</div>
         <textarea id="g-out" rows="14" class="out">${esc(ui.gen.texte)}</textarea>
         <div class="row between" style="margin-top:8px"><b class="small">Contrôle avant envoi</b><span id="qc-score"></span></div><div class="qc" id="qc"></div>
-        <div class="row" style="margin-top:8px"><button class="btn sm sec" data-act="copy">Copier</button>
+        <div class="row" style="margin-top:8px"><button class="btn sm sec" data-act="copy">Copier</button>${ui.canal==='email'||ui.canal==='relance'?`<button class="btn sm sec" data-act="slots">${ic('calendar')} Insérer 3 créneaux</button>`:''}
           ${ui.canal==='email'||ui.canal==='relance'?`<button class="btn sm" data-act="valider" ${opp||!c||!c.email?'disabled':''}>Valider et programmer l'envoi</button>`:`<button class="btn sm" data-act="tachecanal">Créer la tâche ${ui.canal==='appel'?'d\'appel':'LinkedIn'}</button>`}
           ${c&&!c.email?'<span class="small muted">Pas d\'e-mail : lancez l\'enrichissement.</span>':''}</div>
       </div>
@@ -764,10 +790,12 @@ function fiche(){
         <dt>Évacuation</dt><dd>${b.exo} exercice${b.exo>1?'s':''} par an (2 par site, R4227-39)${p.icpe?' · ICPE':''}</dd>
         <dt>Potentiel 1re année</dt><dd><b>${eur(b.an1)}</b></dd><dt>Récurrent annuel</dt><dd>${eur(b.rec)}</dd>
         <dt>Financement</dt><dd>${esc(p.opco||'?')}${b.opcoAide?' · <span class="chip ok">finançable &lt; 50 sal.</span>':''}</dd></dl>
+        ${p.decouverte?`<p class="small" style="margin:8px 0 0"><b>Découverte (appel) :</b> ${p.decouverte.sst!==''?`${p.decouverte.sst} SST déjà formés, écart <b>${Math.max(0,b.sst-(+p.decouverte.sst))}</b>`:'SST actuels inconnus'} · dernier exercice : ${esc(p.decouverte.exo)}${p.decouverte.presta?` · prestataire : ${esc(p.decouverte.presta)}`:''}</p>`:''}
         <p class="small muted" style="margin:8px 0 0">Hypothèses : recommandation INRS 10 à 15 %, R4224-15, R4227-39, R4541-8. Tarifs d'exemple, à remplacer par le catalogue.</p>
       </div>
+      ${devisCard(p)}
       <div class="card"><h2>Signaux</h2><div class="list">${p.signaux.map(g=>`<div class="li"><span class="dot info"></span><div class="grow small"><b>${SIGNAUX[g.t].l}</b> · poids ${SIGNAUX[g.t].w}, demi-vie ${SIGNAUX[g.t].hl} j<br>${esc(g.txt)}<br><span class="muted">${esc(g.src)} · ${fmt(ago(g.d))}</span></div></div>`).join('')||'<p class="small muted">Aucun signal. Le score repose sur l\'adéquation.</p>'}</div></div>
-      <div class="card"><h2>Contacts</h2><div class="list">${p.contacts.map(x=>`<div class="li"><div class="grow small"><b>${esc(x.n)}</b> · ${esc(x.f)} <span class="chip">${x.role}</span><br>${x.email?esc(x.email):'<span class="muted">e-mail inconnu</span>'} ${esChip(x.es)}${x.tel?'<br>'+esc(x.tel):''}</div></div>`).join('')||'<p class="small muted">Aucun contact. Lancez l\'enrichissement ou ajoutez-en un.</p>'}</div>
+      <div class="card"><h2>Contacts</h2><div class="list">${p.contacts.map(x=>`<div class="li"><div class="grow small"><b>${esc(x.n)}</b> · ${esc(x.f)} <span class="chip">${x.role}</span> ${relation(p,x)}<br>${x.email?esc(x.email):'<span class="muted">e-mail inconnu</span>'} ${esChip(x.es)}${x.tel?'<br>'+esc(x.tel):''}</div></div>`).join('')||'<p class="small muted">Aucun contact. Lancez l\'enrichissement ou ajoutez-en un.</p>'}</div>
         <div class="row" style="margin-top:6px"><input type="text" id="nc-n" placeholder="Nom" style="flex:1;min-width:110px"><input type="text" id="nc-f" placeholder="Fonction" style="flex:1;min-width:110px"><button class="btn sm sec" data-act="addc">Ajouter</button></div></div>
       <div class="card"><h2>Identité et provenance</h2><dl class="kv">
         <dt>Effectif</dt><dd>${p.eff} (tranche INSEE)</dd><dt>Établissements</dt><dd>${p.sites}</dd><dt>ICPE / ERP</dt><dd>${p.icpe?'ICPE':'—'} / ${p.erp?'ERP':'—'}</dd>
@@ -808,6 +836,62 @@ function majQualite(){
   if(!q){ box.innerHTML='<span class="muted">Le script d\'appel n\'est pas contrôlé : il sert de guide.</span>'; sc.innerHTML=''; return; }
   sc.innerHTML=`<span class="chip ${q.pct>=85?'ok':q.pct>=60?'warn':'bad'}">${q.pct} / 100</span>`;
   box.innerHTML=q.c.map(([ok,l])=>`<span><b class="${ok?'y':'n'}">${ok?'✓':'!'}</b>${esc(l)}</span>`).join('');
+}
+
+/* ---- Colonnes IA (inspiré d'Attio) ---- */
+const AICOLS={
+ angle:{l:"Angle d'approche",src:'signaux, segment, besoin estimé',f:p=>{const g=topSig(p); return g?.t==='site'||g?.t==='presse'?'Former avant ouverture':g?.t==='qse'?'Épauler le futur QSE':g?.t==='recrut'?'Accueil des nouveaux':g?.t==='marche'||g?.t==='ao'?'Sourçage avant marché':g?.t==='mac'?'Recyclage à date':p.seg==='sante'?'Évacuation des soins':'Obligations chiffrées';}},
+ decideur:{l:'Décideur à viser',src:'segment, effectif',f:p=>p.seg==='sante'?'DRH ou direction des soins':p.seg==='collectivite'?'Responsable formation':p.eff>=250?'Responsable QSE':'Dirigeant ou DRH'},
+ risque:{l:'Risque incendie',src:'Géorisques, SIRENE',f:p=>p.icpe?'Élevé (site ICPE)':p.erp?'Moyen (ERP)':'Standard'},
+ multisite:{l:'Plusieurs sites à former ?',src:'SIRENE (établissements)',f:p=>p.sites>1?`Oui, ${p.sites} sites`:'Non, site unique'},
+ presta:{l:'Prestataire actuel',src:'historique, DECP',f:p=>p.hist.some(h=>/prestataire/i.test(h.txt))?'Oui, noté à l\'appel':p.signaux.some(g=>g.t==='marche')?'Titulaire du marché 2023 (DECP)':'Inconnu'},
+ finance:{l:'Financement',src:'IDCC, effectif',f:p=>p.eff<50?`${p.opco||'OPCO'} (< 50 sal.)`:p.seg==='collectivite'?'Budget formation / CNFPT':'Plan de compétences'}
+};
+/* ---- Force de la relation (inspiré d'Attio) ---- */
+function relation(p,c){ const n=p.hist.length, rep=S.replies.some(r=>r.pid===p.id&&r.de===c.n&&r.cl!=='Opposition'); const lvl = c.es==='bloque'?['bad','opposé'] : rep&&n>=2?['ok','forte'] : rep||n>=2?['info','moyenne'] : n?['warn','faible'] : ['','aucune']; return `<span class="chip ${lvl[0]}" title="Calculée d'après les échanges (e-mails, appels, réponses)">relation ${lvl[1]}</span>`; }
+/* ---- Proposition express (inspiré de Sellsy, Axonaut, HubSpot ; rentabilité inspirée de Furious) ---- */
+const CATA={sst:{l:'SST initial · 2 j, 4 à 10 pers.',pu:1450,j:2},mac:{l:'MAC SST · 1 j',pu:820,j:1},gp:{l:'Gestes et postures · 1 j',pu:980,j:1},evac:{l:"Exercice d'évacuation · ½ j",pu:690,j:.5},ext:{l:'Extincteurs sur feux réels (UMFI) · ½ j',pu:750,j:.5}};
+const BASE=[49.06,2.19]; // Méry-sur-Oise
+function devisDe(p){ if(!S.devis[p.id]){ const b=besoin(p); S.devis[p.id]={q:{sst:p.client?0:Math.min(b.sSess,6),mac:p.client?Math.ceil(b.sSess/2):0,gp:Math.min(b.gSess,6),evac:Math.min(b.exo,4),ext:p.icpe?1:0},remise:0,exo:true}; } return S.devis[p.id]; }
+function calcDevis(p){ const d=devisDe(p); let ht=0,jours=0,sess=0; for(const [k,q] of Object.entries(d.q)){ ht+=q*CATA[k].pu; jours+=q*CATA[k].j; sess+=q; }
+  const rem=ht*d.remise/100, net=ht-rem, tva=d.exo?0:net*.2; const dist=COORDS[p.ville]?km(BASE,COORDS[p.ville]):300;
+  const cout=jours*380+sess*dist*2*0.45; const marge=net-cout; return {ht,rem,net,tva,ttc:net+tva,jours,sess,dist,cout,marge,pct:net?Math.round(marge/net*100):0}; }
+function devisCard(p){ const d=devisDe(p), c=calcDevis(p);
+  return `<div class="card"><div class="row between"><h2>Proposition express</h2><span class="small muted">depuis le catalogue</span></div>
+  <div class="tw"><table class="dv"><thead><tr><th>Prestation</th><th>Qté</th><th>Total HT</th></tr></thead><tbody>${Object.entries(CATA).map(([k,v])=>`<tr><td class="small">${v.l}<div class="muted">${eur(v.pu)} la session</div></td><td><input type="number" min="0" max="50" id="dq-${k}" data-dq="${k}" value="${d.q[k]}" aria-label="Quantité ${esc(v.l)}"></td><td class="small">${eur(d.q[k]*v.pu)}</td></tr>`).join('')}</tbody></table></div>
+  <div class="row" style="margin-top:8px"><label class="f">Remise %<input type="number" min="0" max="30" id="dv-rem" data-dv="remise" value="${d.remise}" style="width:70px"></label><label class="row small" style="align-self:flex-end"><input type="checkbox" id="dv-exo" data-dv="exo" ${d.exo?'checked':''}> Exonéré de TVA (art. 261-4-4° a du CGI, à confirmer)</label></div>
+  <div class="tot"><span>Total HT</span><b>${eur(c.ht)}</b>${c.rem?`<span>Remise</span><b>− ${eur(c.rem)}</b>`:''}<span>TVA</span><b>${c.tva?eur(c.tva):'exonéré'}</b><span><b style="text-align:left">Total à payer</b></span><b>${eur(c.ttc)}</b></div>
+  <div class="confirm small" style="margin-top:10px"><b>Rentabilité estimée</b> : ${String(c.jours).replace('.',',')} jour${c.jours>1?'s':''} formateur, ${Math.round(c.dist)} km depuis Méry-sur-Oise · coûts ${eur(c.cout)} · marge <b>${eur(c.marge)}</b> <span class="chip ${c.pct>=45?'ok':c.pct>=25?'warn':'bad'}">${c.pct} %</span></div>
+  <div class="row" style="margin-top:10px"><button class="btn sm" data-act="devcrm">Créer le devis dans le CRM</button><button class="btn sm sec" data-act="devmail">Joindre à l'e-mail</button><button class="btn sm sec" data-act="devsign">Envoyer pour signature</button></div>
+  <p class="small muted" style="margin:6px 0 0">Tarifs, coût formateur (380 €/j) et frais (0,45 €/km) d'exemple. Le devis officiel, l'acompte et la facture restent dans le CRM.</p></div>`; }
+
+/* ---- Prévisions et capacité (inspiré d'Axonaut, HubSpot et Furious) ---- */
+const MOIS=['Déc. 2026','Janv. 2027','Févr. 2027','Mars 2027','Avr. 2027','Mai 2027'];
+function previsions(){
+  const signe=[8200,6400,3100,1800,600,0], reserve=[22,26,9,6,2,0], dispo=32;
+  const rec=MOIS.map(()=>0);
+  S.historique.forEach(h=>{ const e=echeance(h); const m=(e.d.getFullYear()-2026)*12+e.d.getMonth()-11; if(m>=0&&m<6){ const cat=/MAC|SST/.test(h.prest)?CATA.mac:/vacuation/.test(h.prest)?CATA.evac:/xtinct/.test(h.prest)?CATA.ext:CATA.gp; rec[m]+=Math.ceil(h.n/10)*cat.pu; } });
+  const P={'En séquence':.05,'A répondu':.2,'RDV fixé':.35,'Transmis au CRM':.5}, pond=MOIS.map(()=>0);
+  S.prospects.forEach(p=>{ const w=P[p.statut]; if(!w) return; const v=besoin(p).an1*w; pond[1]+=v*.4; pond[2]+=v*.35; pond[3]+=v*.25; });
+  const tot=MOIS.map((_,i)=>signe[i]+rec[i]+pond[i]), max=Math.max(...tot,1);
+  const besoinJ=MOIS.map((_,i)=>Math.round(reserve[i]+(rec[i]+pond[i])/720));
+  return head('Prévisions et capacité','Chiffre d\'affaires attendu sur 6 mois et jours formateurs nécessaires : ne pas vendre ce qu\'on ne peut pas assurer.') + `
+  <div class="kpis">
+    <div class="kpi"><span class="l">Signé à réaliser</span><span class="v">${eur(signe.reduce((a,b)=>a+b))}</span></div>
+    <div class="kpi"><span class="l">Recyclages attendus</span><span class="v">${eur(rec.reduce((a,b)=>a+b))}</span><span class="small muted">depuis l'historique</span></div>
+    <div class="kpi"><span class="l">Pipeline pondéré</span><span class="v">${eur(pond.reduce((a,b)=>a+b))}</span><span class="small muted">probabilité par statut</span></div>
+    <div class="kpi"><span class="l">Mois saturés</span><span class="v" style="color:${besoinJ.some(j=>j>dispo)?'var(--bad)':'var(--ok)'}">${besoinJ.filter(j=>j>dispo).length}</span><span class="small muted">au-delà de ${dispo} j / mois</span></div>
+  </div>
+  <div class="card"><div class="row between"><h2>Chiffre d'affaires par mois</h2><div class="leg"><span><i style="background:var(--ok)"></i>Signé</span><span><i style="background:var(--info)"></i>Recyclages</span><span><i style="background:var(--warn)"></i>Pipeline pondéré</span></div></div>
+    ${MOIS.map((m,i)=>`<div class="fc"><span>${m}</span><div class="stack" style="width:${Math.max(4,tot[i]/max*100)}%" title="${eur(tot[i])}"><i style="width:${signe[i]/tot[i]*100||0}%;background:var(--ok)"></i><i style="width:${rec[i]/tot[i]*100||0}%;background:var(--info)"></i><i style="width:${pond[i]/tot[i]*100||0}%;background:var(--warn)"></i></div><b style="text-align:right">${eur(tot[i])}</b></div>`).join('')}</div>
+  <div class="grid g2e">
+    <div class="card"><h2>Capacité des formateurs</h2><p class="small muted" style="margin-top:0">2 formateurs · ${dispo} jours disponibles par mois (exemple)</p>
+      ${MOIS.map((m,i)=>`<div class="fc"><span>${m}</span><div class="bar ${besoinJ[i]>dispo?'':besoinJ[i]>dispo*.8?'warn':'ok'}" style="height:10px"><i style="width:${Math.min(100,besoinJ[i]/dispo*100)}%"></i></div><span class="small">${besoinJ[i]} / ${dispo} j ${besoinJ[i]>dispo?'<span class="chip bad">saturé</span>':''}</span></div>`).join('')}
+      <p class="small muted">Si un mois sature, l'agent repousse les relances non urgentes et propose des dates plus tard ou une session inter-entreprises.</p></div>
+    <div class="card"><h2>Taux de transformation</h2>
+      ${[['Contacté → réponse',12.4],['Réponse → RDV',39],['RDV → devis',70],['Devis → signé',45]].map(([l,v])=>`<div class="fc"><span class="small">${l}</span><div class="bar info" style="height:10px"><i style="width:${v}%"></i></div><b style="text-align:right">${String(v).replace('.',',')} %</b></div>`).join('')}
+      <p class="small muted">Charge d'avant-vente moyenne : 3 h 10 par opportunité (appels, RDV, devis). Délai moyen du premier contact à la signature : 38 jours.</p></div>
+  </div>`;
 }
 
 /* ---- Ma journée ---- */
@@ -931,7 +1015,15 @@ function sessionAppels(){
   <div class="grid g2"><div class="card"><div class="row between"><h2>${esc(p.nom)}</h2>${tierChip(score(p))}</div>
     <p class="small">${c?`<b>${esc(c.n)}</b> · ${esc(c.f)} · ${esc(c.tel||'téléphone du standard : 01 00 00 00 00')}`:'Pas de contact : demander le responsable sécurité au standard'}</p>
     <div class="out">${esc(g.texte)}</div></div>
-    <div class="card"><h2>Compte rendu</h2><textarea id="cr" rows="5" placeholder="Tapez ou dictez le compte rendu. L'IA en tire le résultat, la prochaine étape et la date."></textarea>
+    <div class="card"><h2>Guide de découverte</h2><div class="pb">
+      <label class="f">SST déjà formés<input type="number" id="pb-sst" min="0" placeholder="ex. 6"></label>
+      <label class="f">Dernier exercice d'évacuation<select id="pb-exo"><option>inconnu</option><option>moins de 6 mois</option><option>6 à 12 mois</option><option>plus d'un an</option><option>jamais</option></select></label>
+      <label class="f">Qui décide ?<input type="text" id="pb-dec" placeholder="nom, fonction"></label>
+      <label class="f">Prestataire actuel<input type="text" id="pb-presta" placeholder="si connu"></label>
+      <label class="f">Financement<select id="pb-fin"><option>non abordé</option><option>OPCO</option><option>budget interne</option><option>marché public</option></select></label>
+      <label class="f">Échéance du projet<select id="pb-ech"><option>non précisée</option><option>ce trimestre</option><option>dans 3 à 6 mois</option><option>l'an prochain</option></select></label></div>
+    <p class="small muted" style="margin:0 0 6px">Les réponses mettent à jour la fiche et recalculent l'écart de SST à former.</p>
+    <textarea id="cr" rows="3" placeholder="Compte rendu libre, tapé ou dicté. L'IA en tire le résultat, la prochaine étape et la date."></textarea>
     <div class="grid" style="gap:8px;margin-top:10px">
       <button class="btn" data-act="out" data-k="rdv" data-id="${t.id}">Joint : RDV fixé</button>
       <button class="btn sec" data-act="out" data-k="rappel" data-id="${t.id}">Joint : rappeler dans 15 jours</button>
@@ -1117,7 +1209,7 @@ function automatisations(){
     <label class="f">Alors<select id="a-alors">${['Enrichir les contacts','Générer le brief','Inscrire en séquence « Ouverture de site »','Créer une tâche d\'appel','Notifier le responsable (Teams)','Créer l\'opportunité dans le CRM','Inscrire en nurturing à 11 mois'].map(x=>`<option>${x}</option>`).join('')}</select></label>
     <button class="btn" data-act="addauto" style="align-self:flex-end">Ajouter (désactivée)</button></div></div>
   <div class="grid g2e">${S.autos.map(a=>`<div class="card"><div class="row between" style="flex-wrap:nowrap"><h3>${esc(a.nom)}</h3><label class="switch" title="${a.on?'Active':'Inactive'}"><input type="checkbox" id="au-${a.id}" data-act="toggle" data-id="${a.id}" ${a.on?'checked':''} aria-label="Activer ${esc(a.nom)}"><span></span></label></div>
-    <div class="rule" style="margin-top:6px"><b>Quand</b><span>${esc(a.q)}</span><b>Si</b><span>${esc(a.si)}</span><b>Alors</b><span>${esc(a.alors)}</span></div>
+    <div class="flow"><div class="q"><b>Quand</b>${esc(a.q)}</div><i>→</i><div class="si"><b>Si</b>${esc(a.si)}</div><i>→</i><div class="al"><b>Alors</b>${esc(a.alors)}</div></div>
     <div class="row between" style="margin-top:8px"><span class="small muted">${a.n} exécution${a.n>1?'s':''} ce mois</span><button class="btn sm ghost" data-act="simu" data-id="${a.id}">Simuler</button></div>
     ${a.sim?`<div class="confirm small" style="margin-top:8px">${a.sim}</div>`:''}</div>`).join('')}</div>`;
 }
@@ -1299,6 +1391,7 @@ document.addEventListener('click',e=>{
     case 'session': ui.session=true; render(); break;
     case 'endsession': ui.session=null; render(); break;
     case 'out': { const t=S.tasks.find(x=>x.id===+id), tp=byId(t.pid); t.fait=true; const cr=($('#cr')?.value||'').trim();
+      if(k!=='messagerie'){ const dc={sst:$('#pb-sst')?.value??'',exo:$('#pb-exo')?.value||'inconnu',dec:$('#pb-dec')?.value||'',presta:$('#pb-presta')?.value||'',fin:$('#pb-fin')?.value||'',ech:$('#pb-ech')?.value||''}; if(dc.sst!==''||dc.exo!=='inconnu'||dc.dec||dc.presta){ tp.decouverte=dc; addHist(tp,`Découverte : ${dc.sst!==''?dc.sst+' SST formés, ':''}dernier exercice ${dc.exo}${dc.dec?', décideur '+dc.dec:''}${dc.presta?', prestataire '+dc.presta:''}, financement ${dc.fin}, échéance ${dc.ech}`); } }
       if(k==='rdv'){ tp.statut='RDV fixé'; addHist(tp,'Appel : RDV fixé'+(cr?' · '+cr:'')); crmLog('rdv.fixe',tp.nom+' → opportunité et fiche de préparation'); toast('RDV fixé : opportunité créée dans le CRM, fiche de préparation prête.'); }
       else if(k==='rappel'){ addTask('appel',tp.id,'Rappeler '+(mainContact(tp)?.n||tp.nom),15); addHist(tp,'Appel : à rappeler dans 15 jours'+(cr?' · '+cr:'')); toast('Rappel planifié dans 15 jours.'); }
       else if(k==='messagerie'){ addTask('appel',tp.id,'Nouvel essai : '+(mainContact(tp)?.n||tp.nom),1); addHist(tp,'Appel : messagerie'); toast('Nouvel essai demain.'); }
@@ -1336,6 +1429,11 @@ document.addEventListener('click',e=>{
     case 'bulkcrm': ui.sel.forEach(i=>{ const pp=byId(i); pp.statut='Transmis au CRM'; crmLog('prospect.qualifie',pp.nom); }); toast(`${ui.sel.size} prospect(s) envoyé(s) au CRM.`); ui.sel.clear(); save(); render(); break;
     case 'bulkclear': ui.sel.clear(); render(); break;
     case 'pal': openPal(); break;
+    case 'delai': S.aiCols=S.aiCols.filter(x=>x!==k); save(); render(); break;
+    case 'slots': { const t=$('#g-out'); const ins="\n\nJe vous propose trois créneaux de 20 minutes (Teams ou téléphone) :\n· jeudi 26/11 à 10 h\n· vendredi 27/11 à 14 h 30\n· lundi 30/11 à 11 h\nOu choisissez directement le vôtre : [lien de prise de rendez-vous]"; const v=t.value; const pos=v.indexOf('\n\nBien cordialement'); t.value= pos>0? v.slice(0,pos)+ins+v.slice(pos) : v+ins; ui.gen.texte=t.value; majQualite(); toast('Créneaux libres de votre agenda Microsoft 365 insérés.'); break; }
+    case 'devcrm': { const c=calcDevis(p); addHist(p,`Devis brouillon créé dans le CRM : ${eur(c.ttc)}, ${c.sess} sessions`); crmLog('devis.cree',`${p.nom} · ${eur(c.ttc)}`); save(); render(); toast('Devis brouillon créé dans le CRM, avec le besoin estimé et le brief.'); break; }
+    case 'devmail': { const c=calcDevis(p); const wasEmail=ui.canal==='email'; ui.canal='email'; if(!wasEmail||!ui.gen) ui.gen=gen(p,mainContact(p),'email',ui.ton,ui.consigne); const ins=`\n\nVous trouverez ci-joint une proposition pour ${c.sess} session${c.sess>1?'s':''} (${String(c.jours).replace('.',',')} jour${c.jours>1?'s':''} de formation), soit ${eur(c.ttc)}${calcDevis(p).tva?' TTC':' (exonéré de TVA)'}. Elle est ajustable à vos effectifs et à vos dates.`; const pos=ui.gen.texte.indexOf('\n\nBien cordialement'); ui.gen.texte = pos>0? ui.gen.texte.slice(0,pos)+ins+ui.gen.texte.slice(pos) : ui.gen.texte+ins; render(); toast('Proposition jointe au brouillon d\'e-mail (PDF généré à l\'envoi).'); break; }
+    case 'devsign': { addHist(p,'Proposition envoyée pour signature électronique ; relance automatique à J+7'); save(); render(); toast('Lien de signature envoyé. Relance prévue à J+7 si non signé.'); break; }
     case 'theme': toggleTheme(); break;
     case 'pview': ui.pview=k; render(); break;
     case 'sv': { ui.sv=k; const f={q:'',tier:'',seg:'',dep:'',statut:'',sig:false,nc:false}; if(k==='mesA') f.tier='A'; if(k==='signaux') f.sig=true; if(k==='sanscontact') f.nc=true; if(k==='public') f.seg='collectivite'; if(k==='clients') f.statut='Client'; ui.filt=f; render(); break; }
@@ -1360,6 +1458,8 @@ document.addEventListener('change',e=>{
   if(el.dataset.filt){ const k=el.dataset.filt; ui.filt[k]= el.type==='checkbox'?el.checked:el.value; if(k!=='q') render(); return; }
   if(el.dataset.w){ const k=el.dataset.w; S.weights[k]= k==='prio'?el.value:+el.value; save(); render(); return; }
   if(el.dataset.lim){ S.limites[el.dataset.lim]=+el.value; save(); render(); return; }
+  if(el.dataset.dq){ const d=devisDe(byId(ui.pid)); d.q[el.dataset.dq]=Math.max(0,+el.value||0); save(); render(); return; }
+  if(el.dataset.dv){ const d=devisDe(byId(ui.pid)); if(el.dataset.dv==='exo') d.exo=el.checked; else d.remise=Math.min(30,Math.max(0,+el.value||0)); save(); render(); return; }
   switch(a){
     case 'sel': { const id=+el.dataset.id; el.checked?ui.sel.add(id):ui.sel.delete(id); render(); break; }
     case 'selall': filtered().forEach(({p})=> el.checked?ui.sel.add(p.id):ui.sel.delete(p.id)); render(); break;
@@ -1371,6 +1471,7 @@ document.addEventListener('change',e=>{
     case 'map': ui.imp.map[+el.dataset.i]=el.value; analyse(); render(); break;
     case 'seqmode': S.sequences.find(s=>s.id===ui.seq).mode=el.value; save(); toast('Mode de validation enregistré.'); break;
     case 'seqcap': S.sequences.find(s=>s.id===ui.seq).plafond=+el.value; save(); break;
+    case 'addai': if(el.value){ S.aiCols.push(el.value); save(); render(); toast("Colonne ajoutée : l'IA la remplit pour chaque ligne, avec sa source."); } break;
     case 'mailtest': S.mailTest=el.checked; save(); render(); toast(S.mailTest?'Mode test activé : aucun envoi réel.':'Mode test désactivé : les envois partiront réellement.'); break;
     case 'reclass': { const r=S.replies.find(x=>x.id===+el.dataset.id); if(el.value){ r.cl=el.value; r.conf=100; save(); render(); toast('Classement corrigé : la correction sert au jeu de test du classement.'); } break; }
   }

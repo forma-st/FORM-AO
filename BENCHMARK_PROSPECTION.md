@@ -59,6 +59,21 @@ But : situer l'agent FORMA'ST face aux outils du marché, reprendre leurs meille
 
 ---
 
+## 3 bis. Le meilleur de Sellsy, Axonaut, HubSpot, Furious et Attio
+
+| Outil | Ce qu'il fait le mieux | Repris dans l'agent | Où | Maquette | Phase |
+|---|---|---|---|---|---|
+| **Sellsy** (FR) | Du devis à la facture dans un seul outil ; pipeline à étapes personnalisables ; relances automatiques ; plateforme agréée pour la facture électronique ; IA (Mistral) | **Proposition express** : devis brouillon depuis le catalogue et le besoin estimé, joint à l'e-mail, envoyé au CRM ; relance automatique du devis à J+7 | Agent → CRM (le devis officiel et la facture restent dans le CRM) | ✅ Fiche | P2 |
+| **Axonaut** (FR) | Tout-en-un pour TPE : devis personnalisés rapides, acomptes, facturation à l'avancement, trésorerie prévisionnelle reliée à la banque | **Prévisions** sur 6 mois : signé, recyclages attendus (historique), pipeline pondéré ; acomptes et facturation laissés au CRM | Agent (prévision) / CRM (facturation) | ✅ Prévisions | P3 |
+| **HubSpot** | Lien de prise de RDV relié à l'agenda Office ; **guides d'appel** (playbooks) qui remplissent la fiche ; devis à modèles ; séquences déclenchées par les automatisations ; chronologie unique | **Insérer 3 créneaux** libres + lien de RDV dans l'e-mail ; **guide de découverte** dans la session d'appels (SST déjà formés, dernier exercice, décideur, prestataire, financement, échéance) qui recalcule l'écart à former | Agent | ✅ Fiche, session d'appels | P2 |
+| **Furious** (FR) | ERP des sociétés de services : charge d'avant-vente, taux de transformation, **rentabilité par projet en temps réel**, alertes de charge | **Rentabilité estimée** de chaque proposition (jours formateur, déplacement depuis Méry-sur-Oise, marge) ; **capacité des formateurs** par mois avec alerte de saturation ; taux de transformation par étape et charge d'avant-vente | Agent | ✅ Fiche, Prévisions | P3 |
+| **Attio** | **Attributs IA** (une question → une colonne remplie par l'IA pour chaque ligne), listes de travail, modèle de données souple, **force de la relation**, automatisations sur un canevas visuel, assistant « Ask Attio » | **Colonnes IA** dans la liste (angle d'approche, décideur à viser, risque incendie, multi-sites, prestataire actuel, financement), avec leur source ; **force de la relation** par contact ; automatisations affichées en schéma Quand → Si → Alors ; l'assistant existe déjà | Agent | ✅ Prospects, fiche, automatisations | P1–P2 |
+
+Règles de transposition :
+- **Le CRM garde la facturation** (devis officiel, acompte, facture électronique, trésorerie) : Sellsy et Axonaut montrent que c'est un métier à part, soumis à la réforme de la facture électronique. L'agent prépare, le CRM émet.
+- **Les colonnes IA citent leur source** et sont recalculées quand la donnée change ; elles ne servent jamais à écrire un fait dans un message sans vérification.
+- **La capacité prime sur le pipeline** : un mois saturé déclenche le report des relances non urgentes plutôt que des promesses intenables.
+
 ## 4. Idées écartées
 
 | Idée | Où on la trouve | Pourquoi l'écarter |
@@ -78,5 +93,10 @@ But : situer l'agent FORMA'ST face aux outils du marché, reprendre leurs meille
 - Salesforce : [Prospecting Agent](https://www.salesforce.com/sales/prospecting/agent/), [Guide d'implémentation Agentforce for Sales Development](https://www.salesforce.com/en-us/wp-content/uploads/sites/4/documents/guides/Agentforce-for-Sales-Development-Implementation-Guide.pdf), [Piper, l'agent SDR de Salesforce](https://www.salesforce.com/salesforce-on-salesforce/agentic-presales-qualified-piper/)
 - HubSpot : [AI Prospecting Agent](https://hubspot.com/products/sales/ai-prospecting-agent), [Base de connaissances](https://knowledge.hubspot.com/get-started-with-ai-powered-prospecting), [Spring 2025 Spotlight](https://www.hubspot.com/company-news/spring-2025-spotlight-breeze-agents)
 - lemlist et La Growth Machine : [comparatif LGM](https://lagrowthmachine.com/fr/lemlist-vs-la-growth-machine/) (publié par l'éditeur), [Impli](https://www.impli.fr/comparaison/lemlist-vs-la-growth-machine), [Overloop](https://overloop.com/fr/blog/avis-la-growth-machine)
+- Sellsy : [Sellsy, gestion commerciale](https://go.sellsy.com/fr/tous-les-modules/gestion-commerciale), [Blog du Modérateur](https://www.blogdumoderateur.com/tools/sellsy/), [Rotek](https://rotek.fr/?p=45768), [Breakcold](https://www.breakcold.com/fr/blog/sellsy-crm-avis)
+- Axonaut : [Blog du Modérateur](https://www.blogdumoderateur.com/axonaut-solution-crm-factures-depenses/), [Codeur](https://www.codeur.com/comparatif/logiciel-facturation/axonaut), [Finance Héros](https://finance-heros.fr/avis-axonaut/)
+- Furious : [Blog du Modérateur](https://www.blogdumoderateur.com/tools/furious/), [Appvizer](https://www.appvizer.fr/operations/erp/furious), [La Fabrique du Net](https://www.lafabriquedunet.fr/logiciel/furious)
+- Attio : [AI attributes (Attio)](https://attio.com/blog/introducing-ai-attributes), [Attio AI (aide)](https://attio.com/help/reference/attio-ai), [CRM.org](https://crm.org/news/attio-review), [Sacra](https://sacra.com/research/attio)
+- HubSpot Sales Hub : [Tarifs et fonctions](https://www.hubspot.com/pricing/sales)
 - Pappers : [API Pappers](https://www.pappers.fr/api), [Fonctionnalités](https://www.pappers.fr/fonctionnalites)
-- Pipedrive, Sellsy, Axonaut, Ringover, Aircall, Modjo, Dropcontact, Lusha : connaissance générale du marché, non revérifiée pour ce document. **Prix à confirmer.**
+- Pipedrive, Ringover, Aircall, Modjo, Dropcontact, Lusha : connaissance générale du marché, non revérifiée pour ce document. **Prix à confirmer.**

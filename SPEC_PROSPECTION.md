@@ -1,4 +1,4 @@
-# Agent d'aide à la prospection — Cahier des charges (v0.4)
+# Agent d'aide à la prospection — Cahier des charges (v0.5)
 
 Module **interne** de FORMA'ST, testé d'abord seul, puis intégré en tout ou partie au **CRM interne** (développé avec Claude Code) et à l'**application AO** (Veille AO, ce dépôt).
 
@@ -7,6 +7,8 @@ Module **interne** de FORMA'ST, testé d'abord seul, puis intégré en tout ou p
 > **v0.3** : le CRM est une application **séparée** de l'outil AO. Les échanges passent par des API internes ; architecture, emplacement de l'agent et contrats d'API précisés en 3.14.2.
 >
 > **v0.4** : comparatif avec Koban, Neocamino, Salesforce, HubSpot, Pipedrive, lemlist / La Growth Machine et d'autres ([BENCHMARK_PROSPECTION.md](BENCHMARK_PROSPECTION.md)) ; améliorations retenues en 3.18 ; ergonomie précisée en 7.1.
+>
+> **v0.5** : reprise du meilleur de Sellsy, Axonaut, HubSpot, Furious et Attio (3.19).
 
 Maquette fonctionnelle : [`maquettes/prospection.html`](maquettes/prospection.html) (données fictives).
 
@@ -478,6 +480,25 @@ Détail et sources : [BENCHMARK_PROSPECTION.md](BENCHMARK_PROSPECTION.md).
 | **Téléphonie** | Appel en un clic (Teams Phone ou opérateur), enchaînement d'appels, résumé du compte rendu par l'IA ; enregistrement seulement avec information et accord de la personne | P4 |
 | **Score prédictif des opportunités** | Probabilité de signature, une fois 6 mois de résultats disponibles | P4 |
 
+### 3.19 Reprises de Sellsy, Axonaut, HubSpot, Furious et Attio
+
+| Fonction | Description | Inspiration | Phase |
+|---|---|---|---|
+| **Colonnes IA** | L'utilisateur ajoute à une liste une colonne définie par une question (préréglées : angle d'approche, décideur à viser, risque incendie, plusieurs sites, prestataire actuel, financement ; ou question libre). L'IA la remplit pour chaque ligne, avec sa source, et la recalcule quand la donnée change. Filtrable et triable | Attio (attributs IA) | P2 |
+| **Force de la relation** | Par contact : aucune / faible / moyenne / forte, calculée sur les échanges (e-mails, appels, réponses, RDV) | Attio | P2 |
+| **Proposition express** | Depuis la fiche : lignes du catalogue préremplies avec le besoin estimé, quantités modifiables, remise, TVA ou exonération (art. 261-4-4° a du CGI, à confirmer pour FORMA'ST) ; jointe à l'e-mail, envoyée pour signature électronique, créée comme devis brouillon dans le CRM ; relance à J+7 | Sellsy, Axonaut, HubSpot | P2 |
+| **Rentabilité estimée** | Pour chaque proposition : jours formateur, distance depuis Méry-sur-Oise, frais, coût, marge et taux de marge ; alerte sous 25 % | Furious | P2 |
+| **Créneaux de rendez-vous** | Insertion en un clic de 3 créneaux libres de l'agenda Microsoft 365 et d'un lien de prise de RDV ; invitation Teams créée à la réservation | HubSpot (prise de RDV) | P2 |
+| **Guide de découverte** | Questions structurées pendant l'appel (SST déjà formés, dernier exercice, décideur, prestataire, financement, échéance) ; les réponses mettent à jour la fiche et l'écart de SST à former | HubSpot (guides d'appel) | P2 |
+| **Prévisions sur 6 mois** | Chiffre d'affaires signé, recyclages attendus d'après l'historique, pipeline pondéré par statut (5 % en séquence, 20 % a répondu, 35 % RDV, 50 % transmis au CRM ; à recalibrer) | Axonaut, HubSpot | P3 |
+| **Capacité des formateurs** | Jours disponibles par mois et par formateur, jours réservés, jours nécessaires selon les prévisions ; mois saturé → relances non urgentes repoussées, dates plus tardives ou sessions inter-entreprises proposées | Furious | P3 |
+| **Taux de transformation et charge d'avant-vente** | Par étape (contacté → réponse → RDV → devis → signé), temps passé par opportunité, délai jusqu'à la signature | Furious | P3 |
+| **Automatisations en schéma** | Chaque recette affichée en blocs Quand → Si → Alors ; éditeur visuel en P3 | Attio, HubSpot | P1 (affichage), P3 (éditeur) |
+
+Le devis officiel, l'acompte, la facture électronique et la trésorerie restent dans le **CRM** : l'agent prépare et transmet.
+
+Tables ajoutées : `Proposition` (compte, lignes JSON, remise, exoneration_tva, total_ht, jours, cout_estime, marge, statut, crm_id), `CapaciteFormateur` (formateur, mois, jours_disponibles, jours_reserves), `ColonneIA` (liste, question, prompt, source, actif) et `ValeurIA` (colonne, compte, valeur, source, calculee_le).
+
 ---
 
 ## 4. Exigences non fonctionnelles
@@ -569,6 +590,7 @@ prospection/
 | Ma journée | Prochaines actions classées, objectif du jour, compte rendu de la nuit, prospects autour de la prochaine session |
 | Campagnes | Calendrier annuel, préparation et validation, posts LinkedIn de la semaine |
 | Pilote automatique | Niveau d'autonomie par activité, budget, plafond, journal |
+| Prévisions et capacité | CA sur 6 mois (signé, recyclages, pipeline pondéré), capacité des formateurs, taux de transformation |
 | Statistiques | Indicateurs, entonnoir, signaux récents, échéances, rendement des sources, coût IA |
 | Prospects | Liste filtrable (palier, segment, département, statut, signal), tri par score, actions groupées |
 | Fiche prospect | Score et explication, besoin estimé, signaux, contacts, rédaction IA par canal, historique |
