@@ -1,4 +1,4 @@
-# Veille AO – outil interne FORMA'ST
+# FORM'AO – outil interne FORMA'ST
 
 Veille des appels d'offres publics et privés, score Go/No-Go par IA et suivi des réponses.
 Le cahier des charges complet est dans [SPEC.md](SPEC.md).

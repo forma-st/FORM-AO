@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installation de Veille AO sur un serveur Debian 12 / Ubuntu 24.04 neuf.
+# Installation de FORM'AO sur un serveur Debian 12 / Ubuntu 24.04 neuf.
 # Usage (en root) :  bash install.sh veille.mondomaine.fr
 set -euo pipefail
 

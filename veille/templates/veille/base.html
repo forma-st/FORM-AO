@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block titre %}Veille AO{% endblock %} – FORMA'ST</title>
+<title>{% block titre %}Appels d'offres{% endblock %} – FORM'AO</title>
 <link rel="preload" href="{% static 'veille/fonts/barlow-latin-600-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{% static 'veille/app.css' %}">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='6' fill='%230A7F4F'/%3E%3Crect x='4' y='4' width='24' height='24' rx='4' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
@@ -15,7 +15,7 @@
   <nav class="rail" aria-label="Navigation principale">
     <a class="marque" href="{% url 'tableau' %}">
       <span class="marque-signe" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 8.5l4 4 8-9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      <span class="marque-nom">Veille AO<small>FORMA'ST</small></span>
+      <span class="marque-nom">FORM'AO<small>Appels d'offres FORMA'ST</small></span>
     </a>
     <a class="nav" href="{% url 'tableau' %}" {% if nom == "tableau" or nom == "detail" or nom == "reponse" or nom == "memoire_voir" %}aria-current="page"{% endif %}>Appels d'offres {% if nav_a_trier %}<span class="compteur vif" title="à trier">{{ nav_a_trier }}</span>{% endif %}</a>
     <a class="nav" href="{% url 'pipeline' %}" {% if nom == "pipeline" %}aria-current="page"{% endif %}>Réponses {% if nav_en_cours %}<span class="compteur">{{ nav_en_cours }}</span>{% endif %}</a>

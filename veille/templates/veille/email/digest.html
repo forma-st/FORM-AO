@@ -1,7 +1,7 @@
 {% load veille_tags %}<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#16221D;max-width:680px;margin:0 auto">
 <div style="background:#16221D;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0">
   <span style="display:inline-block;width:14px;height:14px;background:#0A7F4F;border:2px solid #fff;border-radius:3px;vertical-align:-2px"></span>
-  <strong style="font-size:17px;margin-left:6px">Veille AO</strong> <span style="color:#9FB0A8">– {% now "l j F" %}</span>
+  <strong style="font-size:17px;margin-left:6px">FORM'AO</strong> <span style="color:#9FB0A8">– {% now "l j F" %}</span>
 </div>
 <div style="background:#F1F4F2;padding:18px 20px;border-radius:0 0 8px 8px">
 {% if avis %}<p style="margin:0 0 14px">{{ avis|length }} appel{{ avis|length|pluralize }} d'offres à trier (score {{ profil.seuil_digest }} et plus).</p>
@@ -20,6 +20,6 @@
 {% endfor %}{% endif %}
 {% if echeances %}<p style="margin:18px 0 6px;font-weight:bold;color:#C62828">Dates limites dans moins de 10 jours</p><ul style="margin:0;padding-left:20px">{% for a in echeances %}<li><a href="{{ base_url }}/avis/{{ a.pk }}/reponse/" style="color:#1D5FA8">{{ a.objet|truncatechars:90 }}</a> – {{ a.date_limite|date:"j/m H\hi" }}</li>{% endfor %}</ul>{% endif %}
 {% if pieces %}<p style="margin:18px 0 6px;font-weight:bold;color:#8A6200">Pièces administratives à renouveler</p><ul style="margin:0;padding-left:20px">{% for p in pieces %}<li>{{ p }} – expire le {{ p.date_expiration|date:"j/m/Y" }}</li>{% endfor %}</ul>{% endif %}
-<p style="margin:20px 0 0"><a href="{{ base_url }}/" style="display:inline-block;background:#0A7F4F;color:#fff;padding:10px 16px;border-radius:7px;text-decoration:none;font-weight:bold">Ouvrir la veille</a></p>
+<p style="margin:20px 0 0"><a href="{{ base_url }}/" style="display:inline-block;background:#0A7F4F;color:#fff;padding:10px 16px;border-radius:7px;text-decoration:none;font-weight:bold">Ouvrir FORM'AO</a></p>
 </div>
 </div>

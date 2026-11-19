@@ -15,8 +15,8 @@ from .models import (
     Reference,
 )
 
-admin.site.site_header = "Veille appels d'offres"
-admin.site.site_title = "Veille AO"
+admin.site.site_header = "FORM'AO – réglages avancés"
+admin.site.site_title = "FORM'AO"
 
 
 @admin.register(Entreprise)

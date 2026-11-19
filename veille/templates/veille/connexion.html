@@ -1,9 +1,9 @@
 {% load static %}<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Connexion – Veille AO FORMA'ST</title><link rel="stylesheet" href="{% static 'veille/app.css' %}"></head>
+<title>Connexion – FORM'AO</title><link rel="stylesheet" href="{% static 'veille/app.css' %}"></head>
 <body><div class="connexion">
   <form method="post" class="panneau formulaire">{% csrf_token %}
-    <div class="marque"><span class="marque-signe" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 8.5l4 4 8-9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="marque-nom">Veille AO<small>FORMA'ST</small></span></div>
+    <div class="marque"><span class="marque-signe" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 8.5l4 4 8-9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="marque-nom">FORM'AO<small>Appels d'offres FORMA'ST</small></span></div>
     {% if form.errors %}<ul class="messages"><li class="error">Identifiant ou mot de passe incorrect.</li></ul>{% endif %}
     <p><label for="id_username">Identifiant</label><input type="text" name="username" id="id_username" autocomplete="username" autofocus required></p>
     <p><label for="id_password">Mot de passe</label><input type="password" name="password" id="id_password" autocomplete="current-password" required></p>
