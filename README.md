@@ -137,7 +137,9 @@ Planification (cron) chaque jour à 7 h 10 :
 
 ## Mise en production
 
-Guide pas à pas pour un serveur loué (VPS) : [deploy/INSTALLATION.md](deploy/INSTALLATION.md). Le script `deploy/install.sh` installe tout (application, HTTPS, veille chaque matin, sauvegardes).
+**Sur un Mac** (choix retenu pour démarrer) : guide pas à pas dans [deploy/mac/INSTALLATION-MAC.md](deploy/mac/INSTALLATION-MAC.md). La commande `bash deploy/mac/installer.sh` installe et démarre tout : l'application, la veille à 7 h 10 et la sauvegarde quotidienne, qui redémarrent avec le Mac. L'accès à distance d'un collègue passe par Tailscale. `data/reprise.json` reprend les avis notés, l'analyse et le mémoire de la phase de test.
+
+**Sur un serveur loué (VPS)** : Guide pas à pas pour un serveur loué (VPS) : [deploy/INSTALLATION.md](deploy/INSTALLATION.md). Le script `deploy/install.sh` installe tout (application, HTTPS, veille chaque matin, sauvegardes).
 
 
 - Servir l'application avec un seul processus multi-thread, par exemple `gunicorn config.wsgi --workers 1 --threads 4 --timeout 120`, derrière nginx et en HTTPS. Les analyses et les mémoires tournent dans des threads de ce processus.
