@@ -1,6 +1,6 @@
 {% extends "veille/base.html" %}
 {% load veille_tags %}
-{% block titre %}Réponse – {{ a.objet|truncatechars:50 }}{% endblock %}
+{% block titre %}Réponse – {{ a.objet|lisible|truncatechars:50 }}{% endblock %}
 {% block entete %}{% if en_cours %}<meta http-equiv="refresh" content="15">{% endif %}{% endblock %}
 {% block contenu %}
 {% include "veille/_avis_entete.html" %}

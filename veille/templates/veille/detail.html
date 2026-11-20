@@ -1,6 +1,6 @@
 {% extends "veille/base.html" %}
 {% load veille_tags %}
-{% block titre %}{{ a.objet|truncatechars:60 }}{% endblock %}
+{% block titre %}{{ a.objet|lisible|truncatechars:60 }}{% endblock %}
 {% block contenu %}
 {% include "veille/_avis_entete.html" %}
 <div class="colonnes">

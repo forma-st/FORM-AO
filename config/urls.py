@@ -5,7 +5,11 @@ from django.urls import path
 from veille import views
 
 urlpatterns = [
-    path("", views.tableau_de_bord, name="tableau"),
+    path("", views.accueil, name="accueil"),
+    path("accueil/personnaliser/", views.accueil_personnaliser, name="accueil_personnaliser"),
+    path("appels-offres/", views.tableau_de_bord, name="tableau"),
+    path("appels-offres/ecarter-no-go/", views.ecarter_no_go, name="ecarter_no_go"),
+    path("appels-offres/annuler-ecart/", views.annuler_ecart, name="annuler_ecart"),
     path("collecter/", views.collecter_maintenant, name="collecter"),
     path("avis/<int:pk>/", views.detail, name="detail"),
     path("avis/<int:pk>/decider/", views.decider, name="decider"),

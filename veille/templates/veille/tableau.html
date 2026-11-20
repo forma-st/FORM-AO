@@ -13,7 +13,6 @@
   </div>
   <div class="actions" style="margin:0">
     <form method="post" action="{% url 'collecter' %}">{% csrf_token %}<button class="btn secondaire" {% if collecte_en_cours %}disabled{% endif %}>Collecter maintenant</button></form>
-    <a class="btn secondaire" href="{% url 'ajouter' %}">Ajouter une consultation privée</a>
   </div>
 </div>
 
@@ -22,7 +21,7 @@
   {% if echeances %}
   <div class="signal urgent">
     <strong>Dates limites dans moins de 10 jours</strong>
-    <ul>{% for e in echeances %}<li><a href="{% url 'reponse' e.pk %}">{{ e.objet|truncatechars:60 }}</a> – {{ e.date_limite|date:"j/m H\hi" }}</li>{% endfor %}</ul>
+    <ul>{% for e in echeances %}<li><a href="{% url 'reponse' e.pk %}">{{ e.objet|lisible|truncatechars:60 }}</a> – {{ e.date_limite|date:"j/m H\hi" }}</li>{% endfor %}</ul>
   </div>
   {% endif %}
   {% if pieces %}
@@ -39,13 +38,13 @@
   <nav class="onglets" aria-label="Filtrer par statut">
     {% for cle, libelle, n in onglets %}<a href="?onglet={{ cle }}" {% if cle == onglet and not q %}aria-current="page"{% endif %}>{{ libelle }}<span>{{ n }}</span></a>{% endfor %}
   </nav>
-  <form class="recherche" method="get" role="search">
-    <input type="hidden" name="onglet" value="{{ onglet }}">
-    <label class="sr" for="q">Rechercher</label>
-    <input type="search" id="q" name="q" value="{{ q }}" placeholder="Rechercher un objet, un acheteur…">
-  </form>
+  <p class="aide-clavier">Clavier : <kbd>j</kbd><kbd>k</kbd> se déplacer, <kbd>g</kbd> Go, <kbd>n</kbd> No-Go, <kbd>Entrée</kbd> ouvrir, <kbd>/</kbd> rechercher</p>
 </div>
-{% if q %}<p class="doux" style="margin-top:10px">Résultats pour « {{ q }} » dans tous les avis retenus. <a href="?onglet={{ onglet }}">Effacer</a></p>{% endif %}
+{% if onglet == "a_trier" and not q and no_go_recommandes %}
+<div class="resume-tri" style="margin-top:12px"><p class="doux">L'IA propose d'écarter {{ no_go_recommandes }} de ces avis (hors métier, exigences bloquantes…).</p>
+<form method="post" action="{% url 'ecarter_no_go' %}">{% csrf_token %}<input type="hidden" name="suivant" value="{{ request.get_full_path }}"><button class="btn secondaire petit">Écarter les {{ no_go_recommandes }} No-Go recommandés</button></form></div>
+{% endif %}
+{% if q %}<p class="doux" style="margin-top:10px">{{ avis|length }} résultat{{ avis|length|pluralize }} pour « {{ q }} » dans tous les avis retenus. <a href="{% url 'tableau' %}">Effacer la recherche</a></p>{% endif %}
 
 <ul class="liste">
 {% for a in avis %}
@@ -53,7 +52,7 @@
   <li class="ligne">
     <div class="plaque {{ a.score|couleur_score }}" title="Score {{ a.score|default_if_none:'non calculé' }}/100">{{ a.score|default_if_none:"?" }}</div>
     <div>
-      <a class="ligne-titre" href="{% url 'detail' a.pk %}">{{ a.objet|truncatechars:150 }}</a>
+      <a class="ligne-titre" href="{% url 'detail' a.pk %}">{{ a.objet|lisible|truncatechars:150 }}</a>
       <div class="ligne-meta">{{ a.acheteur|default:"Acheteur non précisé" }}{% if a.departements %}, {{ a.departements|departements }}{% endif %}</div>
       {% if a.resume %}<p class="ligne-resume">{{ a.resume|truncatechars:240 }}</p>{% endif %}
       <div class="faits">

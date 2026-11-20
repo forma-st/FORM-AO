@@ -61,3 +61,38 @@ def marquer_a_completer(texte):
     from django.utils.safestring import mark_safe
 
     return mark_safe(re.sub(r"(\[À COMPLÉTER[^\]]*\])", r'<mark class="marque-completer">\1</mark>', escape(texte or "")))
+
+
+@register.filter
+def annulation(message):
+    """Extrait (pk, statut précédent) d'un message de décision portant le tag « annuler:<pk>:<statut> »."""
+    for tag in str(getattr(message, "extra_tags", "") or "").split():
+        if tag.startswith("annuler:"):
+            _, pk, statut = tag.split(":", 2)
+            return {"pk": pk, "statut": statut}
+    return None
+
+
+@register.filter
+def niveau(message):
+    """Classe CSS du message (success, warning, error, info) sans les tags techniques."""
+    return getattr(message, "level_tag", "") or "info"
+
+
+@register.simple_tag(takes_context=True)
+def salutation(context):
+    from django.utils import timezone
+
+    h = timezone.localtime().hour
+    return "Bonsoir" if h >= 18 else "Bonjour"
+
+
+@register.filter
+def lisible(texte):
+    """Remet en casse normale les intitulés saisis tout en majuscules (fréquents au BOAMP)."""
+    t = " ".join((texte or "").split())
+    lettres = [c for c in t if c.isalpha()]
+    if lettres and sum(c.isupper() for c in lettres) / len(lettres) > 0.8:
+        t = t.lower()
+        t = t[:1].upper() + t[1:]
+    return t

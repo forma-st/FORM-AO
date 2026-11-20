@@ -22,6 +22,7 @@ from .models import (
     PieceAdministrative,
     ProfilVeille,
 )
+from .services import accueil as accueil_service
 from .services import annuaire, documents, prefiltre, scoring
 from .services import dce as dce_service
 from .services import memoire as memoire_service
@@ -102,6 +103,8 @@ def tableau_de_bord(request):
             "derniere_collecte": Collecte.objects.filter(fin__isnull=False).first(),
             "collecte_en_cours": _collecte_en_cours(),
             "total": AvisMarche.objects.count(),
+            "no_go_recommandes": _ouverts(base.filter(statut__in=["DETECTE", "A_QUALIFIER"], recommandation="NO_GO"))
+            .exclude(score_modele="règles").count(),
         },
     )
 
@@ -128,15 +131,23 @@ def decider(request, pk):
     """Tri en un clic : Go, No-Go (avec motif) ou retour « à trier »."""
     a = get_object_or_404(AvisMarche, pk=pk)
     decision = request.POST.get("decision")
-    if decision not in ("GO", "NO_GO", "A_QUALIFIER"):
+    if decision not in ("GO", "NO_GO", "A_QUALIFIER") and not (
+        request.POST.get("annulation") and decision in dict(AvisMarche.STATUTS)
+    ):
         raise Http404
+    precedent = a.statut
     a.statut = decision
     motif = request.POST.get("motif", "").strip()
     if motif:
         a.decision_motif = motif
     a.save(update_fields=["statut", "decision_motif", "modifie_le"])
     libelle = {"GO": "Go", "NO_GO": "No-Go", "A_QUALIFIER": "à trier"}[decision]
-    messages.success(request, f"« {a.objet[:70]} » classé {libelle}.")
+    texte = f"« {a.objet[:70]} » classé {libelle}."
+    if request.POST.get("annulation"):
+        texte = f"Décision annulée : « {a.objet[:70]} » revient à l'étape « {a.get_statut_display()} »."
+    # « annuler:<pk>:<statut précédent> » permet d'afficher un bouton Annuler dans le message
+    tags = "" if request.POST.get("annulation") else f"annuler:{a.pk}:{precedent}"
+    messages.success(request, texte, extra_tags=tags)
     return _retour(request, "tableau")
 
 
@@ -486,3 +497,64 @@ def profil(request):
         messages.success(request, "Profil enregistré : les prochains documents l'intègrent automatiquement.")
         return _retour(request, "profil")
     return render(request, "veille/profil.html", {"e": e, "form": form, "completude": annuaire.completude(e)})
+
+
+# ---------------------------------------------------------------------------
+# Accueil : tableau de bord personnalisable
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def accueil(request):
+    return render(
+        request,
+        "veille/accueil.html",
+        {
+            "widgets": accueil_service.construire(request.user),
+            "tous": accueil_service.preferences(request.user),
+            "personnaliser": request.GET.get("personnaliser") == "1",
+            "entreprise": Entreprise.get(),
+        },
+    )
+
+
+@login_required
+@require_POST
+def accueil_personnaliser(request):
+    if request.POST.get("action") == "reinitialiser":
+        accueil_service.reinitialiser(request.user)
+        messages.success(request, "Accueil remis dans sa disposition d'origine.")
+        return redirect("accueil")
+    ordre = [c for c in request.POST.get("ordre", "").split(",") if c]
+    accueil_service.enregistrer(
+        request.user,
+        ordre,
+        set(request.POST.getlist("visible")),
+        set(request.POST.getlist("large")),
+    )
+    messages.success(request, "Accueil enregistré.")
+    return redirect("accueil")
+
+
+@login_required
+@require_POST
+def ecarter_no_go(request):
+    """Classe No-Go, en une fois, les avis à trier que l'IA recommande d'écarter."""
+    qs = AvisMarche.objects.filter(
+        prefiltre_ok=True, statut__in=["DETECTE", "A_QUALIFIER"], recommandation="NO_GO"
+    ).exclude(score_modele="règles")
+    ids = list(qs.values_list("pk", flat=True))
+    qs.update(statut="NO_GO", decision_motif="No-Go recommandé par l'IA", modifie_le=timezone.now())
+    request.session["derniers_ecartes"] = ids
+    messages.success(request, f"{len(ids)} avis écartés (No-Go recommandés par l'IA). Ils restent consultables dans l'onglet No-Go.",
+                     extra_tags="annuler_lot")
+    return _retour(request, "tableau")
+
+
+@login_required
+@require_POST
+def annuler_ecart(request):
+    ids = request.session.pop("derniers_ecartes", [])
+    n = AvisMarche.objects.filter(pk__in=ids, statut="NO_GO").update(statut="A_QUALIFIER", decision_motif="")
+    messages.success(request, f"{n} avis remis dans « À trier ».")
+    return _retour(request, "tableau")

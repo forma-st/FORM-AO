@@ -2,7 +2,7 @@
 <p class="fil"><a href="{% url 'tableau' %}">Appels d'offres</a></p>
 <div class="entete-page" style="margin-bottom:0">
   <div style="max-width:80ch">
-    <h1>{{ a.objet }}</h1>
+    <h1>{{ a.objet|lisible }}</h1>
     <p class="doux">{{ a.acheteur|default:"Acheteur non précisé" }} – {{ a.get_source_display }}{% if a.source == "BOAMP" or a.source == "TED" %} n° {{ a.source_id }}{% endif %}{% if a.url %} – <a href="{{ a.url }}" target="_blank" rel="noopener">avis officiel</a>{% endif %}</p>
   </div>
   {% include "veille/_decision.html" with suivant=request.get_full_path %}

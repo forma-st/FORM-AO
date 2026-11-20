@@ -7,6 +7,11 @@ Le cahier des charges complet est dans [SPEC.md](SPEC.md).
 
 ### Interface
 
+- **Accueil en tableau de bord**, personnalisable par chaque utilisateur (affichage, ordre par glisser-déposer, taille des widgets). Huit widgets : à trier, prochaines échéances, réponses en cours, activité de la veille sur 14 jours, résultats et taux de réussite, coffre-fort, complétude du profil, état de la veille.
+- **Écarter en un clic** les avis que l'IA recommande en No-Go, avec possibilité d'annuler.
+- **Annuler** après chaque décision Go ou No-Go, directement depuis le message de confirmation.
+- **Recherche globale** dans la barre du haut (touche `/`) et **raccourcis clavier** sur la liste : `j` et `k` pour se déplacer, `g` pour Go, `n` pour No-Go, `Entrée` pour ouvrir.
+- **Mode sombre** automatique et barre d'onglets en bas de l'écran sur téléphone.
 - **Tri en un clic** : sur chaque avis, des boutons Go et No-Go (avec un motif, qui aide à mieux trier ensuite). Des onglets « À trier », « Go », « En cours », « Résultats », « No-Go », et une recherche sur tous les avis.
 - **Préparer la réponse** en 4 étapes : déposer le DCE, l'analyser, rédiger le mémoire, assembler le dossier.
 - **Mémoire modifiable** dans le navigateur ; le fichier Word reprend les modifications.

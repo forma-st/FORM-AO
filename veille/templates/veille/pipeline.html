@@ -11,7 +11,7 @@
       <article class="ticket">
         <div class="plaque mini {{ a.score|couleur_score }}">{{ a.score|default_if_none:"?" }}</div>
         <div>
-          <a href="{% url 'reponse' a.pk %}">{{ a.objet|truncatechars:80 }}</a>
+          <a href="{% url 'reponse' a.pk %}">{{ a.objet|lisible|truncatechars:80 }}</a>
           <div class="doux">{{ a.acheteur|truncatechars:40 }}{% if a.date_limite %}, {{ a.jours_restants|j_moins }}{% endif %}{% if a.responsable %}, {{ a.responsable }}{% endif %}</div>
           <form method="post" action="{% url 'changer_statut' a.pk %}">{% csrf_token %}
             <input type="hidden" name="suivant" value="{% url 'pipeline' %}">
