@@ -6,3 +6,4 @@ media/
 .env
 # data/seed_formast.json est versionné volontairement (dépôt privé)
 staticfiles/
+export/*.zip

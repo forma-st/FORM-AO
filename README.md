@@ -3,6 +3,7 @@
 Veille des appels d'offres publics et privés, score Go/No-Go par IA et suivi des réponses.
 Le cahier des charges complet est dans [SPEC.md](SPEC.md).
 Nouveau module en conception : **agent d'aide à la prospection**, voir [SPEC_PROSPECTION.md](SPEC_PROSPECTION.md) la maquette [maquettes/prospection.html](maquettes/prospection.html) et le comparatif [BENCHMARK_PROSPECTION.md](BENCHMARK_PROSPECTION.md).
+Kit d'intégration pour une autre application : [export/agent-prospection/](export/agent-prospection/README.md).
 
 ## Ce qui marche aujourd'hui
 
