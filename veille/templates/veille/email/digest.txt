@@ -1,4 +1,4 @@
-{% load veille_tags %}Veille appels d'offres – {% now "d/m/Y" %}
+{% load veille_tags %}FORM'AO – appels d'offres – {% now "d/m/Y" %}
 {% for a in avis %}
 [{{ a.score }}/100 – {{ a.recommandation|libelle_reco }}] {{ a.objet }}
   {{ a.acheteur }}{% if a.date_limite %} – date limite {{ a.date_limite|date:"d/m/Y" }}{% endif %}

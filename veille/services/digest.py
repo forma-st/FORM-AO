@@ -59,7 +59,7 @@ def envoyer_digest(profil: ProfilVeille, forcer: bool = False) -> int:
         return 0
     if not (avis or pieces or echeances):
         return 0
-    sujet = f"[Veille AO] {len(avis)} appel(s) d'offres à regarder – {timezone.localdate():%d/%m}"
+    sujet = f"[FORM'AO] {len(avis)} appel(s) d'offres à regarder – {timezone.localdate():%d/%m}"
     _envoyer(
         sujet,
         profil.liste_destinataires,
@@ -78,7 +78,7 @@ def envoyer_alertes(profil: ProfilVeille) -> int:
         return 0
     for a in avis:
         _envoyer(
-            f"[Veille AO] À regarder vite ({a.score}/100) : {a.objet[:80]}",
+            f"[FORM'AO] À regarder vite ({a.score}/100) : {a.objet[:80]}",
             profil.liste_destinataires,
             "veille/email/alerte.html",
             {"a": a},

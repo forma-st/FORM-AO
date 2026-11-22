@@ -1,27 +1,37 @@
 {% extends "veille/base.html" %}
 {% block titre %}Coffre-fort{% endblock %}
 {% block contenu %}
-<h1>Coffre-fort des pièces administratives</h1>
-<p class="doux">Les pièces valides sont jointes automatiquement aux dossiers de candidature. Une alerte part dans le digest 30 jours avant expiration.</p>
-{% if manquantes %}<div class="carte"><strong>Pièces manquantes :</strong> {{ manquantes|join:", " }}</div>{% endif %}
-<table>
-  <thead><tr><th>Pièce</th><th>Type</th><th>Émise le</th><th>Expire le</th><th>État</th><th></th></tr></thead>
-  <tbody>
-  {% for p in pieces %}
-    <tr>
-      <td>{% if p.fichier %}<a href="{{ p.fichier.url }}">{{ p }}</a>{% else %}{{ p }}{% endif %}</td>
-      <td>{{ p.get_type_display }}</td>
-      <td>{{ p.date_emission|date:"d/m/Y"|default:"—" }}</td>
-      <td>{{ p.date_expiration|date:"d/m/Y"|default:"—" }}</td>
-      <td class="etat-{{ p.statut }}">{% if p.statut == "valide" %}Valide{% elif p.statut == "a_renouveler" %}À renouveler (J-{{ p.jours_avant_expiration }}){% elif p.statut == "expire" %}Expirée{% else %}Fichier manquant{% endif %}</td>
-      <td><form method="post" action="{% url 'supprimer_piece' p.pk %}" onsubmit="return confirm('Supprimer cette pièce ?')">{% csrf_token %}<button class="secondaire">Supprimer</button></form></td>
-    </tr>
-  {% empty %}<tr><td colspan="6">Aucune pièce pour l'instant.</td></tr>{% endfor %}
-  </tbody>
-</table>
-<h2>Ajouter une pièce</h2>
-<div class="carte">
-<form method="post" enctype="multipart/form-data" action="{% url 'coffre_fort' %}{% if suivant %}?suivant={{ suivant|urlencode }}{% endif %}">{% csrf_token %}{{ form.as_p }}<button type="submit">Ajouter</button></form>
-<p class="doux">Durées usuelles : Kbis moins de 3 mois, attestation URSSAF 6 mois, attestation fiscale : année en cours.</p>
+<div class="entete-page"><div><h1>Coffre-fort</h1>
+<p class="doux">Les pièces valides à la date limite sont jointes automatiquement aux dossiers. Le digest vous prévient 30 jours avant une expiration.</p></div></div>
+<div class="colonnes">
+  <div>
+    <section class="panneau">
+      <h2>Pièces attendues dans un dossier</h2>
+      <ul class="criteres">{% for t, lib, ok in attendues %}<li><span class="picto {% if ok %}ok{% else %}manquante{% endif %}" aria-hidden="true">{% if ok %}✓{% else %}✕{% endif %}</span><div>{{ lib }}{% if not ok %} <a class="petit" href="?type={{ t }}#ajout">ajouter</a>{% endif %}</div></li>{% endfor %}</ul>
+    </section>
+    <h2>Pièces déposées</h2>
+    {% if pieces %}
+    <table class="tableau panneau">
+      <thead><tr><th>Pièce</th><th>Émise le</th><th>Expire le</th><th>État</th><th><span class="sr">Supprimer</span></th></tr></thead>
+      <tbody>{% for p in pieces %}
+        <tr>
+          <td>{% if p.fichier %}<a href="{{ p.fichier.url }}">{{ p }}</a>{% else %}{{ p }}{% endif %}<br><span class="doux">{{ p.get_type_display }}</span></td>
+          <td>{{ p.date_emission|date:"j/m/Y"|default:"—" }}</td>
+          <td>{{ p.date_expiration|date:"j/m/Y"|default:"—" }}</td>
+          <td><span class="picto {{ p.statut }}" style="display:inline-grid;vertical-align:middle" aria-hidden="true">{% if p.statut == "valide" %}✓{% else %}!{% endif %}</span>
+            {% if p.statut == "valide" %}Valide{% elif p.statut == "a_renouveler" %}À renouveler dans {{ p.jours_avant_expiration }} j{% elif p.statut == "expire" %}Expirée{% else %}Fichier manquant{% endif %}</td>
+          <td><form method="post" action="{% url 'supprimer_piece' p.pk %}" onsubmit="return confirm('Supprimer cette pièce ?')">{% csrf_token %}<button class="lien-btn">Supprimer</button></form></td>
+        </tr>{% endfor %}</tbody>
+    </table>
+    {% else %}<p class="vide" style="padding:24px"><strong>Aucune pièce pour l'instant</strong>Les dossiers se génèrent quand même : les pièces y sont signalées manquantes.</p>{% endif %}
+  </div>
+  <aside class="collant" id="ajout">
+    <form method="post" enctype="multipart/form-data" class="panneau formulaire" action="{% url 'coffre_fort' %}{% if suivant %}?suivant={{ suivant|urlencode }}{% endif %}">{% csrf_token %}
+      <h2>Ajouter une pièce</h2>
+      {{ form.as_p }}
+      <button class="btn">Ajouter au coffre-fort</button>
+      <p class="doux" style="margin-top:12px">Durées usuelles : Kbis moins de 3 mois, attestation URSSAF 6 mois, attestation fiscale pour l'année en cours.</p>
+    </form>
+  </aside>
 </div>
 {% endblock %}

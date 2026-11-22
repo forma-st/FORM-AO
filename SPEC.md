@@ -1,4 +1,4 @@
-# Veille & réponse aux appels d'offres — Cahier des charges (v0.3)
+# FORM'AO — Veille & réponse aux appels d'offres — Cahier des charges (v0.3)
 
 Outil **interne** de FORMA'ST (SARL, SIRET 899 526 305 00011, Méry-sur-Oise), non commercialisé. **Profil unique** utilisé pour toutes les réponses, y compris Picard. Objectif : **décider vite et bien où se positionner**, puis réduire au minimum le temps de constitution des dossiers.
 

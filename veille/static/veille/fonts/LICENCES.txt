@@ -1,0 +1,2 @@
+Barlow (Jeremy Tribby) et Atkinson Hyperlegible (Braille Institute) : SIL Open Font License 1.1.
+Fichiers issus des paquets @fontsource/barlow et @fontsource/atkinson-hyperlegible 5.1.1.

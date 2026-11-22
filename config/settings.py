@@ -46,6 +46,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # sert /static/ sans nginx (Mac)
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -66,6 +67,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "veille.context_processors.navigation",
             ],
         },
     },
@@ -128,7 +130,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-LOGIN_URL = '/admin/login/'
+LOGIN_URL = '/connexion/'
+LOGIN_REDIRECT_URL = '/'
 
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
@@ -157,6 +160,13 @@ CSRF_TRUSTED_ORIGINS = ([BASE_URL] if BASE_URL.startswith("https://") else []) +
 ]
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_AGE = 60 * 60 * 24 * 14
+    # Cookies réservés au HTTPS quand l'adresse principale est en HTTPS (VPS) ;
+    # sur un Mac consulté en http://localhost, ils doivent rester utilisables.
+    _https = BASE_URL.startswith("https://")
+    SESSION_COOKIE_SECURE = os.environ.get("DJANGO_COOKIES_SECURISES", "1" if _https else "0") == "1"
+    CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
