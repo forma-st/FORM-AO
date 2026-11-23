@@ -26,6 +26,10 @@ Version du 20/11/2026, cahier des charges v0.6. Tout ce qu'il faut pour dévelop
 | [`donnees/`](donnees/) | Données fictives, fichier d'import d'exemple, modèle d'import de l'historique | Tests |
 | [`code_reutilisable/`](code_reutilisable/) | Client HTTP, normalisation, recherche SIRENE issus de l'outil AO | Développement |
 
+## Code de référence
+
+Une première version fonctionnelle (P1 + option LinkedIn) existe dans le dépôt `forma-st/FORM-AO`, dossier `prospection/` (application Django, avec ses tests). L'autre session Claude Code peut s'en inspirer ou la reprendre : modèles, calcul du score et du besoin, import, annuaire, rédaction, contrôle avant envoi, connexion LinkedIn (OAuth) et publication.
+
 ## Périmètre en une phrase
 
 Outil interne et propriétaire qui trouve les entreprises ayant un besoin réel en formation santé-sécurité (signaux publics, bases fournies, historique clients), calcule ce besoin, priorise, rédige et aide à contacter dans le respect du RGPD, puis transmet les rendez-vous qualifiés au CRM. **Hors périmètre** : devis et facturation (outil relié à Penny Line), planning et charge des formateurs (Planif ST).

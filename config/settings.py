@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "veille",
+    "prospection",
 ]
 
 MIDDLEWARE = [
@@ -146,7 +147,10 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {'console': {'class': 'logging.StreamHandler'}},
-    'loggers': {'veille': {'handlers': ['console'], 'level': 'INFO'}},
+    'loggers': {
+        'veille': {'handlers': ['console'], 'level': 'INFO'},
+        'prospection': {'handlers': ['console'], 'level': 'INFO'},
+    },
 }
 BASE_URL = os.environ.get('BASE_URL', 'http://localhost:8000')
 

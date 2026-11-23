@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
 
 from veille import views
 
@@ -18,6 +18,7 @@ urlpatterns = [
     path("dce/<int:pk>/supprimer/", views.supprimer_document, name="supprimer_document"),
     path("memoire/<int:pk>/", views.memoire_voir, name="memoire_voir"),
     path("memoire/<int:pk>/word/", views.memoire_docx, name="memoire_docx"),
+    path("prospection/", include("prospection.urls")),
     path("admin/", admin.site.urls),
     path("media/<path:chemin>", views.fichier_protege, name="fichier_protege"),
 ]

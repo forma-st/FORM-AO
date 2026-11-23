@@ -6,5 +6,6 @@ sudo -u veilleao git pull --ff-only
 sudo -u veilleao .venv/bin/pip install -q -r requirements.txt
 sudo -u veilleao .venv/bin/python manage.py migrate --noinput
 sudo -u veilleao .venv/bin/python manage.py collectstatic --noinput -v0
+cp deploy/veille-ao.cron /etc/cron.d/veille-ao && chmod 644 /etc/cron.d/veille-ao
 systemctl restart veille-ao
 echo "Application mise à jour."

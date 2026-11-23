@@ -10,6 +10,8 @@ Module **interne** de FORMA'ST, testé d'abord seul, puis intégré en tout ou p
 >
 > **v0.5** : reprise du meilleur de Sellsy, Axonaut, HubSpot, Furious et Attio (3.19).
 >
+> **v0.7 (23/11/2026)** : **version de test en place** dans l'outil AO (module `prospection/`, menu *Prospection*). Livré : Ma journée, prospects et fiche, score et besoin, rédaction (modèles + IA) avec contrôle avant envoi, import CSV / Excel avec dédoublonnage, annuaire officiel, historique des formations et relances, tâches, opposition, **option LinkedIn** (connexion du compte, publication, invitations préparées, plafonds, consignes du copilote). Reste : messagerie et séquences (P2), signaux automatiques (P3), CRM (P4).
+>
 > **v0.6** : recentrage sur l'**aide à la prospection**, en outil **interne et propriétaire**. La facturation reste dans l'outil existant (relié à Penny Line) ; la charge et les tournées des formateurs restent dans **Planif ST** et l'optimiseur de tournées. Devis, rentabilité, prévisions de chiffre d'affaires et capacité retirés du périmètre (3.0 et 3.19).
 
 Maquette fonctionnelle : [`maquette/prospection.html`](../maquette/prospection.html) (données fictives).
