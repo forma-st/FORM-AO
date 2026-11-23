@@ -47,6 +47,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # fichiers statiques sans nginx (installation interne)
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -156,10 +157,12 @@ BASE_URL = os.environ.get('BASE_URL', 'http://localhost:8000')
 
 # --- Production (derrière nginx en HTTPS) ---------------------------------
 STATIC_ROOT = BASE_DIR / "staticfiles"
-CSRF_TRUSTED_ORIGINS = ([BASE_URL] if BASE_URL.startswith("https://") else []) + [
+# DJANGO_HTTPS=0 : installation interne en http (réseau local), cookies non réservés au HTTPS
+HTTPS = os.environ.get("DJANGO_HTTPS", "0" if DEBUG else "1") == "1"
+CSRF_TRUSTED_ORIGINS = ([BASE_URL] if BASE_URL.startswith(("https://", "http://")) else []) + [
     o for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o
 ]
-if not DEBUG:
+if not DEBUG and HTTPS:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

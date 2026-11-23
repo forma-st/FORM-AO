@@ -75,6 +75,8 @@ Pas encore fait : envoi des e-mails depuis l'outil et séquences automatiques (p
 
 ## Installation (serveur Linux ou poste de travail)
 
+**Installation interne en une commande** (Mac ou PC Linux du bureau, sans serveur loué) : [deploy/interne/INSTALLATION_INTERNE.md](deploy/interne/INSTALLATION_INTERNE.md).
+
 Il faut Python 3.12 ou plus récent.
 
 ```bash
