@@ -8,6 +8,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 RACINE="$(pwd)"
+if [ ! -f manage.py ] || [ ! -f requirements.txt ] || [ ! -d prospection ]; then
+  echo "Ce script doit rester dans le dossier deploy/interne/ d'une copie complète du dépôt FORM-AO."
+  echo "Dossier actuel : $RACINE (manage.py, requirements.txt ou prospection/ introuvable)."
+  echo "Récupérez le dépôt avec git (voir deploy/interne/INSTALLATION_INTERNE.md), pas en copiant des fichiers avec le Finder."
+  exit 1
+fi
 PORT="${PORT:-8000}"
 DEMO=0; AUTO=0
 for a in "$@"; do
@@ -38,7 +44,38 @@ echo "==> Environnement Python et dépendances"
 
 echo "==> Fichier de configuration .env"
 NOUVEAU_ENV=0
-if [ ! -f .env ]; then cp .env.example .env; NOUVEAU_ENV=1; fi
+if [ ! -f .env ]; then
+  if [ -f .env.example ]; then
+    cp .env.example .env
+  else
+    # Fichier modèle absent (copie par le Finder, qui ignore les fichiers commençant par un point) : modèle intégré
+    cat > .env <<'MODELE'
+DJANGO_SECRET_KEY=
+DJANGO_DEBUG=0
+DJANGO_ALLOWED_HOSTS=localhost
+BASE_URL=http://localhost:8000
+
+# IA (console.anthropic.com > API Keys). Sans clé, le score se fait par règles.
+ANTHROPIC_API_KEY=
+CLAUDE_MODEL=claude-opus-5-5
+CLAUDE_EFFORT=medium
+
+# Envoi des e-mails (digest et alertes)
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+EMAIL_HOST=
+EMAIL_PORT=587
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+EMAIL_USE_TLS=1
+DEFAULT_FROM_EMAIL=veille-ao@localhost
+
+# Prospection : option LinkedIn (à activer aussi dans Paramètres > Prospection)
+LINKEDIN_CLIENT_ID=
+LINKEDIN_CLIENT_SECRET=
+MODELE
+  fi
+  NOUVEAU_ENV=1
+fi
 IP_LOCALE="$(.venv/bin/python - <<'PYEOF'
 import socket
 try:
