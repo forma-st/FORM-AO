@@ -1,6 +1,4 @@
 # Veille AO : collecte + score + e-mails chaque jour à 7 h 10 (heure du serveur)
 10 7 * * * veilleao cd /opt/veille-ao && .venv/bin/python manage.py veille_quotidienne >> /var/log/veille-ao.log 2>&1
-# Prospection : reprises, relances des formations à échéance, annuaire, scores, chaque jour à 7 h 40
-40 7 * * * veilleao cd /opt/veille-ao && .venv/bin/python manage.py prospection_quotidienne --sirene >> /var/log/veille-ao.log 2>&1
 # Sauvegarde chaque nuit à 2 h 20 (base + fichiers déposés), conservée 30 jours
 20 2 * * * veilleao cd /opt/veille-ao && sqlite3 db.sqlite3 ".backup /var/backups/veille-ao/db-$(date +\%F).sqlite3" && tar czf /var/backups/veille-ao/media-$(date +\%F).tgz media 2>/dev/null; find /var/backups/veille-ao -mtime +30 -delete

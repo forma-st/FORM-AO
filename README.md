@@ -2,8 +2,6 @@
 
 Veille des appels d'offres publics et privés, score Go/No-Go par IA et suivi des réponses.
 Le cahier des charges complet est dans [SPEC.md](SPEC.md).
-Nouveau module en conception : **agent d'aide à la prospection**, voir [SPEC_PROSPECTION.md](SPEC_PROSPECTION.md) la maquette [maquettes/prospection.html](maquettes/prospection.html) et le comparatif [BENCHMARK_PROSPECTION.md](BENCHMARK_PROSPECTION.md).
-Kit d'intégration pour une autre application : [export/agent-prospection/](export/agent-prospection/README.md).
 
 ## Ce qui marche aujourd'hui
 
@@ -54,28 +52,7 @@ Kit d'intégration pour une autre application : [export/agent-prospection/](expo
 
 Pas encore fait : le remplissage automatique des BPU et DPGF Excel de l'acheteur. L'analyse liste les postes à chiffrer, mais les prix sont à saisir à la main.
 
-### Prospection (nouveau module, version de test)
-
-Accessible par le menu *Prospection*, ou à l'adresse `/prospection/`. Cahier des charges : [SPEC_PROSPECTION.md](SPEC_PROSPECTION.md).
-
-- **Ma journée** : les prochaines actions classées (tâches en retard, relances de recyclage, prospects A à contacter), avec *Fait* et *Demain*.
-- **Prospects** : liste triée par score (adéquation, intention, accessibilité), vues enregistrées, fiche avec besoin estimé (SST, manutention, évacuation, potentiel), signaux sourcés, contacts, guide de découverte, historique.
-- **Rédaction** : e-mail, invitation LinkedIn, script d'appel, relance, avec ton et consigne ; *Améliorer avec l'IA* si la clé Anthropic est présente ; contrôle avant envoi noté sur 100 ; mention RGPD toujours ajoutée. L'envoi se fait depuis votre messagerie, le bouton *J'ai envoyé ce message* l'inscrit dans l'historique et planifie la relance.
-- **Import** : CSV ou Excel, correspondance des colonnes, contrôle de chaque ligne (doublons, SIRET, opposition, e-mails personnels), annulable 30 jours ; import des acheteurs publics de la veille AO.
-- **Annuaire officiel** : bouton *Compléter depuis l'annuaire* (SIREN, NAF, effectif, établissements, IDCC), et chaque matin pour les fiches sans SIREN.
-- **Historique des formations** : saisie ou import, échéances (MAC SST 24 mois, évacuation 6 mois…), relances en un clic.
-- **Opposition (RGPD)** : liste globale (adresses et domaines), vérifiée à l'import, à l'ajout d'un contact et à l'envoi.
-- **Option LinkedIn** (désactivée par défaut, *Paramètres → Prospection → Activer l'option LinkedIn*) : connexion du compte et publication de posts par l'API officielle, invitations préparées, recherche de l'entreprise et du décideur, plafonds de prudence, consignes pour le copilote Claude in Chrome. L'outil n'envoie jamais d'invitation ni de message à votre place.
-
-Pour découvrir l'outil avec des données fictives : `manage.py charger_demo_prospection` (puis `--effacer`).
-
-Pour connecter LinkedIn : créez une application sur https://www.linkedin.com/developers/apps avec les produits *Sign In with LinkedIn using OpenID Connect* et *Share on LinkedIn*, déclarez l'URL de redirection `https://VOTRE-DOMAINE/prospection/linkedin/retour/`, puis renseignez `LINKEDIN_CLIENT_ID` et `LINKEDIN_CLIENT_SECRET` dans `.env`. La page *LinkedIn* de l'outil rappelle ces étapes.
-
-Pas encore fait : envoi des e-mails depuis l'outil et séquences automatiques (phase 2), signaux automatiques BODACC / France Travail / Géorisques (phase 3), connexion au CRM.
-
 ## Installation (serveur Linux ou poste de travail)
-
-**Installation interne en une commande** (Mac ou PC Linux du bureau, sans serveur loué) : [deploy/interne/INSTALLATION_INTERNE.md](deploy/interne/INSTALLATION_INTERNE.md).
 
 Il faut Python 3.12 ou plus récent.
 
@@ -137,8 +114,7 @@ Commandes utiles :
 | `manage.py scorer` | Score des avis retenus non encore notés (`--rescorer` pour tout refaire, `--regles` sans IA) |
 | `manage.py envoyer_digest` | Envoi des alertes et du digest |
 | `manage.py charger_profil` | Recharge le profil, le catalogue et la veille depuis le JSON |
-| `manage.py prospection_quotidienne --sirene` | Prospection : reprises, relances des formations à échéance, annuaire, scores (planifié à 7 h 40) |
-| `manage.py test veille prospection` | Tests automatiques |
+| `manage.py test veille` | Tests automatiques |
 
 Planification (cron) chaque jour à 7 h 10 :
 
