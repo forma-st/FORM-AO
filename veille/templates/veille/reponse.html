@@ -1,113 +1,139 @@
 {% extends "veille/base.html" %}
 {% load veille_tags %}
-{% block titre %}Réponse – {{ a.objet|truncatechars:50 }}{% endblock %}
+{% block titre %}Réponse – {{ a.objet|lisible|truncatechars:50 }}{% endblock %}
 {% block entete %}{% if en_cours %}<meta http-equiv="refresh" content="15">{% endif %}{% endblock %}
 {% block contenu %}
-<p class="doux"><a href="{% url 'detail' a.pk %}">← Fiche de l'avis</a></p>
-<h1>Préparer la réponse</h1>
-<p><strong>{{ a.objet }}</strong><br><span class="doux">{{ a.acheteur }}{% if a.date_limite %} · date limite {{ a.date_limite|date:"d/m/Y H:i" }} (J-{{ a.jours_restants }}){% endif %}</span></p>
+{% include "veille/_avis_entete.html" %}
 
-<div class="grille">
-<div>
+<div class="colonnes">
+<ol class="etapes">
 
-<!-- 1. DCE -->
-<div class="carte">
-  <h2 style="margin-top:0">1. Dossier de consultation (DCE)</h2>
-  {% if documents_dce %}
-  <table>
-    <thead><tr><th>Document</th><th>Type</th><th>Pages</th><th></th></tr></thead>
-    <tbody>{% for d in documents_dce %}
-      <tr><td><a href="{{ d.fichier.url }}">{{ d.nom }}</a>{% if not d.texte and d.extension != "pdf" %}<br><span class="doux urgent">Format non lu automatiquement : enregistrez-le en PDF ou .docx</span>{% endif %}</td>
-      <td>{{ d.get_type_display }}</td><td>{{ d.nb_pages|default:"—" }}</td>
-      <td><form method="post" action="{% url 'supprimer_document' d.pk %}">{% csrf_token %}<button class="secondaire">×</button></form></td></tr>
-    {% endfor %}</tbody>
-  </table>
-  {% else %}<p class="doux">Aucun document. Déposez le ZIP du DCE téléchargé sur la plateforme de l'acheteur, ou les PDF/Word un par un. Sans document, l'analyse se fait sur le texte de l'avis.</p>{% endif %}
-  <form method="post" enctype="multipart/form-data" class="actions">{% csrf_token %}
-    <input type="file" name="fichiers" multiple accept=".zip,.pdf,.docx,.xlsx,.xlsm,.txt,.csv,.doc,.xls,.odt">
-    <button name="action" value="deposer" class="secondaire">Déposer</button>
-  </form>
-</div>
+  {# 1. Dossier de consultation #}
+  <li class="etape {% if documents_dce %}faite{% else %}active{% endif %}">
+    <h2>Déposer le dossier de consultation</h2>
+    {% if documents_dce %}
+    <table class="tableau">
+      <thead><tr><th>Document</th><th>Type</th><th>Pages</th><th><span class="sr">Retirer</span></th></tr></thead>
+      <tbody>{% for d in documents_dce %}
+        <tr><td><a href="{{ d.fichier.url }}">{{ d.nom }}</a>{% if not d.texte and d.extension != "pdf" %}<br><span class="doux" style="color:var(--rouge)">Format ancien non lu : enregistrez-le en PDF ou .docx.</span>{% endif %}</td>
+        <td>{{ d.get_type_display }}</td><td>{{ d.nb_pages|default:"—" }}</td>
+        <td><form method="post" action="{% url 'supprimer_document' d.pk %}">{% csrf_token %}<button class="lien-btn" aria-label="Retirer {{ d.nom }}">Retirer</button></form></td></tr>
+      {% endfor %}</tbody>
+    </table>
+    {% else %}
+    <p class="doux">Téléchargez le DCE sur la plateforme de l'acheteur (souvent un ZIP) et déposez-le ici. Sans document, l'analyse se fait sur le texte de l'avis.</p>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data" class="depot actions">{% csrf_token %}
+      <label class="sr" for="fichiers">Fichiers du DCE</label>
+      <input type="file" id="fichiers" name="fichiers" multiple accept=".zip,.pdf,.docx,.xlsx,.xlsm,.txt,.csv,.doc,.xls,.odt">
+      <button name="action" value="deposer" class="btn secondaire petit">Ajouter les fichiers</button>
+    </form>
+  </li>
 
-<!-- 2. Analyse -->
-<div class="carte">
-  <h2 style="margin-top:0">2. Analyse du DCE (Go/No-Go détaillé)</h2>
-  {% if analyse and analyse.statut == "EN_COURS" %}<p>⏳ Analyse en cours… (la page se rafraîchit toute seule)</p>
-  {% elif analyse and analyse.statut == "ERREUR" %}<p class="urgent">Erreur : {{ analyse.erreur }}</p>{% endif %}
-  {% if r %}
-    <p><span class="score {{ r.score|couleur_score }}">{{ r.score }}</span> <strong>{{ r.recommandation|libelle_reco }}</strong> – {{ r.justification }}</p>
-    <p>{{ r.synthese }}</p>
-    <p class="doux"><strong>Durée et volumes :</strong> {{ r.duree_et_volumes }}<br>
-      <strong>Lieux et organisation :</strong> {{ r.lieux_et_organisation }}<br>
-      <strong>Prix :</strong> {{ r.forme_du_prix }}<br>
-      <strong>Date limite des offres :</strong> {{ r.date_limite_offres }} · <strong>des questions :</strong> {{ r.date_limite_questions }}<br>
-      <strong>Visite / soutenance :</strong> {{ r.visite_ou_soutenance }}</p>
+  {# 2. Analyse #}
+  <li class="etape {% if r %}faite{% elif documents_dce %}active{% endif %}">
+    <h2>Analyser le dossier</h2>
+    {% if analyse.statut == "EN_COURS" %}<div class="attente">L'IA lit le dossier… la page se met à jour toute seule.</div>
+    {% elif analyse.statut == "ERREUR" %}<div class="messages"><li class="error">L'analyse a échoué : {{ analyse.erreur|truncatechars:300 }}</li></div>{% endif %}
+    {% if r %}
+      <div class="panneau">
+        <div class="avis-verdict">
+          <div class="plaque {{ r.score|couleur_score }}">{{ r.score }}</div>
+          <div><span class="verdict {{ r.recommandation }}">{{ r.recommandation|libelle_reco }}</span><p style="margin:2px 0 0">{{ r.justification }}</p></div>
+        </div>
+        <p>{{ r.synthese }}</p>
+        <dl class="donnees">
+          <dt>Durée, volumes</dt><dd>{{ r.duree_et_volumes }}</dd>
+          <dt>Lieux</dt><dd>{{ r.lieux_et_organisation }}</dd>
+          <dt>Prix</dt><dd>{{ r.forme_du_prix }}</dd>
+          <dt>Remise des offres</dt><dd>{{ r.date_limite_offres }}</dd>
+          <dt>Questions jusqu'au</dt><dd>{{ r.date_limite_questions }}</dd>
+          <dt>Visite, soutenance</dt><dd>{{ r.visite_ou_soutenance }}</dd>
+        </dl>
+      </div>
 
-    {% if r.lots %}<h2>Lots</h2><ul>{% for l in r.lots %}<li>{% if l.pertinent_pour_nous %}✅{% else %}—{% endif %} <strong>Lot {{ l.numero }}</strong> : {{ l.intitule }} <span class="doux">{{ l.commentaire }}</span></li>{% endfor %}</ul>{% endif %}
+      {% if r.lots %}<h3>Lots</h3><ul class="criteres">{% for l in r.lots %}<li><span class="picto {% if l.pertinent_pour_nous %}favorable{% else %}neutre{% endif %}" aria-hidden="true">{% if l.pertinent_pour_nous %}✓{% else %}–{% endif %}</span><div><strong>Lot {{ l.numero }} – {{ l.intitule }}</strong><br><span class="doux">{{ l.commentaire }}</span></div></li>{% endfor %}</ul>{% endif %}
 
-    <h2>Critères de jugement</h2>
-    <table><thead><tr><th>Critère</th><th>Poids</th><th>Sous-critères</th><th>Source</th></tr></thead><tbody>
-    {% for c in r.criteres_jugement %}<tr><td>{{ c.nom }}</td><td>{{ c.ponderation }}</td><td>{{ c.sous_criteres|join:" ; " }}</td><td class="doux">{{ c.source }}</td></tr>{% endfor %}
-    </tbody></table>
+      <h3>Comment l'offre sera notée</h3>
+      <table class="tableau"><thead><tr><th>Critère</th><th>Poids</th><th>Sous-critères</th><th>Source</th></tr></thead><tbody>
+      {% for c in r.criteres_jugement %}<tr><td><strong>{{ c.nom }}</strong></td><td>{{ c.ponderation }}</td><td>{{ c.sous_criteres|join:" ; " }}</td><td class="doux">{{ c.source }}</td></tr>{% endfor %}
+      </tbody></table>
 
-    <h2>Exigences</h2>
-    <table><thead><tr><th>Exigence</th><th>État</th><th>Source</th></tr></thead><tbody>
-    {% for x in r.exigences %}<tr><td>{{ x.exigence }}<div class="doux">{{ x.commentaire }}</div></td><td class="etat-{{ x.statut }}">{% if x.statut == "remplie" %}Remplie{% elif x.statut == "non_remplie" %}Non remplie{% else %}À vérifier{% endif %}</td><td class="doux">{{ x.source }}</td></tr>{% endfor %}
-    </tbody></table>
+      <h3>Exigences</h3>
+      <ul class="criteres">{% for x in r.exigences %}<li><span class="picto {{ x.statut }}" aria-hidden="true">{% if x.statut == "remplie" %}✓{% elif x.statut == "non_remplie" %}✕{% else %}?{% endif %}</span><div>{{ x.exigence }} <span class="doux">– {{ x.source }}</span>{% if x.commentaire %}<br><span class="doux">{{ x.commentaire }}</span>{% endif %}</div></li>{% endfor %}</ul>
 
-    {% if r.pieges_et_clauses_sensibles %}<h2>Pièges et clauses sensibles</h2><ul>{% for p in r.pieges_et_clauses_sensibles %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
-    {% if r.questions_a_poser %}<h2>Questions à poser à l'acheteur</h2><ul>{% for p in r.questions_a_poser %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
-    {% if r.prix_a_chiffrer %}<h2>À chiffrer</h2><ul>{% for p in r.prix_a_chiffrer %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+      {% if r.pieges_et_clauses_sensibles %}<h3>Pièges et clauses sensibles</h3><ul class="simple">{% for p in r.pieges_et_clauses_sensibles %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+      {% if r.questions_a_poser %}<h3>Questions à poser à l'acheteur</h3><ul class="simple">{% for p in r.questions_a_poser %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+      {% if r.prix_a_chiffrer %}<h3>À chiffrer</h3><ul class="simple">{% for p in r.prix_a_chiffrer %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+      <div class="actions"><a class="btn secondaire petit" href="{% url 'grille' a.pk %}">Télécharger la grille de conformité (Excel)</a></div>
+    {% elif not analyse %}
+      <p class="doux">L'IA relève les critères de notation, toutes les pièces à fournir, les exigences, les pièges et le plan attendu du mémoire. Comptez 1 à 3 minutes.</p>
+    {% endif %}
+    <form method="post" class="actions">{% csrf_token %}
+      <button name="action" value="analyser" class="btn {% if r %}secondaire petit{% endif %}" {% if analyse.statut == "EN_COURS" or not ia_active %}disabled{% endif %}>{% if r %}Relancer l'analyse{% else %}Analyser le dossier{% endif %}</button>
+      {% if not ia_active %}<span class="doux">Nécessite la clé API (IA inactive).</span>{% endif %}
+    </form>
+  </li>
 
-    <h2>Plan du mémoire attendu</h2>
-    <ol>{% for s in r.plan_memoire %}<li><strong>{{ s.titre }}</strong> <span class="doux">({{ s.critere_lie }} · {{ s.longueur_conseillee }})</span><ul>{% for x in s.attendus %}<li class="doux">{{ x }}</li>{% endfor %}</ul></li>{% endfor %}</ol>
-    <p><a class="bouton secondaire" href="{% url 'grille' a.pk %}">Grille de conformité (Excel)</a></p>
-  {% endif %}
-  <form method="post">{% csrf_token %}
-    <button name="action" value="analyser" {% if analyse.statut == "EN_COURS" %}disabled{% endif %}>{% if r %}Relancer l'analyse{% else %}Analyser le dossier{% endif %}</button>
-  </form>
-</div>
+  {# 3. Mémoire #}
+  <li class="etape {% if memoires.0.statut == 'OK' %}faite{% elif r %}active{% endif %}">
+    <h2>Rédiger le mémoire technique</h2>
+    <p class="doux">Brouillon qui suit {% if r %}le plan attendu par l'acheteur{% else %}un plan standard (lancez l'analyse pour coller aux critères){% endif %}, à partir du profil, de la bibliothèque de contenus et du dossier. Tout ce qui manque est signalé « [À COMPLÉTER] ».</p>
+    {% for m in memoires %}
+      {% if m.statut == "OK" %}<p>Brouillon du {{ m.cree_le|date:"j/m à H\hi" }} – {{ m.nb_a_completer }} point{{ m.nb_a_completer|pluralize }} à compléter – <a href="{% url 'memoire_voir' m.pk %}">relire et modifier</a> · <a href="{% url 'memoire_docx' m.pk %}">Word</a></p>
+      {% elif m.statut == "EN_COURS" %}<div class="attente">Rédaction en cours depuis {{ m.cree_le|date:"H\hi" }}… comptez 3 à 8 minutes.</div>
+      {% else %}<p style="color:var(--rouge)">Échec du {{ m.cree_le|date:"j/m H\hi" }} : {{ m.erreur|truncatechars:200 }}</p>{% endif %}
+    {% endfor %}
+    <form method="post" class="formulaire">{% csrf_token %}
+      <p><label for="consignes">Consignes pour la rédaction (facultatif)</label>
+      <textarea id="consignes" name="consignes" rows="3" placeholder="ex. insister sur l'unité mobile incendie, proposer une session pilote, deux intervenants"></textarea></p>
+      <button name="action" value="rediger" class="btn {% if memoires %}secondaire{% endif %}" {% if not ia_active %}disabled{% endif %}>{% if memoires %}Rédiger un nouveau brouillon{% else %}Rédiger le brouillon{% endif %}</button>
+    </form>
+  </li>
 
-<!-- 4. Mémoire -->
-<div class="carte">
-  <h2 style="margin-top:0">4. Mémoire technique</h2>
-  <p class="doux">Brouillon rédigé selon le plan de l'analyse (ou un plan standard), à partir du profil, de la bibliothèque de contenus et du DCE. Les informations manquantes sont signalées « [À COMPLÉTER] ».</p>
-  {% for m in memoires %}
-    <p>{% if m.statut == "OK" %}✅ <a href="{% url 'memoire_voir' m.pk %}">Brouillon du {{ m.cree_le|date:"d/m H:i" }}</a> – {{ m.nb_a_completer }} point(s) à compléter – <a href="{% url 'memoire_docx' m.pk %}">Word</a>
-       {% elif m.statut == "EN_COURS" %}⏳ Rédaction en cours (lancée le {{ m.cree_le|date:"d/m H:i" }})…
-       {% else %}<span class="urgent">Échec du {{ m.cree_le|date:"d/m H:i" }} : {{ m.erreur }}</span>{% endif %}</p>
-  {% endfor %}
-  <form method="post">{% csrf_token %}{{ form_memoire.as_p }}<button name="action" value="rediger">Rédiger un brouillon</button></form>
-</div>
+  {# 4. Dossier #}
+  <li class="etape {% if nb_pieces_ok == controles|length and controles %}faite{% elif memoires %}active{% endif %}">
+    <h2>Assembler le dossier</h2>
+    {% if a.source == "PRIVE" %}<p class="doux">Consultation privée : pas de DC1, DC2 ni DUME (formulaires des marchés publics).</p>
+    {% else %}
+    <form method="post" class="actions" style="margin-top:0">{% csrf_token %}
+      <label for="lots">Lots visés</label>
+      <input id="lots" name="lots_vises" value="{{ a.lots_vises }}" placeholder="vide = tout le marché" size="14">
+      <button name="action" value="lots" class="btn secondaire petit">Enregistrer</button>
+    </form>
+    {% endif %}
+    <p style="margin-top:12px">Documents pré-remplis : {% for cle, nom in generateurs %}<a href="{% url 'document_genere' a.pk cle %}">{{ nom }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}.</p>
+    {% if profil_manquants %}<p class="doux">Profil incomplet ({{ profil_manquants|join:", " }}) : ces champs sortent « [À COMPLÉTER] ». <a href="{% url 'profil' %}?suivant={{ request.path|urlencode }}">Compléter le profil</a></p>{% endif %}
+    <details class="repli" {% if nb_pieces_ok and nb_pieces_ok != controles|length %}open{% endif %}>
+    <summary>Pièces administratives à la date limite : {{ nb_pieces_ok }} sur {{ controles|length }} {% if not nb_pieces_ok %}<span class="doux">(coffre-fort vide, le dossier se génère quand même)</span>{% endif %}</summary>
+    <ul class="criteres">{% for c in controles %}<li><span class="picto {% if c.statut == 'ok' %}ok{% else %}{{ c.statut }}{% endif %}" aria-hidden="true">{% if c.statut == "ok" %}✓{% else %}✕{% endif %}</span>
+      <div>{{ c.libelle }} <span class="doux">– {{ c.detail }}</span>{% if c.statut != "ok" %} <a class="petit" href="{% url 'coffre_fort' %}?type={{ c.type }}&suivant={{ request.path|urlencode }}">ajouter</a>{% endif %}</div></li>{% endfor %}</ul>
+    </details>
+    {% if pieces_demandees %}
+    <h3>Pièces demandées par l'acheteur</h3>
+    <ul class="criteres">{% for p in pieces_demandees %}<li><span class="picto {{ p.etat }}" aria-hidden="true">{% if p.etat == "ok" %}✓{% elif p.etat == "genere" %}⚙{% else %}✕{% endif %}</span><div>{{ p.piece }} <span class="doux">({{ p.etape }}, {{ p.source }}) – {{ p.detail }}</span></div></li>{% endfor %}</ul>
+    {% endif %}
+    <div class="actions"><a class="btn" href="{% url 'dossier_zip' a.pk %}">Télécharger le dossier complet</a><span class="doux">ZIP : documents, pièces valides, dernier mémoire, check-list.</span></div>
+  </li>
+</ol>
 
-</div>
-<div>
-
-<!-- 3. Candidature -->
-<div class="carte">
-  <h2 style="margin-top:0">3. Dossier de candidature</h2>
-  <form method="post" class="actions">{% csrf_token %}
-    <label>Lots visés <input name="lots_vises" value="{{ a.lots_vises }}" placeholder="vide = tout le marché" size="12"></label>
-    <button name="action" value="lots" class="secondaire">OK</button>
-  </form>
-  {% if a.source == "PRIVE" %}<p class="doux">Consultation privée : pas de DC1, DC2 ni DUME (formulaires des marchés publics). Le dossier contient la présentation, les pièces du coffre-fort et le mémoire.</p>{% endif %}
-  <ul>{% for cle, nom in generateurs %}<li><a href="{% url 'document_genere' a.pk cle %}">{{ nom }}</a></li>{% endfor %}</ul>
-  <p><a class="bouton" href="{% url 'dossier_zip' a.pk %}">Télécharger le dossier complet (ZIP)</a></p>
-  <p class="doux">Le ZIP contient DC1, DC2, la déclaration sur l'honneur, la présentation, les pièces valides du coffre-fort, le dernier mémoire et une check-list.</p>
-  {% if profil_manquants %}<p class="doux">Profil incomplet ({{ profil_manquants|join:", " }}) : ces champs sortent « [À COMPLÉTER] ». <a href="{% url 'profil' %}?suivant={{ request.path|urlencode }}">Compléter le profil</a></p>{% endif %}
-  <h2>Pièces administratives à la date limite</h2>
-  <p class="doux">Le dossier se génère même sans pièces : elles sont listées comme manquantes dans la check-list. Ajoutez-les quand vous les avez.</p>
-  <ul>{% for c in controles %}<li class="etat-{{ c.statut }}">{{ c.libelle }} <span class="doux">– {{ c.detail }}</span>{% if c.statut != "ok" %} · <a href="{% url 'coffre_fort' %}?type={{ c.type }}&suivant={{ request.path|urlencode }}">ajouter</a>{% endif %}</li>{% endfor %}</ul>
-  <p><a href="{% url 'coffre_fort' %}">Gérer le coffre-fort →</a></p>
-</div>
-
-{% if pieces_demandees %}
-<div class="carte">
-  <h2 style="margin-top:0">Pièces demandées par l'acheteur</h2>
-  <ul>{% for p in pieces_demandees %}<li><span class="etat-{{ p.etat }}">{% if p.etat == "ok" %}✓{% elif p.etat == "genere" %}⚙{% else %}✗{% endif %}</span> {{ p.piece }} <span class="doux">({{ p.etape }}, {{ p.source }}) – {{ p.detail }}</span></li>{% endfor %}</ul>
-</div>
-{% endif %}
-
-</div>
+<aside class="collant">
+  <section class="panneau">
+    <dl class="donnees">
+      <dt>Date limite</dt><dd>{% if a.date_limite %}<strong>{{ a.date_limite|date:"j F, H\hi" }}</strong> ({{ a.jours_restants|j_moins }}){% else %}non précisée{% endif %}</dd>
+      <dt>Score</dt><dd>{{ a.score|default_if_none:"—" }}/100 – {{ a.recommandation|libelle_reco }}</dd>
+      <dt>Statut</dt><dd>{{ a.get_statut_display }}</dd>
+      {% if a.responsable %}<dt>Responsable</dt><dd>{{ a.responsable }}</dd>{% endif %}
+    </dl>
+    {% if a.statut == "REDACTION" %}
+    <form method="post" action="{% url 'changer_statut' a.pk %}" class="actions">{% csrf_token %}<input type="hidden" name="statut" value="DEPOSE"><input type="hidden" name="suivant" value="{{ request.path }}"><button class="btn secondaire petit">Marquer comme déposé</button></form>
+    {% elif a.statut == "DEPOSE" %}
+    <div class="actions">
+      <form method="post" action="{% url 'changer_statut' a.pk %}">{% csrf_token %}<input type="hidden" name="statut" value="GAGNE"><input type="hidden" name="suivant" value="{{ request.path }}"><button class="btn petit">Gagné</button></form>
+      <form method="post" action="{% url 'changer_statut' a.pk %}">{% csrf_token %}<input type="hidden" name="statut" value="PERDU"><input type="hidden" name="suivant" value="{{ request.path }}"><button class="btn nogo petit">Perdu</button></form>
+    </div>
+    {% endif %}
+  </section>
+</aside>
 </div>
 {% endblock %}

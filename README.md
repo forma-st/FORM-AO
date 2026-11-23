@@ -1,9 +1,22 @@
-# Veille AO – outil interne FORMA'ST
+# FORM'AO – outil interne FORMA'ST
 
 Veille des appels d'offres publics et privés, score Go/No-Go par IA et suivi des réponses.
 Le cahier des charges complet est dans [SPEC.md](SPEC.md).
 
 ## Ce qui marche aujourd'hui
+
+### Interface
+
+- **Accueil en tableau de bord**, personnalisable par chaque utilisateur (affichage, ordre par glisser-déposer, taille des widgets). Huit widgets : à trier, prochaines échéances, réponses en cours, activité de la veille sur 14 jours, résultats et taux de réussite, coffre-fort, complétude du profil, état de la veille.
+- **Écarter en un clic** les avis que l'IA recommande en No-Go, avec possibilité d'annuler.
+- **Annuler** après chaque décision Go ou No-Go, directement depuis le message de confirmation.
+- **Recherche globale** dans la barre du haut (touche `/`) et **raccourcis clavier** sur la liste : `j` et `k` pour se déplacer, `g` pour Go, `n` pour No-Go, `Entrée` pour ouvrir.
+- **Mode sombre** automatique et barre d'onglets en bas de l'écran sur téléphone.
+- **Tri en un clic** : sur chaque avis, des boutons Go et No-Go (avec un motif, qui aide à mieux trier ensuite). Des onglets « À trier », « Go », « En cours », « Résultats », « No-Go », et une recherche sur tous les avis.
+- **Préparer la réponse** en 4 étapes : déposer le DCE, l'analyser, rédiger le mémoire, assembler le dossier.
+- **Mémoire modifiable** dans le navigateur ; le fichier Word reprend les modifications.
+- **Collecter maintenant** : la collecte se lance à la demande, sans attendre le lendemain matin.
+- Charte graphique inspirée de la signalétique de sécurité. Les polices sont hébergées sur le serveur (aucun appel à Google Fonts). L'affichage s'adapte au téléphone.
 
 ### Phase 1 – veille
 
@@ -91,7 +104,7 @@ Le fichier `data/seed_formast.json` contient des données internes (prix, CV, bi
 
 ## Clé API Anthropic
 
-L'application lit la clé dans la variable `ANTHROPIC_API_KEY`. Elle peut venir du fichier `.env` ou de l'environnement du serveur.
+L'application lit la clé dans la variable `VEILLE_ANTHROPIC_API_KEY` (prioritaire) ou `ANTHROPIC_API_KEY`. Elle peut venir du fichier `.env` ou de l'environnement du serveur.
 - **Serveur de production** : dans `.env`, ajouter la ligne `ANTHROPIC_API_KEY=sk-ant-…`, puis redémarrer l'application.
 - **Session cloud Claude Code** (pour les tests) : ajouter une variable d'environnement `ANTHROPIC_API_KEY` dans les réglages de l'environnement. Elle est lisible par toute personne et toute commande qui utilise cet environnement.
 
@@ -124,7 +137,9 @@ Planification (cron) chaque jour à 7 h 10 :
 
 ## Mise en production
 
-Guide pas à pas pour un serveur loué (VPS) : [deploy/INSTALLATION.md](deploy/INSTALLATION.md). Le script `deploy/install.sh` installe tout (application, HTTPS, veille chaque matin, sauvegardes).
+**Sur un Mac** (choix retenu pour démarrer) : guide pas à pas dans [deploy/mac/INSTALLATION-MAC.md](deploy/mac/INSTALLATION-MAC.md). La commande `bash deploy/mac/installer.sh` installe et démarre tout : l'application, la veille à 7 h 10 et la sauvegarde quotidienne, qui redémarrent avec le Mac. L'accès à distance d'un collègue passe par Tailscale. `data/reprise.json` reprend les avis notés, l'analyse et le mémoire de la phase de test.
+
+**Sur un serveur loué (VPS)** : Guide pas à pas pour un serveur loué (VPS) : [deploy/INSTALLATION.md](deploy/INSTALLATION.md). Le script `deploy/install.sh` installe tout (application, HTTPS, veille chaque matin, sauvegardes).
 
 
 - Servir l'application avec un seul processus multi-thread, par exemple `gunicorn config.wsgi --workers 1 --threads 4 --timeout 120`, derrière nginx et en HTTPS. Les analyses et les mémoires tournent dans des threads de ce processus.

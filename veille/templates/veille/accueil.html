@@ -1,0 +1,147 @@
+{% extends "veille/base.html" %}
+{% load veille_tags l10n %}
+{% block titre %}Accueil{% endblock %}
+{% block contenu %}
+<div class="entete-page">
+  <div>
+    <h1>{% salutation %} {{ request.user.first_name|default:request.user.username|capfirst }}</h1>
+    <p class="doux">{% now "l j F Y" %}. Voici où en est la veille de FORMA'ST.</p>
+  </div>
+  <a class="btn secondaire" href="?personnaliser=1#personnaliser" aria-controls="personnaliser">{% include "veille/_icone.html" with nom="reglages" %}Personnaliser l'accueil</a>
+</div>
+
+{% if personnaliser %}
+<section class="panneau personnaliser" id="personnaliser" aria-labelledby="titre-perso">
+  <h2 id="titre-perso">Personnaliser l'accueil</h2>
+  <p class="doux">Cochez les widgets à afficher, faites-les glisser (ou utilisez les flèches) pour les réordonner, et choisissez ceux qui prennent deux colonnes.</p>
+  <form method="post" action="{% url 'accueil_personnaliser' %}" id="form-perso">{% csrf_token %}
+    <input type="hidden" name="ordre" id="ordre" value="">
+    <ol class="liste-widgets" id="liste-widgets">
+      {% for w in tous %}
+      <li class="choix-widget" draggable="true" data-cle="{{ w.cle }}">
+        <span class="poignee" aria-hidden="true">⠿</span>
+        <label class="choix-titre"><input type="checkbox" name="visible" value="{{ w.cle }}" {% if w.visible %}checked{% endif %}> <strong>{{ w.titre }}</strong><span class="doux">{{ w.description }}</span></label>
+        <label class="choix-large"><input type="checkbox" name="large" value="{{ w.cle }}" {% if w.large %}checked{% endif %}> Large</label>
+        <span class="fleches">
+          <button type="button" class="btn secondaire petit monter" aria-label="Monter {{ w.titre }}">↑</button>
+          <button type="button" class="btn secondaire petit descendre" aria-label="Descendre {{ w.titre }}">↓</button>
+        </span>
+      </li>
+      {% endfor %}
+    </ol>
+    <div class="actions">
+      <button class="btn">Enregistrer l'accueil</button>
+      <a class="btn secondaire" href="{% url 'accueil' %}">Annuler</a>
+      <button class="lien-btn" name="action" value="reinitialiser" formnovalidate>Revenir à la disposition d'origine</button>
+    </div>
+  </form>
+</section>
+{% endif %}
+
+<div class="widgets">
+{% for w in widgets %}
+  {% with d=w.d %}
+  <section class="widget {% if w.large %}large{% endif %}" aria-labelledby="w-{{ w.cle }}">
+    <header class="widget-entete"><h2 id="w-{{ w.cle }}">{{ w.titre }}</h2>
+      {% if w.cle == "a_trier" %}<a href="{% url 'tableau' %}">Tout voir ({{ d.total }})</a>
+      {% elif w.cle == "reponses" or w.cle == "echeances" %}<a href="{% url 'pipeline' %}">Toutes les réponses</a>
+      {% elif w.cle == "coffre" %}<a href="{% url 'coffre_fort' %}">Ouvrir</a>
+      {% elif w.cle == "profil" %}<a href="{% url 'profil' %}">Compléter</a>{% endif %}
+    </header>
+
+    {% if w.cle == "a_trier" %}
+      {% if d.avis %}
+      <div class="resume-tri">
+        <p class="doux">{{ d.total }} avis en attente de décision, dont {{ d.go_recommandes }} Go recommandé{{ d.go_recommandes|pluralize }} par l'IA{% if d.no_go_recommandes %} et {{ d.no_go_recommandes }} que l'IA propose d'écarter{% endif %}.</p>
+        {% if d.no_go_recommandes %}<form method="post" action="{% url 'ecarter_no_go' %}">{% csrf_token %}<input type="hidden" name="suivant" value="{% url 'accueil' %}"><button class="btn secondaire petit">Écarter les {{ d.no_go_recommandes }} No-Go recommandés</button></form>{% endif %}
+      </div>
+      <ul class="mini-liste">
+        {% for a in d.avis %}
+        <li>
+          <div class="plaque petite {{ a.score|couleur_score }}">{{ a.score|default_if_none:"?" }}</div>
+          <div class="mini-texte"><a class="mini-titre" href="{% url 'detail' a.pk %}">{{ a.objet|lisible|truncatechars:95 }}</a>
+            <span class="doux">{{ a.acheteur|truncatechars:45 }}{% if a.date_limite %}, <span class="{% if a.jours_restants < 10 %}urgent{% endif %}">{{ a.jours_restants|j_moins }}</span>{% endif %}</span></div>
+          {% include "veille/_decision.html" with suivant=request.get_full_path %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<div class="vide-widget"><strong>Tout est trié</strong>Les nouveaux avis arrivent chaque matin, ou tout de suite avec « Collecter maintenant ».</div>{% endif %}
+
+    {% elif w.cle == "echeances" %}
+      {% if d.avis %}
+      <ol class="frise">
+        {% for a in d.avis %}
+        <li class="{% if a.jours_restants < 7 %}proche{% endif %}">
+          <span class="frise-j">{{ a.jours_restants|j_moins }}</span>
+          <div><a href="{% url 'reponse' a.pk %}">{{ a.objet|lisible|truncatechars:70 }}</a><span class="doux">{{ a.date_limite|date:"l j F, H\hi" }} – {{ a.get_statut_display }}</span></div>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}<div class="vide-widget"><strong>Aucune échéance</strong>Classez un appel d'offres en Go pour suivre sa date limite ici.</div>{% endif %}
+
+    {% elif w.cle == "reponses" %}
+      {% if d.total %}
+      <div class="barre-etapes" role="img" aria-label="{% for e in d.etapes %}{{ e.libelle }} : {{ e.n }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+        {% for e in d.etapes %}{% if e.n %}<span class="seg seg-{{ e.code }}" style="flex:{{ e.n }}"></span>{% endif %}{% endfor %}
+      </div>
+      <ul class="legende">{% for e in d.etapes %}<li><span class="pastille-c seg-{{ e.code }}"></span>{{ e.libelle }} <b>{{ e.n }}</b></li>{% endfor %}</ul>
+      <ul class="mini-liste compacte">{% for a in d.avis %}<li><div class="mini-texte"><a class="mini-titre" href="{% url 'reponse' a.pk %}">{{ a.objet|lisible|truncatechars:70 }}</a><span class="doux">{{ a.get_statut_display }}{% if a.date_limite %}, {{ a.jours_restants|j_moins }}{% endif %}{% if a.responsable %}, {{ a.responsable }}{% endif %}</span></div></li>{% endfor %}</ul>
+      {% else %}<div class="vide-widget"><strong>Aucune réponse en cours</strong>Les dossiers en Go apparaîtront ici jusqu'au dépôt.</div>{% endif %}
+
+    {% elif w.cle == "activite" %}
+      <div class="activite">
+        <dl class="indicateurs">
+          <div><dt>Avis lus</dt><dd>{{ d.lus }}</dd></div>
+          <div><dt>Retenus</dt><dd>{{ d.retenus }}</dd></div>
+          <div><dt>Go recommandés</dt><dd>{{ d.go }}</dd></div>
+        </dl>
+        <figure class="graphique">
+          {% localize off %}<svg viewBox="0 0 {{ d.largeur }} {{ d.hauteur }}" role="img" aria-label="Avis retenus par jour du {{ d.premier|date:'j/m' }} au {{ d.dernier|date:'j/m' }}">
+            <line x1="0" x2="{{ d.largeur }}" y1="{{ d.base }}" y2="{{ d.base }}" class="axe"/>
+            {% for s in d.serie %}
+              <rect x="{{ s.x }}" y="{{ s.y }}" width="{{ s.l }}" height="{{ s.h }}" rx="2" class="barre-retenus {% if s.weekend %}weekend{% endif %}"><title>{{ s.jour|date:"l j F" }} : {{ s.retenus }} retenu{{ s.retenus|pluralize }}, {{ s.go }} Go</title></rect>
+              {% if s.hg %}<rect x="{{ s.x }}" y="{{ s.yg }}" width="{{ s.l }}" height="{{ s.hg }}" rx="2" class="barre-go"/>{% endif %}
+            {% endfor %}
+            <text x="0" y="{{ d.hauteur }}" class="etiquette">{{ d.premier|date:"j M" }}</text>
+            <text x="{{ d.largeur }}" y="{{ d.hauteur }}" text-anchor="end" class="etiquette">{{ d.dernier|date:"j M" }}</text>
+          </svg>{% endlocalize %}
+          <figcaption class="legende"><span><span class="pastille-c barre-retenus"></span>Retenus par la veille</span> <span><span class="pastille-c barre-go"></span>dont Go recommandés</span> <span class="doux">Maximum {{ d.maxi }} par jour</span></figcaption>
+        </figure>
+      </div>
+
+    {% elif w.cle == "resultats" %}
+      {% if d.gagnes or d.perdus or d.deposes %}
+      <dl class="indicateurs">
+        <div><dt>Gagnés</dt><dd class="ok">{{ d.gagnes }}</dd></div>
+        <div><dt>Perdus</dt><dd>{{ d.perdus }}</dd></div>
+        <div><dt>En attente</dt><dd>{{ d.deposes }}</dd></div>
+      </dl>
+      {% if d.taux is not None %}<p>Taux de réussite : <b>{{ d.taux }} %</b></p>{% endif %}
+      {% else %}<div class="vide-widget"><strong>Pas encore de résultat</strong>Marquez un dossier « Déposé » puis « Gagné » ou « Perdu » pour suivre votre taux de réussite.</div>{% endif %}
+
+    {% elif w.cle == "coffre" %}
+      <div class="jauge" role="img" aria-label="{{ d.ok }} pièces valides sur {{ d.total }}"><span style="width:{{ d.part }}%"></span></div>
+      <p><b>{{ d.ok }} pièce{{ d.ok|pluralize }} valide{{ d.ok|pluralize }} sur {{ d.total }}</b>{% if d.prochaine %}, prochaine expiration : {{ d.prochaine }} le {{ d.prochaine.date_expiration|date:"j/m/Y" }}{% endif %}.</p>
+      {% if d.manquantes %}<p class="doux">À déposer : {{ d.manquantes|join:", " }}{% if d.nb_manquantes > 4 %}…{% endif %}</p>{% endif %}
+
+    {% elif w.cle == "profil" %}
+      <div class="jauge" role="img" aria-label="Profil complet à {{ d.part }} %"><span style="width:{{ d.part }}%"></span></div>
+      <p><b>Complet à {{ d.part }} %</b></p>
+      {% if d.manquants %}<p class="doux">Manque : {{ d.manquants|join:", " }}. Ces champs sortent « à compléter » dans les documents.</p>{% else %}<p class="doux">Les documents générés sont complets.</p>{% endif %}
+
+    {% elif w.cle == "veille" %}
+      <ul class="etat-veille">
+        <li><span class="point {% if d.en_cours %}attente{% elif d.erreur %}ko{% else %}ok{% endif %}"></span>{% if d.en_cours %}Collecte en cours…{% elif d.derniere %}Dernière collecte le {{ d.derniere.fin|date:"j F à H\hi" }}{% else %}Aucune collecte pour l'instant{% endif %}</li>
+        <li><span class="point {% if d.ia %}ok{% else %}ko{% endif %}"></span>{% if d.ia %}IA active : chaque avis retenu est évalué{% else %}IA inactive : score par règles{% endif %}</li>
+        <li><span class="point neutre"></span>{{ d.nouveaux }} avis retenu{{ d.nouveaux|pluralize }} depuis hier, {{ d.total }} avis en base</li>
+      </ul>
+      {% if d.erreur %}<p class="urgent petit">La dernière collecte {{ d.erreur.source }} a échoué : {{ d.erreur.erreur|truncatechars:120 }}</p>{% endif %}
+      <form method="post" action="{% url 'collecter' %}">{% csrf_token %}<button class="btn secondaire petit" {% if d.en_cours %}disabled{% endif %}>Collecter maintenant</button></form>
+    {% endif %}
+  </section>
+  {% endwith %}
+{% empty %}
+  <div class="vide"><strong>Votre accueil est vide</strong><a href="?personnaliser=1#personnaliser">Choisir des widgets à afficher</a></div>
+{% endfor %}
+</div>
+{% endblock %}

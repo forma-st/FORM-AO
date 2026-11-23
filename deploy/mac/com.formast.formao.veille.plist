@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.formast.formao.veille</string>
+  <key>WorkingDirectory</key><string>__DOSSIER__</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__DOSSIER__/.venv/bin/python</string>
+    <string>manage.py</string>
+    <string>veille_quotidienne</string>
+  </array>
+  <!-- Chaque jour à 7 h 10. Si le Mac dormait, macOS lance la veille au réveil. -->
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>10</integer></dict>
+  <key>StandardOutPath</key><string>__JOURNAUX__/veille.log</string>
+  <key>StandardErrorPath</key><string>__JOURNAUX__/veille.log</string>
+</dict>
+</plist>

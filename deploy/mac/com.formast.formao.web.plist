@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.formast.formao.web</string>
+  <key>WorkingDirectory</key><string>__DOSSIER__</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__DOSSIER__/.venv/bin/gunicorn</string>
+    <string>config.wsgi</string>
+    <string>--bind</string><string>127.0.0.1:__PORT__</string>
+    <string>--workers</string><string>1</string>
+    <string>--threads</string><string>4</string>
+    <string>--timeout</string><string>120</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>__JOURNAUX__/web.log</string>
+  <key>StandardErrorPath</key><string>__JOURNAUX__/web.log</string>
+</dict>
+</plist>

@@ -1,3 +1,4 @@
+import os
 from datetime import timedelta
 from types import SimpleNamespace
 from unittest import mock
@@ -10,6 +11,11 @@ from django.utils import timezone
 from .models import AvisMarche, Entreprise, Prestation, ProfilVeille
 from .services import boamp, digest, prefiltre, scoring, ted
 from .services.texte import mots_cles_trouves, normaliser
+
+
+# Les tests ne doivent jamais appeler la vraie API Claude.
+for _cle in ("VEILLE_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY"):
+    os.environ.pop(_cle, None)
 
 
 def profil(**kw):
@@ -587,3 +593,156 @@ class ProfilTests(TestCase):
         # redirection externe refusée
         r = self.client.post("/profil/?suivant=//evil.example", {"email": "ao@forma-st.fr"})
         self.assertRedirects(r, "/profil/", fetch_redirect_response=False)
+
+
+# ---------------------------------------------------------------------------
+# Ergonomie : tri en un clic, onglets, collecte, mémoire modifiable, connexion
+# ---------------------------------------------------------------------------
+
+
+@override_settings(MEDIA_ROOT=MEDIA_TEST)
+class ErgonomieTests(TestCase):
+    def setUp(self):
+        self.client.force_login(User.objects.create_superuser("matthieu", "m@example.com", "x"))
+        Entreprise.objects.create(raison_sociale="FORMA'ST")
+        p = profil()
+        self.a = avis(objet="Formations SST", acheteur="Ville", profil=p, prefiltre_ok=True, score=80, statut="A_QUALIFIER")
+        self.a.save()
+
+    def test_tri_en_un_clic_et_onglets(self):
+        r = self.client.get("/appels-offres/?onglet=a_trier")
+        self.assertContains(r, "Formations SST")
+        r = self.client.post(f"/avis/{self.a.pk}/decider/", {"decision": "NO_GO", "motif": "trop loin", "suivant": "/appels-offres/?onglet=a_trier"})
+        self.assertRedirects(r, "/appels-offres/?onglet=a_trier", fetch_redirect_response=False)
+        self.a.refresh_from_db()
+        self.assertEqual((self.a.statut, self.a.decision_motif), ("NO_GO", "trop loin"))
+        self.assertNotContains(self.client.get("/appels-offres/?onglet=a_trier"), 'class="ligne-titre"')  # hors du message flash
+        self.assertContains(self.client.get("/appels-offres/?onglet=ecartes"), "Formations SST")
+        self.client.post(f"/avis/{self.a.pk}/decider/", {"decision": "GO"})
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.statut, "GO")
+        # la recherche couvre tous les onglets
+        self.assertContains(self.client.get("/appels-offres/?q=SST"), "Formations SST")
+        # redirection externe refusée
+        r = self.client.post(f"/avis/{self.a.pk}/decider/", {"decision": "GO", "suivant": "https://evil.example/"})
+        self.assertRedirects(r, "/appels-offres/", fetch_redirect_response=False)
+
+    def test_changer_statut_pipeline(self):
+        self.client.post(f"/avis/{self.a.pk}/statut/", {"statut": "DEPOSE"})
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.statut, "DEPOSE")
+        self.assertContains(self.client.get("/pipeline/"), "Formations SST")
+        self.assertEqual(self.client.post(f"/avis/{self.a.pk}/statut/", {"statut": "N_IMPORTE"}).status_code, 404)
+
+    def test_collecter_maintenant_en_arriere_plan(self):
+        with mock.patch("veille.views.lancer") as lancer:
+            r = self.client.post("/collecter/")
+        self.assertEqual(r.status_code, 302)
+        lancer.assert_called_once()
+
+    def test_memoire_modifiable(self):
+        m = Memoire.objects.create(avis=self.a, statut="OK", contenu="## Section\n[À COMPLÉTER : durée]")
+        r = self.client.post(f"/memoire/{m.pk}/", {"contenu": "## Section\nDurée : 3h30."})
+        self.assertEqual(r.status_code, 302)
+        m.refresh_from_db()
+        self.assertEqual(m.nb_a_completer, 0)
+        self.assertIn("3h30", _texte_docx(self.client.get(f"/memoire/{m.pk}/word/").content))
+
+    def test_connexion(self):
+        self.client.logout()
+        r = self.client.get("/")
+        self.assertRedirects(r, "/connexion/?next=/", fetch_redirect_response=False)
+        self.assertContains(self.client.get("/connexion/"), "Se connecter")
+        r = self.client.post("/connexion/", {"username": "matthieu", "password": "x"})
+        self.assertRedirects(r, "/", fetch_redirect_response=False)
+
+
+# ---------------------------------------------------------------------------
+# Accueil personnalisable et annulation
+# ---------------------------------------------------------------------------
+
+from .models import PreferencesAccueil  # noqa: E402
+from .services import accueil as accueil_service  # noqa: E402
+
+
+@override_settings(MEDIA_ROOT=MEDIA_TEST)
+class AccueilTests(TestCase):
+    def setUp(self):
+        self.u = User.objects.create_superuser("matthieu", "m@example.com", "x", first_name="Matthieu")
+        self.client.force_login(self.u)
+        Entreprise.objects.create(raison_sociale="FORMA'ST")
+        p = profil()
+        self.a = avis(objet="Formations SST", acheteur="Ville", profil=p, prefiltre_ok=True, score=82,
+                      recommandation="GO", statut="A_QUALIFIER", date_publication=timezone.localdate())
+        self.a.save()
+
+    def test_accueil_affiche_les_widgets(self):
+        r = self.client.get("/")
+        self.assertContains(r, "Matthieu")
+        for titre in ["À trier", "Prochaines échéances", "Réponses en cours", "Activité de la veille", "Coffre-fort", "État de la veille"]:
+            self.assertContains(r, titre)
+        self.assertContains(r, "Formations SST")
+        self.assertContains(r, "<svg viewBox=")  # graphique d'activité
+
+    def test_personnaliser_ordre_visibilite_taille(self):
+        self.assertContains(self.client.get("/?personnaliser=1"), 'id="liste-widgets"')
+        r = self.client.post("/accueil/personnaliser/", {
+            "ordre": "veille,a_trier,coffre", "visible": ["veille", "a_trier"], "large": ["veille"],
+        })
+        self.assertRedirects(r, "/", fetch_redirect_response=False)
+        prefs = accueil_service.preferences(self.u)
+        self.assertEqual([w["cle"] for w in prefs][:3], ["veille", "a_trier", "coffre"])
+        visibles = [w["cle"] for w in prefs if w["visible"]]
+        self.assertEqual(visibles, ["veille", "a_trier"])
+        self.assertTrue(prefs[0]["large"])
+        page = self.client.get("/").content.decode()
+        self.assertLess(page.index('id="w-veille"'), page.index('id="w-a_trier"'))
+        self.assertNotIn('id="w-coffre"', page)
+        self.client.post("/accueil/personnaliser/", {"action": "reinitialiser"})
+        self.assertFalse(PreferencesAccueil.objects.filter(utilisateur=self.u).exists())
+
+    def test_nouveau_widget_ajoute_aux_preferences_existantes(self):
+        PreferencesAccueil.objects.create(utilisateur=self.u, widgets=[{"cle": "coffre", "visible": True}, {"cle": "inconnu"}])
+        cles = [w["cle"] for w in accueil_service.preferences(self.u)]
+        self.assertEqual(cles[0], "coffre")
+        self.assertEqual(sorted(cles), sorted(w.cle for w in accueil_service.CATALOGUE))
+
+    def test_annuler_une_decision(self):
+        r = self.client.post(f"/avis/{self.a.pk}/decider/", {"decision": "NO_GO", "suivant": "/appels-offres/"}, follow=True)
+        self.assertContains(r, 'name="annulation"')
+        self.client.post(f"/avis/{self.a.pk}/decider/", {"decision": "A_QUALIFIER", "annulation": "1"})
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.statut, "A_QUALIFIER")
+        # une annulation peut restaurer n'importe quelle étape précédente, mais pas une valeur inconnue
+        self.assertEqual(self.client.post(f"/avis/{self.a.pk}/decider/", {"decision": "PIRATE", "annulation": "1"}).status_code, 404)
+
+    def test_widgets_vides_donnent_une_consigne(self):
+        AvisMarche.objects.all().delete()
+        r = self.client.get("/")
+        self.assertContains(r, "Tout est trié")
+        self.assertContains(r, "Aucune échéance")
+
+
+class EcartGroupeTests(TestCase):
+    def setUp(self):
+        self.client.force_login(User.objects.create_superuser("m", "m@example.com", "x"))
+        p = profil()
+        self.nogo = [avis(source_id=f"n{i}", objet=f"Hors métier {i}", profil=p, prefiltre_ok=True, score=10,
+                          recommandation="NO_GO", statut="A_QUALIFIER", score_modele="claude-opus-5-5") for i in range(3)]
+        for a in self.nogo:
+            a.save()
+        self.regle = avis(source_id="r", objet="Score par règles", profil=p, prefiltre_ok=True, score=20,
+                          recommandation="NO_GO", statut="A_QUALIFIER", score_modele="règles")
+        self.regle.save()
+        self.go = avis(source_id="g", objet="Formations SST", profil=p, prefiltre_ok=True, score=85, recommandation="GO", statut="A_QUALIFIER")
+        self.go.save()
+
+    def test_ecarter_puis_annuler(self):
+        r = self.client.post("/appels-offres/ecarter-no-go/", {"suivant": "/"}, follow=True)
+        self.assertContains(r, "3 avis écartés")
+        self.assertEqual(AvisMarche.objects.filter(statut="NO_GO").count(), 3)
+        # le score par règles n'est pas assez fiable pour écarter automatiquement, et les Go restent
+        self.assertEqual(AvisMarche.objects.get(source_id="r").statut, "A_QUALIFIER")
+        self.assertEqual(AvisMarche.objects.get(source_id="g").statut, "A_QUALIFIER")
+        self.client.post("/appels-offres/annuler-ecart/")
+        self.assertEqual(AvisMarche.objects.filter(statut="NO_GO").count(), 0)

@@ -523,3 +523,25 @@ class Memoire(models.Model):
     @property
     def nb_a_completer(self):
         return self.contenu.count("[À COMPLÉTER")
+
+
+# ---------------------------------------------------------------------------
+# Préférences d'affichage
+# ---------------------------------------------------------------------------
+
+
+class PreferencesAccueil(models.Model):
+    """Widgets de la page d'accueil choisis par chaque utilisateur : ordre, affichage, taille."""
+
+    utilisateur = models.OneToOneField(
+        "auth.User", on_delete=models.CASCADE, related_name="preferences_accueil"
+    )
+    widgets = models.JSONField(default=list, help_text="[{cle, visible, large}] dans l'ordre d'affichage")
+    modifie_le = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Préférences de l'accueil"
+        verbose_name_plural = "Préférences de l'accueil"
+
+    def __str__(self):
+        return f"Accueil de {self.utilisateur}"

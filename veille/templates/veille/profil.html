@@ -1,31 +1,36 @@
 {% extends "veille/base.html" %}
 {% block titre %}Profil FORMA'ST{% endblock %}
 {% block contenu %}
-<h1>Profil {{ e }}</h1>
-<p class="doux">Toutes les pièces (DC1, DC2, présentation, DUME, mémoire) sont générées à partir de ce profil au moment du téléchargement : une information ajoutée ici apparaît automatiquement dans les prochains documents.</p>
-<div class="grille">
-<div>
-  <div class="carte">
-    <h2 style="margin-top:0">Informations à compléter</h2>
-    <form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Enregistrer</button></form>
-  </div>
-</div>
-<div>
-  <div class="carte">
-    <h2 style="margin-top:0">Identité légale</h2>
-    <p>{{ e.raison_sociale }} – {{ e.forme_juridique }}<br>{{ e.adresse }}, {{ e.code_postal }} {{ e.ville }}<br>
-    SIRET {{ e.siret }} · TVA {{ e.tva_intracommunautaire|default:"—" }} · NAF {{ e.code_naf|default:"—" }}<br>
-    Déclaration d'activité {{ e.numero_declaration_activite|default:"—" }} · {% if e.qualiopi %}Qualiopi{% endif %}{% if e.habilitation_inrs_sst %} · INRS SST{% endif %}<br>
-    {{ e.representant_nom }}, {{ e.representant_qualite }}{% if e.tranche_effectif %} · {{ e.tranche_effectif }}{% endif %}</p>
-    <form method="post">{% csrf_token %}<button name="action" value="annuaire" class="secondaire">Mettre à jour depuis l'annuaire officiel</button></form>
-    <p class="doux">{% if e.maj_annuaire_le %}Dernière mise à jour le {{ e.maj_annuaire_le|date:"d/m/Y H:i" }}.{% endif %} Source : annuaire des entreprises (INSEE / RNE). Les champs saisis à la main ne sont jamais effacés.</p>
-  </div>
-  <div class="carte">
-    <h2 style="margin-top:0">Complétude des documents</h2>
-    <ul>{% for c in completude %}<li class="{% if c.rempli %}etat-ok{% elif c.obligatoire %}etat-manquante{% else %}etat-a_verifier{% endif %}">{% if c.rempli %}✓{% else %}✗{% endif %} {{ c.libelle }}{% if not c.obligatoire %} <span class="doux">(facultatif)</span>{% endif %}</li>{% endfor %}</ul>
-    <p class="doux">Tant qu'une information manque, elle apparaît surlignée « [À COMPLÉTER] » dans les documents.</p>
-    <p><a href="{% url 'admin:veille_entreprise_change' e.pk %}">Tous les champs (présentation, points forts…) →</a></p>
-  </div>
-</div>
+<div class="entete-page"><div><h1>Profil {{ e }}</h1>
+<p class="doux">Tous les documents (DC1, DC2, présentation, DUME, mémoire) sont générés à partir de ce profil au moment du téléchargement : ce que vous ajoutez ici y apparaît aussitôt.</p></div></div>
+<div class="colonnes">
+  <form method="post" class="panneau formulaire" action="{% url 'profil' %}{% if request.GET.suivant %}?suivant={{ request.GET.suivant|urlencode }}{% endif %}">{% csrf_token %}
+    <h2>Informations à compléter</h2>
+    {{ form.as_p }}
+    <button class="btn">Enregistrer le profil</button>
+  </form>
+  <aside class="collant">
+    <section class="panneau">
+      <h2>Identité légale</h2>
+      <dl class="donnees">
+        <dt>Société</dt><dd>{{ e.raison_sociale }}, {{ e.forme_juridique }}</dd>
+        <dt>Siège</dt><dd>{{ e.adresse }}, {{ e.code_postal }} {{ e.ville }}</dd>
+        <dt>SIRET</dt><dd>{{ e.siret }}</dd>
+        <dt>TVA</dt><dd>{{ e.tva_intracommunautaire|default:"—" }}</dd>
+        <dt>Activité</dt><dd>NAF {{ e.code_naf|default:"—" }}, déclaration n° {{ e.numero_declaration_activite|default:"—" }}</dd>
+        <dt>Qualité</dt><dd>{% if e.qualiopi %}Qualiopi{% endif %}{% if e.habilitation_inrs_sst %}, habilitation INRS SST{% endif %}</dd>
+        <dt>Dirigeant</dt><dd>{{ e.representant_nom }}, {{ e.representant_qualite }}</dd>
+        <dt>Effectif</dt><dd>{{ e.effectif|default:e.tranche_effectif|default:"—" }}</dd>
+      </dl>
+      <form method="post" class="actions">{% csrf_token %}<button name="action" value="annuaire" class="btn secondaire petit">Mettre à jour depuis l'annuaire officiel</button></form>
+      <p class="doux" style="margin-top:8px">{% if e.maj_annuaire_le %}Dernière mise à jour le {{ e.maj_annuaire_le|date:"j/m/Y" }}. {% endif %}Source INSEE / RNE. Vos saisies ne sont jamais effacées.</p>
+    </section>
+    <section class="panneau">
+      <h2>Complétude des documents</h2>
+      <ul class="criteres">{% for c in completude %}<li><span class="picto {% if c.rempli %}ok{% elif c.obligatoire %}manquante{% else %}neutre{% endif %}" aria-hidden="true">{% if c.rempli %}✓{% elif c.obligatoire %}✕{% else %}–{% endif %}</span><div>{{ c.libelle }}{% if not c.obligatoire %} <span class="doux">(facultatif)</span>{% endif %}</div></li>{% endfor %}</ul>
+      <p class="doux">Une information manquante sort surlignée « [À COMPLÉTER] » dans les documents.</p>
+      <p class="petit"><a href="{% url 'admin:veille_entreprise_change' e.pk %}">Présentation, points forts et autres champs</a> · <a href="{% url 'admin:veille_bloccontenu_changelist' %}">Bibliothèque de contenus</a></p>
+    </section>
+  </aside>
 </div>
 {% endblock %}

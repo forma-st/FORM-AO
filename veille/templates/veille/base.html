@@ -1,71 +1,64 @@
-<!doctype html>
+{% load static veille_tags %}<!doctype html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block titre %}Veille AO{% endblock %}</title>
+<meta name="color-scheme" content="light dark">
+<title>{% block titre %}Appels d'offres{% endblock %} – FORM'AO</title>
+<link rel="preload" href="{% static 'veille/fonts/barlow-latin-600-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{% static 'veille/app.css' %}">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='6' fill='%230A7F4F'/%3E%3Crect x='4' y='4' width='24' height='24' rx='4' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
+<script src="{% static 'veille/app.js' %}" defer></script>
 {% block entete %}{% endblock %}
-<style>
-  :root { --fond:#f6f5f2; --carte:#fff; --texte:#1f2328; --doux:#626a73; --bord:#e1ded8;
-          --accent:#b3261e; --vert:#1f7a3a; --orange:#b26a00; --rouge:#b3261e; --gris:#8a8f96; }
-  * { box-sizing: border-box; }
-  body { margin:0; font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--fond); color:var(--texte); }
-  header { background:#fff; border-bottom:1px solid var(--bord); padding:10px 20px; display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
-  header strong { color:var(--accent); font-size:17px; }
-  header a { color:var(--texte); text-decoration:none; }
-  header a:hover { text-decoration:underline; }
-  main { max-width:1200px; margin:0 auto; padding:20px 16px 60px; }
-  h1 { font-size:22px; margin:0 0 14px; }
-  h2 { font-size:17px; margin:22px 0 8px; }
-  .carte { background:var(--carte); border:1px solid var(--bord); border-radius:8px; padding:14px 16px; margin-bottom:12px; }
-  table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--bord); border-radius:8px; overflow:hidden; }
-  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--bord); vertical-align:top; }
-  th { font-size:12px; text-transform:uppercase; letter-spacing:.03em; color:var(--doux); background:#faf9f7; }
-  tr:hover td { background:#fbfaf8; }
-  a { color:#0b5cad; }
-  .score { display:inline-block; min-width:38px; text-align:center; font-weight:700; border-radius:6px; padding:2px 6px; color:#fff; }
-  .vert { background:var(--vert); } .orange { background:var(--orange); } .rouge { background:var(--rouge); } .gris { background:var(--gris); }
-  .doux { color:var(--doux); font-size:13px; }
-  .pastille { display:inline-block; font-size:12px; padding:1px 8px; border-radius:20px; border:1px solid var(--bord); background:#faf9f7; }
-  .urgent { color:var(--rouge); font-weight:600; }
-  form.filtres { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
-  input, select, textarea { font:inherit; padding:6px 8px; border:1px solid var(--bord); border-radius:6px; background:#fff; }
-  textarea { width:100%; }
-  button, .bouton { font:inherit; padding:6px 12px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; text-decoration:none; display:inline-block; }
-  button.secondaire, .bouton.secondaire { background:#fff; color:var(--accent); }
-  .messages { list-style:none; padding:0; }
-  .messages li { padding:8px 12px; border-radius:6px; margin-bottom:8px; background:#eef6ee; border:1px solid #cfe5cf; }
-  .messages li.warning, .messages li.error { background:#fff4e5; border-color:#f1d4a6; }
-  .grille { display:grid; grid-template-columns: 2fr 1fr; gap:16px; }
-  .kanban { display:grid; grid-template-columns: repeat(6, minmax(180px, 1fr)); gap:10px; overflow-x:auto; }
-  .colonne { background:#eceae5; border-radius:8px; padding:8px; min-height:200px; }
-  .colonne h3 { font-size:13px; margin:2px 4px 8px; text-transform:uppercase; color:var(--doux); }
-  .ticket { background:#fff; border:1px solid var(--bord); border-radius:6px; padding:8px; margin-bottom:8px; font-size:13px; }
-  .etat-ok { color:var(--vert); font-weight:600; } .etat-genere { color:#0b5cad; font-weight:600; }
-  .etat-manquante, .etat-expiree, .etat-a_faire, .etat-non_remplie { color:var(--rouge); font-weight:600; }
-  .etat-a_verifier, .etat-a_renouveler { color:var(--orange); font-weight:600; } .etat-remplie, .etat-valide { color:var(--vert); font-weight:600; }
-  .etat-expire, .etat-manquant { color:var(--rouge); font-weight:600; }
-  .actions { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
-  .memoire h2 { font-size:18px; color:var(--accent); } .memoire mark { background:#fff176; }
-  .critere { display:flex; gap:8px; padding:4px 0; }
-  .eval-favorable { color:var(--vert); } .eval-defavorable { color:var(--orange); } .eval-eliminatoire { color:var(--rouge); font-weight:700; } .eval-neutre { color:var(--doux); }
-  pre.texte { white-space:pre-wrap; font:13px/1.5 system-ui, sans-serif; background:#faf9f7; border:1px solid var(--bord); border-radius:6px; padding:10px; max-height:420px; overflow:auto; }
-  @media (max-width: 800px) { .grille { grid-template-columns:1fr; } table { font-size:13px; } .masquer-mobile { display:none; } }
-</style>
 </head>
 <body>
-<header>
-  <strong>Veille AO</strong>
-  <a href="{% url 'tableau' %}">Appels d'offres</a>
-  <a href="{% url 'pipeline' %}">Pipeline</a>
-  <a href="{% url 'ajouter' %}">+ Consultation privée</a>
-  <a href="{% url 'coffre_fort' %}">Coffre-fort</a>
-  <a href="{% url 'profil' %}">Profil</a>
-  <a href="{% url 'admin:index' %}">Paramètres</a>
-</header>
-<main>
-  {% if messages %}<ul class="messages">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
-  {% block contenu %}{% endblock %}
-</main>
+<a class="evitement" href="#contenu">Aller au contenu</a>
+{% with nom=request.resolver_match.url_name %}
+<div class="app">
+  <nav class="rail" aria-label="Navigation principale">
+    <a class="marque" href="{% url 'accueil' %}">
+      <span class="marque-signe" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 8.5l4 4 8-9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span class="marque-nom">FORM'AO<small>Appels d'offres FORMA'ST</small></span>
+    </a>
+    <a class="nav" href="{% url 'accueil' %}" {% if nom == "accueil" %}aria-current="page"{% endif %}>{% include "veille/_icone.html" with nom="accueil" %}<span class="nav-libelle">Accueil</span></a>
+    <a class="nav" href="{% url 'tableau' %}" {% if nom == "tableau" or nom == "detail" %}aria-current="page"{% endif %}>{% include "veille/_icone.html" with nom="ao" %}<span class="nav-libelle">Appels d'offres</span>{% if nav_a_trier %}<span class="compteur vif" title="{{ nav_a_trier }} à trier">{{ nav_a_trier }}</span>{% endif %}</a>
+    <a class="nav" href="{% url 'pipeline' %}" {% if nom == "pipeline" or nom == "reponse" or nom == "memoire_voir" %}aria-current="page"{% endif %}>{% include "veille/_icone.html" with nom="reponses" %}<span class="nav-libelle">Réponses</span>{% if nav_en_cours %}<span class="compteur">{{ nav_en_cours }}</span>{% endif %}</a>
+    <a class="nav" href="{% url 'coffre_fort' %}" {% if nom == "coffre_fort" %}aria-current="page"{% endif %}>{% include "veille/_icone.html" with nom="coffre" %}<span class="nav-libelle">Coffre-fort</span></a>
+    <a class="nav" href="{% url 'profil' %}" {% if nom == "profil" %}aria-current="page"{% endif %}>{% include "veille/_icone.html" with nom="profil" %}<span class="nav-libelle">Profil</span></a>
+    <div class="rail-bas">
+      <div class="ia {% if ia_active %}on{% endif %}">{% if ia_active %}IA active{% else %}IA inactive{% endif %}</div>
+      <a href="{% url 'admin:index' %}">Réglages avancés</a>
+      <form method="post" action="{% url 'deconnexion' %}">{% csrf_token %}<button class="lien-btn">Se déconnecter</button></form>
+    </div>
+  </nav>
+  <div class="principal">
+    <header class="barre-haut">
+      <form class="recherche-globale" method="get" action="{% url 'tableau' %}" role="search">
+        <label class="sr" for="recherche">Rechercher un appel d'offres</label>
+        {% include "veille/_icone.html" with nom="recherche" %}
+        <input type="search" id="recherche" name="q" value="{{ request.GET.q }}" placeholder="Rechercher un appel d'offres, un acheteur…" autocomplete="off">
+        <kbd class="raccourci" title="Raccourci clavier">/</kbd>
+      </form>
+      <a class="btn" href="{% url 'ajouter' %}">{% include "veille/_icone.html" with nom="plus" %}<span class="masque-mobile">Consultation privée</span></a>
+      <span class="utilisateur masque-mobile" title="Connecté">{{ request.user.first_name|default:request.user.username|capfirst }}</span>
+    </header>
+    <main class="contenu" id="contenu" tabindex="-1">
+      {% if messages %}
+      <ul class="messages" role="status">
+        {% for m in messages %}{% with u=m|annulation %}
+        <li class="{{ m|niveau }}" {% if not u and "annuler_lot" not in m.extra_tags %}data-disparait{% endif %}>
+          <span>{{ m }}</span>
+          {% if "annuler_lot" in m.extra_tags %}<form method="post" action="{% url 'annuler_ecart' %}">{% csrf_token %}<input type="hidden" name="suivant" value="{{ request.get_full_path }}"><button class="lien-btn">Annuler</button></form>{% endif %}
+          {% if u %}<form method="post" action="{% url 'decider' u.pk %}">{% csrf_token %}<input type="hidden" name="decision" value="{{ u.statut }}"><input type="hidden" name="annulation" value="1"><input type="hidden" name="suivant" value="{{ request.get_full_path }}"><button class="lien-btn">Annuler</button></form>{% endif %}
+          <button class="fermer" type="button" aria-label="Fermer le message">×</button>
+        </li>
+        {% endwith %}{% endfor %}
+      </ul>
+      {% endif %}
+      {% block contenu %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endwith %}
 </body>
 </html>

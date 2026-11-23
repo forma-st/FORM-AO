@@ -1,5 +1,5 @@
 [Unit]
-Description=Veille AO FORMA'ST (gunicorn)
+Description=FORM'AO FORMA'ST (gunicorn)
 After=network.target
 
 [Service]
