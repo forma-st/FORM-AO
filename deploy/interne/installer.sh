@@ -24,6 +24,17 @@ for a in "$@"; do
   esac
 done
 
+if [ "$AUTO" = "1" ] && [ "$(uname)" = "Darwin" ]; then
+  case "$RACINE" in
+    "$HOME/Documents"*|"$HOME/Desktop"*|"$HOME/Downloads"*|"$HOME/Library/Mobile Documents"*)
+      echo "macOS interdit au démarrage automatique de lire les dossiers Documents, Bureau, Téléchargements et iCloud."
+      echo "Déplacez l'outil, par exemple :  mv \"$RACINE\" ~/outil-ao && cd ~/outil-ao && rm -rf .venv"
+      echo "puis relancez :  bash deploy/interne/installer.sh $*"
+      echo "(Sans --demarrage-auto, l'installation fonctionne ici : vous démarrerez l'outil à la main.)"
+      exit 1 ;;
+  esac
+fi
+
 echo "==> Python"
 PY=""
 for p in python3.13 python3.12 python3; do

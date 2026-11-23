@@ -23,16 +23,12 @@ sudo apt install python3 python3-venv git
 
 ## 2. Récupérer le code
 
-Si le dossier du dépôt est déjà sur votre Mac (par exemple `FORMAO`), placez-vous dedans :
+**Sur Mac, n'installez pas l'outil dans Documents, Bureau, Téléchargements ou iCloud** : macOS interdit au démarrage automatique d'y accéder (« Operation not permitted »). Utilisez par exemple `~/outil-ao`. Si l'application de votre autre environnement occupe déjà le port 8000, ajoutez `PORT=8010` devant la commande d'installation.
+
+Clonez le dépôt. Le dépôt est privé : connectez-vous d'abord à GitHub (GitHub Desktop, ou `gh auth login`).
 
 ```bash
-cd ~/FORMAO
-```
-
-Sinon, clonez-le. Le dépôt est privé : connectez-vous d'abord à GitHub (GitHub Desktop, ou `gh auth login`).
-
-```bash
-git clone https://github.com/forma-st/FORM-AO.git ~/FORMAO && cd ~/FORMAO
+git clone https://github.com/forma-st/FORM-AO.git ~/outil-ao && cd ~/outil-ao
 ```
 
 Tant que la version de test n'est pas fusionnée dans `main`, prenez sa branche :
