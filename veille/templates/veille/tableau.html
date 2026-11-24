@@ -44,15 +44,38 @@
 <div class="resume-tri" style="margin-top:12px"><p class="doux">L'IA propose d'écarter {{ no_go_recommandes }} de ces avis (hors métier, exigences bloquantes…).</p>
 <form method="post" action="{% url 'ecarter_no_go' %}">{% csrf_token %}<input type="hidden" name="suivant" value="{{ request.get_full_path }}"><button class="btn secondaire petit">Écarter les {{ no_go_recommandes }} No-Go recommandés</button></form></div>
 {% endif %}
+{% if a_renoter and onglet != "filtre" and not q %}
+<div class="resume-tri bandeau-info" style="margin-top:12px"><p class="doux">{{ a_renoter }} avis {{ a_renoter|pluralize:"a,ont" }} été noté{{ a_renoter|pluralize }} par règles, sans l'IA : leur score est provisoire.</p>
+<form method="post" action="{% url 'renoter_regles' %}">{% csrf_token %}<input type="hidden" name="suivant" value="{{ request.get_full_path }}"><button class="btn secondaire petit" {% if budget_ia.atteint %}disabled title="Budget IA du mois atteint"{% endif %}>Re-noter par l'IA (≈ {{ cout_renoter|floatformat:2 }} €)</button></form></div>
+{% endif %}
+{% if onglet == "filtre" and not q %}<p class="doux" style="margin-top:12px">Avis encore ouverts publiés ces {{ jours_filtre }} derniers jours que le filtre par mots-clés a écartés, avec la raison. Si l'un d'eux vous intéresse, ouvrez-le et cliquez « Remettre dans la veille » : il sera évalué. Pour ne plus en rater de semblables, ajoutez le mot-clé dans les <a href="{% url 'admin:veille_profilveille_changelist' %}">profils de veille</a>.</p>{% endif %}
 {% if q %}<p class="doux" style="margin-top:10px">{{ avis|length }} résultat{{ avis|length|pluralize }} pour « {{ q }} » dans tous les avis retenus. <a href="{% url 'tableau' %}">Effacer la recherche</a></p>{% endif %}
 
+{% if onglet == "filtre" and not q %}
+<ul class="liste liste-filtre">
+{% for a in avis %}
+  <li class="ligne">
+    <div class="plaque gris" title="Non évalué">–</div>
+    <div>
+      <a class="ligne-titre" href="{% url 'detail' a.pk %}">{{ a.objet|lisible|truncatechars:150 }}</a>
+      <div class="ligne-meta">{{ a.acheteur|default:"Acheteur non précisé" }}{% if a.departements %}, {{ a.departements|departements }}{% endif %} · publié le {{ a.date_publication|date:"j F" }}</div>
+      <div class="faits"><span class="fait mauvais">Écarté : {{ a.prefiltre_motif|default:"aucun mot-clé du métier" }}</span>{% if a.montant_estime %}<span class="fait">{{ a.montant_estime|euros }}</span>{% endif %}<span class="fait">{{ a.get_source_display }}</span></div>
+    </div>
+    <div class="echeance">{% if a.date_limite %}<b>{{ a.jours_restants|j_moins }}</b><span>{{ a.date_limite|date:"j M" }}</span>{% endif %}</div>
+    <div class="decision"><a class="btn secondaire petit" href="{% url 'detail' a.pk %}">Voir</a></div>
+  </li>
+{% empty %}
+  <li class="vide"><strong>Rien d'écarté ces {{ jours_filtre }} derniers jours</strong>Le filtre n'a laissé de côté aucun avis encore ouvert.</li>
+{% endfor %}
+</ul>
+{% else %}
 <ul class="liste">
 {% for a in avis %}
   {% with d=a.score_details %}
   <li class="ligne">
     <div class="plaque {{ a.score|couleur_score }}" title="Score {{ a.score|default_if_none:'non calculé' }}/100">{{ a.score|default_if_none:"?" }}</div>
     <div>
-      <a class="ligne-titre" href="{% url 'detail' a.pk %}">{{ a.objet|lisible|truncatechars:150 }}</a>
+      {% if depuis_visite and a.cree_le > depuis_visite %}<span class="badge-nouveau">Nouveau</span>{% endif %}<a class="ligne-titre" href="{% url 'detail' a.pk %}">{{ a.objet|lisible|truncatechars:150 }}</a>
       <div class="ligne-meta">{{ a.acheteur|default:"Acheteur non précisé" }}{% if a.departements %}, {{ a.departements|departements }}{% endif %}</div>
       {% if a.resume %}<p class="ligne-resume">{{ a.resume|truncatechars:240 }}</p>{% endif %}
       <div class="faits">
@@ -62,6 +85,7 @@
         {% if a.montant_estime %}<span class="fait">{{ a.montant_estime|euros }}</span>{% endif %}
         <span class="fait">{{ a.get_source_display }}</span>
         {% if a.statut != "DETECTE" and a.statut != "A_QUALIFIER" %}<span class="fait">{{ a.get_statut_display }}</span>{% endif %}
+        {% if a.score_modele == "règles" %}<span class="fait" title="Calculé sans l'IA : à confirmer">Score provisoire</span>{% endif %}
       </div>
     </div>
     <div class="echeance {% if a.jours_restants is not None and a.jours_restants < 10 %}urgent{% endif %}">
@@ -79,4 +103,5 @@
   </li>
 {% endfor %}
 </ul>
+{% endif %}
 {% endblock %}

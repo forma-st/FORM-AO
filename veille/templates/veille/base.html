@@ -1,9 +1,9 @@
 {% load static veille_tags %}<!doctype html>
-<html lang="fr">
+<html lang="fr"{% if theme == "clair" %} data-theme="light"{% elif theme == "sombre" %} data-theme="dark"{% endif %}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="{% if theme == 'clair' %}light{% elif theme == 'sombre' %}dark{% else %}light dark{% endif %}">
 <title>{% block titre %}Appels d'offres{% endblock %} – FORM'AO</title>
 <link rel="preload" href="{% static 'veille/fonts/barlow-latin-600-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{% static 'veille/app.css' %}">
@@ -25,8 +25,15 @@
     <a class="nav" href="{% url 'pipeline' %}" {% if nom == "pipeline" or nom == "reponse" or nom == "memoire_voir" %}aria-current="page"{% endif %}>{% include "veille/_icone.html" with nom="reponses" %}<span class="nav-libelle">Réponses</span>{% if nav_en_cours %}<span class="compteur">{{ nav_en_cours }}</span>{% endif %}</a>
     <a class="nav" href="{% url 'coffre_fort' %}" {% if nom == "coffre_fort" %}aria-current="page"{% endif %}>{% include "veille/_icone.html" with nom="coffre" %}<span class="nav-libelle">Coffre-fort</span></a>
     <a class="nav" href="{% url 'profil' %}" {% if nom == "profil" %}aria-current="page"{% endif %}>{% include "veille/_icone.html" with nom="profil" %}<span class="nav-libelle">Profil</span></a>
+    <a class="nav" href="{% url 'parametres' %}" {% if nom == "parametres" %}aria-current="page"{% endif %}>{% include "veille/_icone.html" with nom="reglages" %}<span class="nav-libelle">Paramètres</span>{% if budget_ia.atteint or budget_ia.alerte %}<span class="compteur {% if budget_ia.atteint %}alerte{% else %}vif{% endif %}" title="Budget IA : {{ budget_ia.part }} %">!</span>{% endif %}</a>
     <div class="rail-bas">
-      <div class="ia {% if ia_active %}on{% endif %}">{% if ia_active %}IA active{% else %}IA inactive{% endif %}</div>
+      <a class="ia {% if ia_active %}on{% endif %} {% if budget_ia.atteint %}bloque{% elif budget_ia.alerte %}alerte{% endif %}" href="{% url 'parametres' %}#budget" title="Consommation de l'IA ce mois-ci">
+        {% if not ia_active %}IA inactive{% elif budget_ia.atteint %}IA : budget atteint{% else %}IA active{% endif %}
+        {% if ia_active and budget_ia.limite %}<span class="ia-budget">{{ budget_ia.depense|floatformat:2 }} € / {{ budget_ia.budget|floatformat:0 }} €</span>{% endif %}
+      </a>
+      <form method="post" action="{% url 'changer_theme' %}">{% csrf_token %}<input type="hidden" name="suivant" value="{{ request.get_full_path }}">
+        <button class="lien-btn bouton-theme" title="Changer le thème d'affichage">{% include "veille/_icone.html" with nom=theme %}<span>Thème : {% if theme == "clair" %}clair{% elif theme == "sombre" %}sombre{% else %}comme le Mac{% endif %}</span></button>
+      </form>
       <a href="{% url 'admin:index' %}">Réglages avancés</a>
       <form method="post" action="{% url 'deconnexion' %}">{% csrf_token %}<button class="lien-btn">Se déconnecter</button></form>
     </div>

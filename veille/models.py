@@ -1,3 +1,6 @@
+from datetime import time
+from decimal import Decimal
+
 from django.db import models
 from django.utils import timezone
 
@@ -545,3 +548,96 @@ class PreferencesAccueil(models.Model):
 
     def __str__(self):
         return f"Accueil de {self.utilisateur}"
+
+
+class PreferencesUtilisateur(models.Model):
+    """Réglages personnels : thème d'affichage et repère « nouveau depuis ma dernière visite »."""
+
+    THEMES = [("systeme", "Comme le Mac"), ("clair", "Clair"), ("sombre", "Sombre")]
+
+    utilisateur = models.OneToOneField(
+        "auth.User", on_delete=models.CASCADE, related_name="preferences"
+    )
+    theme = models.CharField(max_length=10, choices=THEMES, default="systeme")
+    derniere_activite = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Préférences utilisateur"
+        verbose_name_plural = "Préférences utilisateur"
+
+    def __str__(self):
+        return f"Préférences de {self.utilisateur}"
+
+
+# ---------------------------------------------------------------------------
+# Paramètres de l'application et consommation de l'IA
+# ---------------------------------------------------------------------------
+
+
+class Parametres(models.Model):
+    """Réglages communs à toute l'équipe (une seule ligne)."""
+
+    collecte_auto = models.BooleanField("Collecte automatique chaque jour", default=True)
+    heure_collecte = models.TimeField("Heure de la collecte", default=time(7, 10))
+    derniere_veille_auto = models.DateField(null=True, blank=True, editable=False)
+
+    notif_macos = models.BooleanField("Notification sur le Mac après la collecte", default=True)
+    notif_email = models.BooleanField("E-mail récapitulatif après la collecte", default=True)
+
+    budget_mensuel = models.DecimalField(
+        "Budget IA mensuel (€)", max_digits=8, decimal_places=2, default=Decimal("20"),
+        help_text="0 = pas de limite.",
+    )
+    seuil_alerte_budget = models.PositiveSmallIntegerField(
+        "Avertir à partir de (% du budget)", default=80
+    )
+    max_avis_par_collecte = models.PositiveIntegerField(
+        "Avis notés par l'IA au maximum à chaque collecte", default=50,
+        help_text="Au-delà, les avis restants sont notés par règles.",
+    )
+    taux_usd_eur = models.DecimalField(
+        "Taux de change (1 $ = … €)", max_digits=5, decimal_places=3, default=Decimal("0.86"),
+        help_text="L'IA est facturée en dollars.",
+    )
+    modifie_le = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Paramètres"
+        verbose_name_plural = "Paramètres"
+
+    def __str__(self):
+        return "Paramètres de FORM'AO"
+
+    @classmethod
+    def get(cls) -> "Parametres":
+        obj = cls.objects.order_by("pk").first()
+        return obj or cls.objects.create()
+
+
+class ConsommationIA(models.Model):
+    """Un appel à l'IA : jetons consommés et coût, pour suivre le budget."""
+
+    USAGES = [
+        ("SCORE", "Notation d'un avis"),
+        ("ANALYSE", "Analyse d'un dossier"),
+        ("MEMOIRE", "Rédaction d'un mémoire"),
+        ("AUTRE", "Autre"),
+    ]
+
+    date = models.DateTimeField(default=timezone.now, db_index=True)
+    usage = models.CharField(max_length=10, choices=USAGES)
+    avis = models.ForeignKey(AvisMarche, on_delete=models.SET_NULL, null=True, blank=True, related_name="consommations")
+    modele = models.CharField(max_length=50, blank=True)
+    jetons_entree = models.PositiveIntegerField(default=0)
+    jetons_sortie = models.PositiveIntegerField(default=0)
+    jetons_cache_lus = models.PositiveIntegerField(default=0)
+    jetons_cache_ecrits = models.PositiveIntegerField(default=0)
+    cout_usd = models.DecimalField(max_digits=10, decimal_places=5, default=Decimal("0"))
+
+    class Meta:
+        ordering = ["-date"]
+        verbose_name = "Consommation IA"
+        verbose_name_plural = "Consommation IA"
+
+    def __str__(self):
+        return f"{self.get_usage_display()} – {self.date:%d/%m %H:%M} – {self.cout_usd:.3f} $"

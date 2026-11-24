@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import timedelta
 from types import SimpleNamespace
@@ -746,3 +747,337 @@ class EcartGroupeTests(TestCase):
         self.assertEqual(AvisMarche.objects.get(source_id="g").statut, "A_QUALIFIER")
         self.client.post("/appels-offres/annuler-ecart/")
         self.assertEqual(AvisMarche.objects.filter(statut="NO_GO").count(), 0)
+
+
+# ---------------------------------------------------------------------------
+# Paramètres, coût de l'IA, budget, notifications, veille automatique
+# ---------------------------------------------------------------------------
+
+from datetime import time as _time  # noqa: E402
+from decimal import Decimal  # noqa: E402
+
+from django.core.management import call_command  # noqa: E402
+
+from .models import ConsommationIA, Parametres, PreferencesUtilisateur  # noqa: E402
+from .services import couts, notifications, planification  # noqa: E402
+
+
+def fausse_reponse(entree=5_000, sortie=2_000, lus=0, ecrits=0, modele="claude-opus-5-5", **kw):
+    usage = SimpleNamespace(input_tokens=entree, output_tokens=sortie,
+                            cache_read_input_tokens=lus, cache_creation_input_tokens=ecrits)
+    return SimpleNamespace(usage=usage, model=modele, **kw)
+
+
+def depenser(euros, usage="SCORE"):
+    """Crée une consommation de ce montant (en €, au taux par défaut)."""
+    usd = Decimal(str(euros)) / Parametres.get().taux_usd_eur
+    return ConsommationIA.objects.create(usage=usage, modele="claude-opus-5-5", cout_usd=usd)
+
+
+class CoutsTests(TestCase):
+    def setUp(self):
+        Entreprise.objects.create(raison_sociale="FORMA'ST")
+        self.a = avis(objet="Formations SST", profil=profil(), prefiltre_ok=True)
+        self.a.save()
+
+    def test_calcul_du_cout(self):
+        # 1 M jetons d'entrée = 4 $, 1 M de sortie = 20 $, cache lu = 0,20 $
+        self.assertEqual(couts.cout_usd("claude-opus-5-5", 1_000_000, 0), Decimal("4.0"))
+        self.assertEqual(couts.cout_usd("claude-opus-5-5", 0, 1_000_000, 1_000_000), Decimal("20.2"))
+        # nom inconnu ou suffixé : tarif le plus proche, sinon Opus 5.5
+        self.assertEqual(couts.tarif("claude-sonnet-5-5-xyz"), couts.TARIFS["claude-sonnet-5-5"])
+        self.assertEqual(couts.tarif("inconnu"), couts.TARIF_PAR_DEFAUT)
+
+    def test_enregistrement_d_un_appel(self):
+        c = couts.enregistrer(fausse_reponse(entree=10_000, sortie=5_000, lus=20_000), "SCORE", self.a)
+        self.assertEqual((c.jetons_entree, c.jetons_sortie, c.jetons_cache_lus), (10_000, 5_000, 20_000))
+        self.assertEqual(c.cout_usd, Decimal("0.144"))  # 0,04 + 0,10 + 0,004
+        self.assertEqual(c.avis, self.a)
+        # une réponse sans usage (simulations) ne casse rien
+        self.assertIsNone(couts.enregistrer(SimpleNamespace(model="x"), "SCORE"))
+
+    def test_scorer_enregistre_la_consommation(self):
+        client = mock.Mock()
+        client.beta.messages.parse.return_value = fausse_reponse(stop_reason="end_turn", parsed_output=faux_resultat())
+        scoring.scorer(self.a, client=client, profil="profil")
+        self.assertEqual(ConsommationIA.objects.filter(usage="SCORE", avis=self.a).count(), 1)
+
+    def test_etat_du_budget(self):
+        p = Parametres.get()
+        p.budget_mensuel, p.seuil_alerte_budget = Decimal("10"), 80
+        p.save()
+        depenser(5)
+        b = couts.etat_budget()
+        self.assertEqual((b.depense, b.part, b.alerte, b.atteint, b.niveau), (Decimal("5.00"), 50, False, False, "ok"))
+        depenser(3.5)
+        self.assertEqual(couts.etat_budget().niveau, "attente")
+        depenser(2)
+        self.assertTrue(couts.budget_atteint())
+        # le mois précédent ne compte pas
+        ConsommationIA.objects.update(date=couts.debut_du_mois() - timedelta(days=1))
+        self.assertEqual(couts.etat_budget().depense, Decimal("0.00"))
+        # budget 0 = pas de limite
+        depenser(1000)
+        p.budget_mensuel = 0
+        p.save()
+        self.assertFalse(couts.budget_atteint())
+
+    def test_budget_atteint_bloque_l_ia(self):
+        p = Parametres.get()
+        p.budget_mensuel = Decimal("1")
+        p.save()
+        depenser(2)
+        client = mock.Mock()
+        with self.assertRaises(scoring.BudgetAtteint):
+            scoring.scorer(self.a, client=client, profil="profil")
+        client.beta.messages.parse.assert_not_called()
+        # l'analyse est refusée… sauf si on force
+        self.a.texte = "Formations SST"
+        an = dce.analyser(self.a, client=client)
+        self.assertEqual(an.statut, "ERREUR")
+        self.assertIn("Budget", an.erreur)
+        client.beta.messages.parse.return_value = fausse_reponse(stop_reason="end_turn", parsed_output=faux_resultat_analyse())
+        self.assertEqual(dce.analyser(self.a, client=client, forcer_budget=True).statut, "OK")
+
+    def test_estimation_selon_les_documents(self):
+        petit = couts.estimer_usd("ANALYSE", self.a)
+        DocumentDCE.objects.create(avis=self.a, nom="CCTP.txt", type="CCTP", texte="x" * 350_000,
+                                   fichier=SimpleUploadedFile("CCTP.txt", b"x"))
+        self.assertGreater(couts.estimer_usd("ANALYSE", self.a), petit + Decimal("0.3"))  # +100 k jetons ≈ 0,40 $
+        # après quelques notations, l'estimation suit la moyenne réelle
+        for _ in range(3):
+            ConsommationIA.objects.create(usage="SCORE", cout_usd=Decimal("0.02"))
+        self.assertEqual(couts.estimer_usd("SCORE"), Decimal("0.02"))
+
+
+class CommandeScorerTests(TestCase):
+    def setUp(self):
+        Entreprise.objects.create(raison_sociale="FORMA'ST")
+        p = profil()
+        for i in range(3):
+            avis(source_id=f"s{i}", objet=f"Formations SST {i}", profil=p, prefiltre_ok=True).save()
+        os.environ["ANTHROPIC_API_KEY"] = "test"
+        self.addCleanup(os.environ.pop, "ANTHROPIC_API_KEY", None)
+
+    def _scorer(self, **kw):
+        client = mock.Mock()
+        client.beta.messages.parse.return_value = fausse_reponse(stop_reason="end_turn", parsed_output=faux_resultat())
+        with mock.patch.object(scoring, "_client", return_value=client), mock.patch.object(scoring, "profil_entreprise", return_value="p"):
+            call_command("scorer", stdout=_io.StringIO(), stderr=_io.StringIO(), **kw)
+        return client
+
+    def test_limite_par_collecte(self):
+        p = Parametres.get()
+        p.max_avis_par_collecte = 2
+        p.save()
+        self._scorer()
+        modeles = sorted(AvisMarche.objects.values_list("score_modele", flat=True))
+        self.assertEqual(modeles, ["claude-opus-5-5", "claude-opus-5-5", "règles"])
+
+    def test_budget_atteint_bascule_sur_les_regles_puis_renotation(self):
+        p = Parametres.get()
+        p.budget_mensuel = Decimal("1")
+        p.save()
+        depenser(2)
+        client = self._scorer()
+        client.beta.messages.parse.assert_not_called()
+        self.assertEqual(set(AvisMarche.objects.values_list("score_modele", flat=True)), {"règles"})
+        self.assertEqual(scoring.notes_par_regles().count(), 3)
+        # budget relevé : « re-noter » ne traite que les avis notés par règles
+        p.budget_mensuel = 0
+        p.save()
+        self._scorer(refaire_regles=True)
+        self.assertEqual(scoring.notes_par_regles().count(), 0)
+
+
+class VeilleAutomatiqueTests(TestCase):
+    def setUp(self):
+        self.p = Parametres.get()
+        self.p.heure_collecte = _time(7, 10)
+        self.p.save()
+
+    def _a(self, h, m, jour=0):
+        d = timezone.localdate() + timedelta(days=jour)
+        return timezone.make_aware(timezone.datetime(d.year, d.month, d.day, h, m))
+
+    def test_une_fois_par_jour_apres_l_heure(self):
+        self.assertFalse(planification.prevue_maintenant(self.p, self._a(6, 59)))
+        self.assertTrue(planification.prevue_maintenant(self.p, self._a(7, 10)))
+        self.assertTrue(planification.prevue_maintenant(self.p, self._a(11, 0)))  # Mac réveillé tard : rattrapage
+        self.p.derniere_veille_auto = timezone.localdate()
+        self.assertFalse(planification.prevue_maintenant(self.p, self._a(11, 0)))
+        self.assertEqual(planification.prochaine_execution(self.p, self._a(11, 0)), self._a(7, 10, jour=1))
+        self.p.collecte_auto = False
+        self.assertFalse(planification.prevue_maintenant(self.p, self._a(8, 0, jour=1)))
+        self.assertIsNone(planification.prochaine_execution(self.p))
+
+    def test_commande_si_prevu(self):
+        with mock.patch("veille.management.commands.veille_quotidienne.prevue_maintenant", return_value=False), \
+             mock.patch("veille.management.commands.veille_quotidienne.call_command") as cc:
+            call_command("veille_quotidienne", si_prevu=True, stdout=_io.StringIO())
+        cc.assert_not_called()
+        self.p.notif_email = False
+        self.p.save()
+        with mock.patch("veille.management.commands.veille_quotidienne.prevue_maintenant", return_value=True), \
+             mock.patch("veille.management.commands.veille_quotidienne.call_command") as cc, \
+             mock.patch.object(notifications, "notifier") as notif:
+            call_command("veille_quotidienne", si_prevu=True, stdout=_io.StringIO())
+        self.assertEqual([c.args[0] for c in cc.call_args_list], ["collecter", "scorer"])  # pas d'e-mail
+        notif.assert_called_once()
+        self.assertEqual(Parametres.get().derniere_veille_auto, timezone.localdate())
+
+    def test_message_de_notification(self):
+        r = {"retenus": 3, "go": 1, "forts": 2, "echeances": 1, "erreurs": ["TED"], "a_trier": 7}
+        p = Parametres.get()
+        p.budget_mensuel = Decimal("20")
+        p.save()
+        depenser(4.2)
+        titre, texte, sous_titre = notifications.message_collecte(r, couts.etat_budget())
+        self.assertEqual(titre, "3 nouveaux appels d'offres")
+        self.assertIn("1 Go recommandé", texte)
+        self.assertIn("TED en échec", texte)
+        self.assertIn("4,20 € sur 20 €", sous_titre)
+        titre, texte, _ = notifications.message_collecte({**r, "retenus": 0, "erreurs": [], "echeances": 0})
+        self.assertEqual(titre, "Pas de nouvel appel d'offres")
+
+    def test_notification_passe_les_textes_en_arguments(self):
+        with mock.patch.object(notifications, "disponible", return_value=True), \
+             mock.patch.object(notifications.subprocess, "run") as run:
+            self.assertTrue(notifications.notifier('Titre "piégé"', "Texte'; do shell script \"x\""))
+        commande = run.call_args.args[0]
+        self.assertEqual(commande[0], "osascript")
+        self.assertIn('Titre "piégé"', commande)  # argument séparé, jamais dans le script
+        self.assertFalse(any("piégé" in c for c in commande if c.startswith("display")))
+
+
+@override_settings(MEDIA_ROOT=MEDIA_TEST)
+class ParametresVuesTests(TestCase):
+    def setUp(self):
+        self.u = User.objects.create_superuser("matthieu", "m@example.com", "x")
+        self.client.force_login(self.u)
+        Entreprise.objects.create(raison_sociale="FORMA'ST")
+        self.pv = profil()
+
+    def test_page_et_enregistrement(self):
+        r = self.client.get("/parametres/")
+        self.assertContains(r, "Budget de l'IA")
+        self.assertContains(r, "Notifications du matin")
+        r = self.client.post("/parametres/", {
+            "collecte_auto": "on", "heure_collecte": "08:30", "notif_macos": "on",
+            "budget_mensuel": "15", "seuil_alerte_budget": "75", "max_avis_par_collecte": "30", "taux_usd_eur": "0.9",
+        })
+        self.assertRedirects(r, "/parametres/", fetch_redirect_response=False)
+        p = Parametres.get()
+        self.assertEqual((p.heure_collecte, p.notif_email, p.budget_mensuel, p.max_avis_par_collecte),
+                         (_time(8, 30), False, Decimal("15"), 30))
+        r = self.client.post("/parametres/", {"heure_collecte": "08:30", "budget_mensuel": "15", "seuil_alerte_budget": "150",
+                                              "max_avis_par_collecte": "30", "taux_usd_eur": "0.9"})
+        self.assertContains(r, "Entre 1 et 100")
+
+    def test_theme(self):
+        self.assertNotContains(self.client.get("/"), "data-theme=")
+        self.client.post("/parametres/theme/", {"theme": "sombre", "suivant": "/"})
+        self.assertContains(self.client.get("/"), 'data-theme="dark"')
+        self.client.post("/parametres/theme/")  # bouton du rail : thème suivant
+        self.assertEqual(PreferencesUtilisateur.objects.get(utilisateur=self.u).theme, "systeme")
+        self.client.post("/parametres/", {"action": "theme", "theme": "clair"})
+        self.assertContains(self.client.get("/"), 'data-theme="light"')
+        self.client.post("/parametres/theme/", {"theme": "n_importe"})
+        self.assertEqual(PreferencesUtilisateur.objects.get(utilisateur=self.u).theme, "sombre")
+
+    def test_budget_visible_et_alerte(self):
+        os.environ["ANTHROPIC_API_KEY"] = "test"
+        self.addCleanup(os.environ.pop, "ANTHROPIC_API_KEY", None)
+        p = Parametres.get()
+        p.budget_mensuel = Decimal("10")
+        p.save()
+        depenser(9)
+        r = self.client.get("/")
+        self.assertContains(r, "90 % du budget IA consommé")
+        self.assertContains(r, "9,00 € / 10 €")
+        depenser(2)
+        self.assertContains(self.client.get("/"), "Budget IA du mois atteint")
+
+    def test_tester_notification(self):
+        with mock.patch.object(notifications, "notifier", return_value=True) as n:
+            r = self.client.post("/parametres/tester-notification/", follow=True)
+        n.assert_called_once()
+        self.assertContains(r, "Notification envoyée")
+
+    def test_reponse_affiche_l_estimation_et_exige_confirmation(self):
+        os.environ["ANTHROPIC_API_KEY"] = "test"
+        self.addCleanup(os.environ.pop, "ANTHROPIC_API_KEY", None)
+        a = avis(objet="Formations SST", profil=self.pv, prefiltre_ok=True, statut="GO", texte="SST")
+        a.save()
+        self.assertContains(self.client.get(f"/avis/{a.pk}/reponse/"), "≈ ")
+        p = Parametres.get()
+        p.budget_mensuel = Decimal("1")
+        p.save()
+        depenser(2)
+        with mock.patch("veille.views.lancer") as lancer:
+            r = self.client.post(f"/avis/{a.pk}/reponse/", {"action": "analyser"}, follow=True)
+            self.assertContains(r, "Lancer quand même")
+            lancer.assert_not_called()
+            self.client.post(f"/avis/{a.pk}/reponse/", {"action": "analyser", "depasser_budget": "1"})
+            lancer.assert_called_once()
+            self.assertTrue(lancer.call_args.kwargs["forcer_budget"])
+
+    def test_renoter_et_onglet_filtre(self):
+        os.environ["ANTHROPIC_API_KEY"] = "test"
+        self.addCleanup(os.environ.pop, "ANTHROPIC_API_KEY", None)
+        avis(source_id="r", objet="Formations SST", profil=self.pv, prefiltre_ok=True, score=40,
+             score_modele="règles", statut="A_QUALIFIER").save()
+        avis(source_id="f", objet="Nettoyage des locaux", prefiltre_ok=False, prefiltre_motif="mot exclu : nettoyage",
+             date_publication=timezone.localdate()).save()
+        r = self.client.get("/appels-offres/")
+        self.assertContains(r, "Re-noter par l'IA")
+        self.assertContains(r, "Score provisoire")
+        with mock.patch("veille.views.lancer") as lancer:
+            self.client.post("/appels-offres/renoter/")
+        lancer.assert_called_once()
+        r = self.client.get("/appels-offres/?onglet=filtre")
+        self.assertContains(r, "Nettoyage des locaux")
+        self.assertContains(r, "mot exclu : nettoyage")
+
+    def test_badge_nouveau_depuis_la_derniere_visite(self):
+        PreferencesUtilisateur.objects.create(utilisateur=self.u, derniere_activite=timezone.now() - timedelta(days=1))
+        avis(source_id="n", objet="Formations SST", profil=self.pv, prefiltre_ok=True, score=80, statut="A_QUALIFIER").save()
+        self.assertContains(self.client.get("/appels-offres/"), "badge-nouveau")
+        # à la visite suivante (plus de 30 min plus tard), l'avis n'est plus nouveau
+        PreferencesUtilisateur.objects.filter(utilisateur=self.u).update(derniere_activite=timezone.now() - timedelta(hours=1))
+        session = self.client.session
+        session.pop("visite_precedente")
+        session.save()
+        AvisMarche.objects.update(cree_le=timezone.now() - timedelta(hours=2))
+        self.assertNotContains(self.client.get("/appels-offres/"), "badge-nouveau")
+
+
+class RepriseTests(TestCase):
+    def test_fusion_sans_doublon_ni_ecrasement(self):
+        p = profil()
+        ici = avis(source_id="1", objet="Déjà collecté", profil=p, prefiltre_ok=True, score=40,
+                   score_modele="règles", statut="GO", responsable="Matthieu")
+        ici.save()
+        export = [
+            {"model": "veille.avismarche", "pk": 500, "fields": {
+                "source": "BOAMP", "source_id": "1", "objet": "Déjà collecté", "nature": "AVIS", "statut": "A_QUALIFIER",
+                "score": 82, "score_modele": "claude-opus-5-5", "recommandation": "GO", "prefiltre_ok": True,
+                "score_le": "2026-11-19T20:00:00Z", "profil": 999}},
+            {"model": "veille.avismarche", "pk": 501, "fields": {
+                "source": "BOAMP", "source_id": "2", "objet": "Nouveau", "nature": "AVIS", "statut": "NO_GO",
+                "score": 20, "score_modele": "claude-opus-5-5", "prefiltre_ok": True, "profil": 999,
+                "date_publication": "2026-11-18"}},
+            {"model": "veille.analysedce", "pk": 1, "fields": {"avis": 500, "statut": "OK", "resultat": {"a": 1},
+                                                              "cree_le": "2026-11-19T20:17:04Z"}},
+        ]
+        chemin = os.path.join(MEDIA_TEST, "reprise.json")
+        with open(chemin, "w", encoding="utf-8") as f:
+            json.dump(export, f)
+        for _ in range(2):  # relancer ne crée rien de plus
+            call_command("reprendre_donnees", chemin, stdout=_io.StringIO())
+        self.assertEqual(AvisMarche.objects.count(), 2)
+        ici.refresh_from_db()
+        self.assertEqual((ici.score, ici.score_modele, ici.statut, ici.responsable), (82, "claude-opus-5-5", "GO", "Matthieu"))
+        nouveau = AvisMarche.objects.get(source_id="2")
+        self.assertEqual((nouveau.statut, nouveau.profil), ("NO_GO", p))
+        self.assertEqual(AnalyseDCE.objects.get().avis, ici)

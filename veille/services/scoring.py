@@ -25,6 +25,21 @@ class ScoringIndisponible(Exception):
     pass
 
 
+class BudgetAtteint(ScoringIndisponible):
+    pass
+
+
+MESSAGE_BUDGET = "Budget IA du mois atteint (modifiable dans Paramètres)."
+
+
+def verifier_budget() -> None:
+    """Lève BudgetAtteint si le budget mensuel est consommé."""
+    from . import couts
+
+    if couts.budget_atteint():
+        raise BudgetAtteint(MESSAGE_BUDGET)
+
+
 # --------------------------------------------------------------------------
 # Schéma de sortie
 # --------------------------------------------------------------------------
@@ -185,6 +200,15 @@ def ia_disponible() -> bool:
     return bool(cle_api())
 
 
+def notes_par_regles():
+    """Avis retenus, encore ouverts, dont le score vient des règles (à faire noter par l'IA)."""
+    from django.db.models import Q
+
+    return AvisMarche.objects.filter(prefiltre_ok=True, score_modele="règles").filter(
+        Q(date_limite__isnull=True) | Q(date_limite__gte=timezone.now())
+    ).exclude(statut__in=["NO_GO", "PERDU", "GAGNE", "SANS_SUITE"])
+
+
 def _client() -> anthropic.Anthropic:
     cle = cle_api()
     if not cle:
@@ -195,7 +219,11 @@ def _client() -> anthropic.Anthropic:
 
 
 def scorer(avis: AvisMarche, client: anthropic.Anthropic | None = None, profil: str | None = None) -> ScoreAvis:
-    """Score un avis et enregistre le résultat. Lève ScoringIndisponible si l'IA ne répond pas."""
+    """Score un avis et enregistre le résultat. Lève ScoringIndisponible si l'IA ne répond pas
+    ou si le budget du mois est atteint."""
+    from . import couts
+
+    verifier_budget()
     client = client or _client()
     profil = profil if profil is not None else profil_entreprise()
 
@@ -220,6 +248,7 @@ def scorer(avis: AvisMarche, client: anthropic.Anthropic | None = None, profil: 
         ],
         output_format=ScoreAvis,
     )
+    couts.enregistrer(reponse, "SCORE", avis)
 
     if reponse.stop_reason == "refusal":
         raise ScoringIndisponible("L'IA a refusé de traiter cet avis.")

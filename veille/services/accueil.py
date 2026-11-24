@@ -8,9 +8,9 @@ from datetime import timedelta
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from ..models import AvisMarche, Collecte, Entreprise, PieceAdministrative, PreferencesAccueil
-from . import annuaire, documents
-from .scoring import ia_disponible
+from ..models import AvisMarche, Collecte, Entreprise, Parametres, PieceAdministrative, PreferencesAccueil
+from . import annuaire, couts, documents, planification
+from .scoring import ia_disponible, notes_par_regles
 
 
 @dataclass(frozen=True)
@@ -29,7 +29,8 @@ CATALOGUE = [
     Widget("resultats", "Résultats", "Marchés gagnés, perdus et taux de réussite."),
     Widget("coffre", "Coffre-fort", "Pièces administratives valides et prochaines expirations."),
     Widget("profil", "Profil FORMA'ST", "Ce qu'il manque pour que les documents soient complets."),
-    Widget("veille", "État de la veille", "Dernière collecte, IA, lancement manuel."),
+    Widget("veille", "État de la veille", "Dernière et prochaine collecte, IA, lancement manuel."),
+    Widget("ia", "Budget IA", "Dépense de l'IA ce mois-ci par rapport au budget fixé."),
 ]
 PAR_CLE = {w.cle: w for w in CATALOGUE}
 
@@ -189,13 +190,28 @@ def w_profil():
 def w_veille():
     derniere = Collecte.objects.filter(fin__isnull=False).first()
     depuis = timezone.now() - timedelta(days=1)
+    p = Parametres.get()
     return {
         "derniere": derniere,
+        "bilan": planification.derniere_collecte(),
+        "prochaine": planification.prochaine_execution(p),
+        "auto": p.collecte_auto,
+        "installee": planification.automatisation_installee(),
         "en_cours": Collecte.objects.filter(fin__isnull=True, debut__gte=timezone.now() - timedelta(minutes=30)).exists(),
         "erreur": Collecte.objects.filter(fin__isnull=False).exclude(erreur="").filter(debut__gte=depuis).first(),
         "nouveaux": AvisMarche.objects.filter(prefiltre_ok=True, cree_le__gte=depuis).count(),
         "ia": ia_disponible(),
         "total": AvisMarche.objects.count(),
+    }
+
+
+def w_ia():
+    b = couts.etat_budget()
+    return {
+        "b": b,
+        "par_usage": couts.depense_par_usage()[:3],
+        "a_renoter": notes_par_regles().count() if ia_disponible() else 0,
+        "ia": ia_disponible(),
     }
 
 
@@ -208,6 +224,7 @@ DONNEES = {
     "coffre": w_coffre,
     "profil": w_profil,
     "veille": w_veille,
+    "ia": w_ia,
 }
 
 

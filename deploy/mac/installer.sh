@@ -80,7 +80,7 @@ if [ ! -f db.sqlite3.profil_charge ]; then
 fi
 if [ -f data/reprise.json ] && [ ! -f db.sqlite3.reprise_chargee ]; then
   echo "Reprise des avis, analyses et mémoires de la session de test…"
-  .venv/bin/python manage.py loaddata data/reprise.json -v0 && touch db.sqlite3.reprise_chargee
+  .venv/bin/python manage.py reprendre_donnees data/reprise.json && touch db.sqlite3.reprise_chargee
 fi
 if [ -n "${MAIL_DEST:-}" ]; then
   DEST="$MAIL_DEST" .venv/bin/python manage.py shell -c "import os; from veille.models import ProfilVeille as P; P.objects.update(destinataires=os.environ['DEST'].strip())"
@@ -95,7 +95,7 @@ else
   .venv/bin/python manage.py createsuperuser
 fi
 
-titre "Démarrage automatique (application, veille de 7 h 10, sauvegarde de la nuit)"
+titre "Démarrage automatique (application, veille du matin, sauvegarde de la nuit)"
 mkdir -p "$AGENTS" "$JOURNAUX" "$SAUVEGARDES"
 for modele in deploy/mac/*.plist; do
   nom="$(basename "$modele")"

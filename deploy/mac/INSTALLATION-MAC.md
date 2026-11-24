@@ -2,7 +2,7 @@
 
 Le Mac sert de serveur : FORM'AO y tourne en permanence, fait la veille chaque matin et sauvegarde ses données chaque jour. Un collègue y accède à distance de façon sécurisée avec Tailscale. Compter environ 20 minutes.
 
-**Condition importante** : le Mac doit rester **allumé, branché et sans veille** pendant la journée. S'il dort à 7 h 10, la veille du jour se lance à son réveil. Si le couvercle d'un MacBook est fermé, l'application n'est plus joignable pour le collègue.
+**Condition importante** : le Mac doit rester **allumé, branché et sans veille** pendant la journée. S'il dort à l'heure prévue (7 h 10 par défaut, réglable dans Paramètres), la veille du jour se lance à son réveil. Si le couvercle d'un MacBook est fermé, l'application n'est plus joignable pour le collègue.
 
 ## 1. Récupérer le projet
 
@@ -42,7 +42,7 @@ Ce que le script met en place, et qui redémarre tout seul avec le Mac :
 | Quoi | Quand |
 |---|---|
 | L'application | En permanence, relancée automatiquement en cas de problème |
-| La veille (collecte, score, e-mails) | Chaque jour à 7 h 10, ou au réveil du Mac |
+| La veille (collecte, score, e-mails) | Chaque jour à l'heure choisie dans Paramètres (7 h 10 par défaut), ou au réveil du Mac |
 | La sauvegarde (base + fichiers déposés, gardée 30 jours) dans `Documents/FORMAO-sauvegardes` | Chaque jour à 12 h 30 |
 
 ## 3. Empêcher la mise en veille

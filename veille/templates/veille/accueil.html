@@ -10,6 +10,12 @@
   <a class="btn secondaire" href="?personnaliser=1#personnaliser" aria-controls="personnaliser">{% include "veille/_icone.html" with nom="reglages" %}Personnaliser l'accueil</a>
 </div>
 
+{% if ia_active and budget_ia.atteint %}
+<div class="signal urgent bandeau-budget"><strong>Budget IA du mois atteint ({{ budget_ia.depense|floatformat:2 }} € sur {{ budget_ia.budget|floatformat:0 }} €)</strong>Les nouveaux avis sont notés par règles jusqu'au 1er du mois prochain. <a href="{% url 'parametres' %}#budget">Augmenter le budget</a></div>
+{% elif ia_active and budget_ia.alerte %}
+<div class="signal attention bandeau-budget"><strong>{{ budget_ia.part }} % du budget IA consommé</strong>{{ budget_ia.depense|floatformat:2 }} € sur {{ budget_ia.budget|floatformat:0 }} € ce mois-ci. <a href="{% url 'parametres' %}#budget">Voir le détail</a></div>
+{% endif %}
+
 {% if personnaliser %}
 <section class="panneau personnaliser" id="personnaliser" aria-labelledby="titre-perso">
   <h2 id="titre-perso">Personnaliser l'accueil</h2>
@@ -59,7 +65,7 @@
         {% for a in d.avis %}
         <li>
           <div class="plaque petite {{ a.score|couleur_score }}">{{ a.score|default_if_none:"?" }}</div>
-          <div class="mini-texte"><a class="mini-titre" href="{% url 'detail' a.pk %}">{{ a.objet|lisible|truncatechars:95 }}</a>
+          <div class="mini-texte">{% if depuis_visite and a.cree_le > depuis_visite %}<span class="badge-nouveau">Nouveau</span>{% endif %}<a class="mini-titre" href="{% url 'detail' a.pk %}">{{ a.objet|lisible|truncatechars:95 }}</a>
             <span class="doux">{{ a.acheteur|truncatechars:45 }}{% if a.date_limite %}, <span class="{% if a.jours_restants < 10 %}urgent{% endif %}">{{ a.jours_restants|j_moins }}</span>{% endif %}</span></div>
           {% include "veille/_decision.html" with suivant=request.get_full_path %}
         </li>
@@ -131,12 +137,24 @@
 
     {% elif w.cle == "veille" %}
       <ul class="etat-veille">
-        <li><span class="point {% if d.en_cours %}attente{% elif d.erreur %}ko{% else %}ok{% endif %}"></span>{% if d.en_cours %}Collecte en cours…{% elif d.derniere %}Dernière collecte le {{ d.derniere.fin|date:"j F à H\hi" }}{% else %}Aucune collecte pour l'instant{% endif %}</li>
+        <li><span class="point {% if d.en_cours %}attente{% elif d.erreur %}ko{% else %}ok{% endif %}"></span>{% if d.en_cours %}Collecte en cours…{% elif d.bilan %}Dernière collecte le {{ d.bilan.fin|date:"j F à H\hi" }} : {{ d.bilan.lus }} avis lus, {{ d.bilan.retenus }} retenu{{ d.bilan.retenus|pluralize }}{% else %}Aucune collecte pour l'instant{% endif %}</li>
+        <li><span class="point {% if not d.installee %}ko{% elif d.auto %}ok{% else %}neutre{% endif %}"></span><span>{% if not d.installee %}Collecte automatique pas encore installée sur ce Mac (<a href="{% url 'parametres' %}">voir Paramètres</a>){% elif not d.auto %}Collecte automatique désactivée{% elif d.prochaine %}Prochaine collecte {{ d.prochaine|date:"l j F à H\hi" }}{% endif %}</span></li>
         <li><span class="point {% if d.ia %}ok{% else %}ko{% endif %}"></span>{% if d.ia %}IA active : chaque avis retenu est évalué{% else %}IA inactive : score par règles{% endif %}</li>
         <li><span class="point neutre"></span>{{ d.nouveaux }} avis retenu{{ d.nouveaux|pluralize }} depuis hier, {{ d.total }} avis en base</li>
       </ul>
       {% if d.erreur %}<p class="urgent petit">La dernière collecte {{ d.erreur.source }} a échoué : {{ d.erreur.erreur|truncatechars:120 }}</p>{% endif %}
       <form method="post" action="{% url 'collecter' %}">{% csrf_token %}<button class="btn secondaire petit" {% if d.en_cours %}disabled{% endif %}>Collecter maintenant</button></form>
+    {% elif w.cle == "ia" %}
+      {% if not d.ia %}<div class="vide-widget"><strong>IA inactive</strong>Ajoutez la clé API dans le fichier .env pour faire noter les avis par l'IA.</div>
+      {% else %}
+      <p class="montant">{{ d.b.depense|floatformat:2 }} €{% if d.b.limite %}<span class="doux"> sur {{ d.b.budget|floatformat:0 }} € ce mois-ci</span>{% else %}<span class="doux"> ce mois-ci, sans limite</span>{% endif %}</p>
+      {% if d.b.limite %}<div class="jauge {{ d.b.niveau }}" role="img" aria-label="{{ d.b.part }} % du budget"><span style="width:{{ d.b.part }}%"></span></div>{% endif %}
+      {% if d.b.atteint %}<p class="urgent petit">Budget atteint : les nouveaux avis sont notés par règles jusqu'au mois prochain.</p>
+      {% elif d.b.alerte %}<p class="attention-texte petit">{{ d.b.part }} % du budget consommé.</p>{% endif %}
+      {% if d.par_usage %}<ul class="legende">{% for u in d.par_usage %}<li>{{ u.usage }} <b>{{ u.total|floatformat:2 }} €</b> <span class="doux">({{ u.n }})</span></li>{% endfor %}</ul>{% endif %}
+      {% if d.a_renoter %}<form method="post" action="{% url 'renoter_regles' %}" style="margin-top:10px">{% csrf_token %}<input type="hidden" name="suivant" value="{% url 'accueil' %}"><button class="btn secondaire petit" {% if d.b.atteint %}disabled{% endif %}>Re-noter par l'IA les {{ d.a_renoter }} avis au score provisoire</button></form>{% endif %}
+      {% endif %}
+      <p class="petit" style="margin-top:10px"><a href="{% url 'parametres' %}#budget">Régler le budget</a></p>
     {% endif %}
   </section>
   {% endwith %}

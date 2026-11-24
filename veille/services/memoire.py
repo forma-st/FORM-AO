@@ -73,9 +73,15 @@ def plan_texte(avis: AvisMarche) -> str:
     return "\n".join(lignes)
 
 
-def rediger(avis: AvisMarche, consignes: str = "", client=None, memoire: Memoire | None = None) -> Memoire:
+def rediger(
+    avis: AvisMarche, consignes: str = "", client=None, memoire: Memoire | None = None, forcer_budget: bool = False
+) -> Memoire:
+    from . import couts
+
     memoire = memoire or Memoire.objects.create(avis=avis, consignes=consignes, statut="EN_COURS")
     try:
+        if not forcer_budget:
+            scoring.verifier_budget()
         blocs = dce.blocs_documents(avis)
         if not blocs and avis.texte.strip():
             blocs = [
@@ -105,6 +111,7 @@ def rediger(avis: AvisMarche, consignes: str = "", client=None, memoire: Memoire
             messages=[{"role": "user", "content": blocs + [{"type": "text", "text": demande}]}],
         ) as flux:
             message = flux.get_final_message()
+        couts.enregistrer(message, "MEMOIRE", avis)
         if message.stop_reason == "refusal":
             raise scoring.ScoringIndisponible("L'IA a refusé de rédiger ce mémoire.")
         texte = "".join(b.text for b in message.content if b.type == "text").strip()

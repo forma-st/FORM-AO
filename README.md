@@ -129,15 +129,15 @@ Commandes utiles :
 | `manage.py charger_profil` | Recharge le profil, le catalogue et la veille depuis le JSON |
 | `manage.py test veille` | Tests automatiques |
 
-Planification (cron) chaque jour à 7 h 10 :
+Planification (cron) : une vérification toutes les 15 minutes ; la veille ne tourne qu'une fois par jour, à partir de l'heure choisie dans **Paramètres** (7 h 10 par défaut). Sans `--si-prevu`, la commande tourne tout de suite.
 
 ```
-10 7 * * * cd /chemin/veille-ao && .venv/bin/python manage.py veille_quotidienne >> veille.log 2>&1
+*/15 * * * * cd /chemin/veille-ao && .venv/bin/python manage.py veille_quotidienne --si-prevu >> veille.log 2>&1
 ```
 
 ## Mise en production
 
-**Sur un Mac** (choix retenu pour démarrer) : guide pas à pas dans [deploy/mac/INSTALLATION-MAC.md](deploy/mac/INSTALLATION-MAC.md). La commande `bash deploy/mac/installer.sh` installe et démarre tout : l'application, la veille à 7 h 10 et la sauvegarde quotidienne, qui redémarrent avec le Mac. L'accès à distance d'un collègue passe par Tailscale. `data/reprise.json` reprend les avis notés, l'analyse et le mémoire de la phase de test.
+**Sur un Mac** (choix retenu pour démarrer) : guide pas à pas dans [deploy/mac/INSTALLATION-MAC.md](deploy/mac/INSTALLATION-MAC.md). La commande `bash deploy/mac/installer.sh` installe et démarre tout : l'application, la veille du matin (heure réglable dans Paramètres) et la sauvegarde quotidienne, qui redémarrent avec le Mac. L'accès à distance d'un collègue passe par Tailscale. `data/reprise.json` reprend les avis notés, l'analyse et le mémoire de la phase de test.
 
 **Sur un serveur loué (VPS)** : Guide pas à pas pour un serveur loué (VPS) : [deploy/INSTALLATION.md](deploy/INSTALLATION.md). Le script `deploy/install.sh` installe tout (application, HTTPS, veille chaque matin, sauvegardes).
 

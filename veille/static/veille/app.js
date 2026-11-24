@@ -92,5 +92,23 @@
     if (section) section.scrollIntoView({ block: "start" });
   }
 
-  document.addEventListener("DOMContentLoaded", () => { messages(); nogo(); raccourcis(); personnaliser(); });
+  /* Paramètres : le thème s'applique tout de suite au clic, puis il est enregistré. */
+  function theme() {
+    const form = $(".choix-theme");
+    if (!form) return;
+    form.addEventListener("change", (e) => {
+      if (e.target.name !== "theme") return;
+      const v = e.target.value;
+      const html = document.documentElement;
+      if (v === "clair") html.dataset.theme = "light";
+      else if (v === "sombre") html.dataset.theme = "dark";
+      else delete html.dataset.theme;
+      // getAttribute : le champ caché name="action" masque la propriété form.action
+      fetch(form.getAttribute("action"), { method: "POST", body: new FormData(form), credentials: "same-origin" })
+        .then((r) => { if (!r.ok) throw new Error(r.status); })
+        .catch(() => HTMLFormElement.prototype.submit.call(form));
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => { messages(); nogo(); raccourcis(); personnaliser(); theme(); });
 })();

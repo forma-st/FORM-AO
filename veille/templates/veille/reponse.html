@@ -71,7 +71,8 @@
     {% endif %}
     <form method="post" class="actions">{% csrf_token %}
       <button name="action" value="analyser" class="btn {% if r %}secondaire petit{% endif %}" {% if analyse.statut == "EN_COURS" or not ia_active %}disabled{% endif %}>{% if r %}Relancer l'analyse{% else %}Analyser le dossier{% endif %}</button>
-      {% if not ia_active %}<span class="doux">Nécessite la clé API (IA inactive).</span>{% endif %}
+      {% if not ia_active %}<span class="doux">Nécessite la clé API (IA inactive).</span>
+      {% else %}<span class="cout" title="Estimation d'après la taille des documents déposés">≈ {{ cout_analyse|floatformat:2 }} €</span>{% include "veille/_depasser_budget.html" %}{% endif %}
     </form>
   </li>
 
@@ -87,7 +88,10 @@
     <form method="post" class="formulaire">{% csrf_token %}
       <p><label for="consignes">Consignes pour la rédaction (facultatif)</label>
       <textarea id="consignes" name="consignes" rows="3" placeholder="ex. insister sur l'unité mobile incendie, proposer une session pilote, deux intervenants"></textarea></p>
+      <span class="actions" style="margin:0">
       <button name="action" value="rediger" class="btn {% if memoires %}secondaire{% endif %}" {% if not ia_active %}disabled{% endif %}>{% if memoires %}Rédiger un nouveau brouillon{% else %}Rédiger le brouillon{% endif %}</button>
+      {% if ia_active %}<span class="cout" title="Estimation d'après la taille des documents déposés">≈ {{ cout_memoire|floatformat:2 }} €</span>{% include "veille/_depasser_budget.html" %}{% endif %}
+      </span>
     </form>
   </li>
 
@@ -123,6 +127,7 @@
       <dt>Date limite</dt><dd>{% if a.date_limite %}<strong>{{ a.date_limite|date:"j F, H\hi" }}</strong> ({{ a.jours_restants|j_moins }}){% else %}non précisée{% endif %}</dd>
       <dt>Score</dt><dd>{{ a.score|default_if_none:"—" }}/100 – {{ a.recommandation|libelle_reco }}</dd>
       <dt>Statut</dt><dd>{{ a.get_statut_display }}</dd>
+      {% if cout_avis %}<dt>IA</dt><dd>{{ cout_avis|floatformat:2 }} € dépensés sur ce dossier</dd>{% endif %}
       {% if a.responsable %}<dt>Responsable</dt><dd>{{ a.responsable }}</dd>{% endif %}
     </dl>
     {% if a.statut == "REDACTION" %}

@@ -9,10 +9,12 @@
     <string>__DOSSIER__/.venv/bin/python</string>
     <string>manage.py</string>
     <string>veille_quotidienne</string>
+    <string>--si-prevu</string>
   </array>
-  <!-- Chaque jour à 7 h 10. Si le Mac dormait, macOS lance la veille au réveil. -->
-  <key>StartCalendarInterval</key>
-  <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>10</integer></dict>
+  <!-- Vérifie toutes les 15 minutes : la veille tourne une fois par jour, à partir de l'heure
+       choisie dans FORM'AO (Paramètres). Si le Mac dormait, elle est rattrapée au réveil. -->
+  <key>StartInterval</key><integer>900</integer>
+  <key>RunAtLoad</key><true/>
   <key>StandardOutPath</key><string>__JOURNAUX__/veille.log</string>
   <key>StandardErrorPath</key><string>__JOURNAUX__/veille.log</string>
 </dict>

@@ -7,6 +7,7 @@ from .models import (
     Memoire,
     AvisMarche,
     Collecte,
+    ConsommationIA,
     Entreprise,
     Formateur,
     PieceAdministrative,
@@ -105,3 +106,14 @@ class AnalyseDCEAdmin(admin.ModelAdmin):
 @admin.register(Memoire)
 class MemoireAdmin(admin.ModelAdmin):
     list_display = ["__str__", "statut", "modele", "cree_le"]
+
+
+@admin.register(ConsommationIA)
+class ConsommationIAAdmin(admin.ModelAdmin):
+    list_display = ["date", "usage", "modele", "jetons_entree", "jetons_sortie", "jetons_cache_lus", "cout_usd", "avis"]
+    list_filter = ["usage", "modele"]
+    date_hierarchy = "date"
+    raw_id_fields = ["avis"]
+
+    def has_add_permission(self, request):
+        return False

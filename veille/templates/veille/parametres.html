@@ -1,0 +1,107 @@
+{% extends "veille/base.html" %}
+{% load veille_tags %}
+{% block titre %}Paramètres{% endblock %}
+{% block contenu %}
+<div class="entete-page"><div><h1>Paramètres</h1>
+<p class="doux">Affichage, veille automatique, notifications et budget de l'IA. L'affichage est personnel ; le reste vaut pour toute l'équipe.</p></div></div>
+
+<div class="colonnes">
+<div>
+  <section class="panneau" aria-labelledby="t-affichage">
+    <h2 id="t-affichage">Affichage</h2>
+    <form method="post" class="choix-theme" action="{% url 'parametres' %}">{% csrf_token %}
+      <input type="hidden" name="action" value="theme">
+      <fieldset>
+        <legend class="sr">Thème</legend>
+        {% for cle, libelle in themes %}
+        <label class="carte-theme theme-{{ cle }}">
+          <input type="radio" name="theme" value="{{ cle }}" {% if cle == theme_choisi %}checked{% endif %}>
+          <span class="apercu" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span class="carte-libelle">{% include "veille/_icone.html" with nom=cle %}{{ libelle }}</span>
+        </label>
+        {% endfor %}
+      </fieldset>
+      <noscript><button class="btn secondaire petit">Appliquer le thème</button></noscript>
+    </form>
+    <p class="doux">« Comme le Mac » suit le réglage clair ou sombre du système, y compris le passage automatique le soir.</p>
+  </section>
+
+  <form method="post" action="{% url 'parametres' %}" class="formulaire" novalidate>{% csrf_token %}
+    {% if form.non_field_errors %}<div class="signal urgent">{{ form.non_field_errors }}</div>{% endif %}
+
+    <section class="panneau" aria-labelledby="t-veille">
+      <h2 id="t-veille">Veille automatique</h2>
+      <p class="interrupteur">{{ form.collecte_auto }} <label for="{{ form.collecte_auto.id_for_label }}">{{ form.collecte_auto.label }}</label></p>
+      <p><label for="{{ form.heure_collecte.id_for_label }}">{{ form.heure_collecte.label }}</label>{{ form.heure_collecte }}{{ form.heure_collecte.errors }}</p>
+      <p class="doux">La collecte lit le BOAMP et TED, applique le filtre, fait noter les avis retenus par l'IA puis prévient l'équipe. Si le Mac dort à l'heure prévue, elle se lance à son réveil.</p>
+      <ul class="etat-veille">
+        <li><span class="point {% if not automatisation %}ko{% elif not p.collecte_auto %}neutre{% else %}ok{% endif %}"></span>
+          <span>{% if not automatisation %}Lancement automatique pas encore installé sur ce Mac : exécutez une fois <code>bash deploy/mac/installer.sh</code> depuis le dossier du projet.
+          {% elif not p.collecte_auto %}Collecte automatique désactivée.
+          {% elif prochaine %}Prochaine collecte : {{ prochaine|date:"l j F à H\hi" }}.{% endif %}</span></li>
+        {% if derniere %}<li><span class="point {% if derniere.erreurs %}ko{% else %}ok{% endif %}"></span><span>Dernière collecte le {{ derniere.fin|date:"j F à H\hi" }} : {{ derniere.lus }} avis lus, {{ derniere.nouveaux }} nouveaux, {{ derniere.retenus }} retenus ({{ derniere.sources|join:", " }}).</span></li>{% endif %}
+      </ul>
+      <p><label for="{{ form.max_avis_par_collecte.id_for_label }}">{{ form.max_avis_par_collecte.label }}</label>{{ form.max_avis_par_collecte }}<span class="aide">{{ form.max_avis_par_collecte.help_text }} Au rythme actuel, 2 à 10 avis sont retenus par jour.</span>{{ form.max_avis_par_collecte.errors }}</p>
+    </section>
+
+    <section class="panneau" aria-labelledby="t-notif">
+      <h2 id="t-notif">Notifications du matin</h2>
+      <p class="interrupteur">{{ form.notif_macos }} <label for="{{ form.notif_macos.id_for_label }}">{{ form.notif_macos.label }}</label></p>
+      <p class="aide">Une notification dans le coin de l'écran : « 3 nouveaux appels d'offres, 1 Go recommandé », avec la dépense IA du mois.
+        {% if not notif_possible %}<br><strong>Indisponible ici :</strong> elle s'affiche uniquement sur le Mac qui fait tourner FORM'AO.{% endif %}</p>
+      <p class="interrupteur">{{ form.notif_email }} <label for="{{ form.notif_email.id_for_label }}">{{ form.notif_email.label }}</label></p>
+      <p class="aide">
+        {% if email_configure %}Envoyé à {{ destinataires|join:", "|default:"(aucun destinataire : à saisir dans le profil de veille)" }}.
+        {% else %}<strong>Serveur d'e-mail non configuré :</strong> les e-mails sont seulement écrits dans le journal. Renseignez <code>EMAIL_HOST</code>, <code>EMAIL_HOST_USER</code> et <code>EMAIL_HOST_PASSWORD</code> dans le fichier <code>.env</code> (identifiants SMTP de votre messagerie), avec <code>EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend</code>.{% endif %}
+      </p>
+    </section>
+
+    <section class="panneau" id="budget" aria-labelledby="t-budget">
+      <h2 id="t-budget">Budget de l'IA</h2>
+      <div class="grille-2">
+        <p><label for="{{ form.budget_mensuel.id_for_label }}">{{ form.budget_mensuel.label }}</label>{{ form.budget_mensuel }}<span class="aide">{{ form.budget_mensuel.help_text }}</span>{{ form.budget_mensuel.errors }}</p>
+        <p><label for="{{ form.seuil_alerte_budget.id_for_label }}">{{ form.seuil_alerte_budget.label }}</label>{{ form.seuil_alerte_budget }}{{ form.seuil_alerte_budget.errors }}</p>
+      </div>
+      <p class="doux">Budget atteint : les nouveaux avis sont notés par règles (sans IA) jusqu'au mois suivant, et l'analyse d'un dossier ou la rédaction d'un mémoire demande une confirmation.</p>
+      <details class="repli"><summary>Taux de change</summary>
+        <p><label for="{{ form.taux_usd_eur.id_for_label }}">{{ form.taux_usd_eur.label }}</label>{{ form.taux_usd_eur }}<span class="aide">{{ form.taux_usd_eur.help_text }}</span>{{ form.taux_usd_eur.errors }}</p>
+      </details>
+    </section>
+
+    <div class="actions barre-enregistrer"><button class="btn">Enregistrer les paramètres</button></div>
+  </form>
+</div>
+
+<aside class="collant">
+  <section class="panneau" aria-labelledby="t-conso">
+    <h2 id="t-conso">IA ce mois-ci</h2>
+    <p class="montant">{{ budget.depense|floatformat:2 }} €{% if budget.limite %}<span class="doux"> sur {{ budget.budget|floatformat:0 }} €</span>{% endif %}</p>
+    {% if budget.limite %}
+    <div class="jauge {{ budget.niveau }}" role="img" aria-label="{{ budget.part }} % du budget consommé"><span style="width:{{ budget.part }}%"></span></div>
+    <p class="{% if budget.atteint %}urgent{% elif budget.alerte %}attention-texte{% else %}doux{% endif %}">
+      {% if budget.atteint %}Budget atteint : l'IA est en pause pour la notation.
+      {% elif budget.alerte %}{{ budget.part }} % du budget consommé.
+      {% else %}Il reste {{ budget.restant|floatformat:2 }} €.{% endif %}</p>
+    {% endif %}
+    {% if par_usage %}
+    <table class="tableau compact">
+      <thead><tr><th>Usage</th><th>Appels</th><th>Coût moyen</th><th>Total</th></tr></thead>
+      <tbody>{% for u in par_usage %}<tr><td>{{ u.usage }}</td><td>{{ u.n }}</td><td>{{ u.moyen|floatformat:2 }} €</td><td>{{ u.total|floatformat:2 }} €</td></tr>{% endfor %}</tbody>
+    </table>
+    {% else %}<p class="doux">Aucun appel à l'IA ce mois-ci.</p>{% endif %}
+    <p class="doux">Une notation d'avis coûte environ {{ estimation_avis|floatformat:2 }} €. Modèle : {{ modele }}.</p>
+  </section>
+  <section class="panneau" aria-labelledby="t-histo">
+    <h2 id="t-histo">Six derniers mois</h2>
+    <ol class="histo">
+      {% for h in historique %}<li><span>{{ h.mois|date:"F Y"|capfirst }}</span><b>{{ h.total|floatformat:2 }} €</b></li>{% endfor %}
+    </ol>
+    <p class="doux">Le suivi a commencé avec cette version : les appels antérieurs ne sont pas comptés.</p>
+  </section>
+  <section class="panneau">
+    <h2>Tester</h2>
+    <form method="post" action="{% url 'tester_notification' %}">{% csrf_token %}<button class="btn secondaire petit" {% if not notif_possible %}disabled{% endif %}>{% include "veille/_icone.html" with nom="cloche" %}Envoyer une notification de test</button></form>
+  </section>
+</aside>
+</div>
+{% endblock %}

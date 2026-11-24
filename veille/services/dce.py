@@ -269,9 +269,13 @@ def blocs_documents(avis: AvisMarche) -> list[dict]:
     return blocs
 
 
-def analyser(avis: AvisMarche, client=None) -> AnalyseDCE:
+def analyser(avis: AvisMarche, client=None, forcer_budget: bool = False) -> AnalyseDCE:
+    from . import couts
+
     analyse, _ = AnalyseDCE.objects.update_or_create(avis=avis, defaults={"statut": "EN_COURS", "erreur": ""})
     try:
+        if not forcer_budget:
+            scoring.verifier_budget()
         blocs = blocs_documents(avis)
         if not blocs:
             if not avis.texte.strip():
@@ -307,6 +311,7 @@ def analyser(avis: AvisMarche, client=None) -> AnalyseDCE:
             output_format=AnalyseResultat,
             timeout=900,
         )
+        couts.enregistrer(reponse, "ANALYSE", avis)
         if reponse.stop_reason == "refusal":
             raise scoring.ScoringIndisponible("L'IA a refusé d'analyser ce dossier.")
         if reponse.parsed_output is None:

@@ -19,11 +19,13 @@ from .models import (
     DocumentDCE,
     Entreprise,
     Memoire,
+    Parametres,
     PieceAdministrative,
+    PreferencesUtilisateur,
     ProfilVeille,
 )
 from .services import accueil as accueil_service
-from .services import annuaire, documents, prefiltre, scoring
+from .services import annuaire, couts, documents, notifications, planification, prefiltre, scoring
 from .services import dce as dce_service
 from .services import memoire as memoire_service
 from .services.digest import echeances_proches, pieces_a_renouveler
@@ -65,37 +67,53 @@ def _collecte_en_cours():
 # ---------------------------------------------------------------------------
 
 
+JOURS_FILTRE = 7  # onglet « Écartés par le filtre » : avis publiés ces derniers jours
+
+
+def _ecartes_par_filtre():
+    depuis = timezone.localdate() - timezone.timedelta(days=JOURS_FILTRE - 1)
+    return _ouverts(AvisMarche.objects.filter(prefiltre_ok=False, date_publication__gte=depuis, nature__in=["AVIS", "AUTRE"]))
+
+
 @login_required
 def tableau_de_bord(request):
     onglet = request.GET.get("onglet", "a_trier")
-    statuts = dict((k, s) for k, _, s in ONGLETS).get(onglet, ONGLETS[0][2])
     base = AvisMarche.objects.filter(prefiltre_ok=True)
-
-    qs = base.filter(statut__in=statuts).select_related("profil")
     q = request.GET.get("q", "").strip()
-    if q:
-        # la recherche porte sur tous les avis retenus, quel que soit l'onglet
-        qs = base.filter(Q(objet__icontains=q) | Q(acheteur__icontains=q) | Q(texte__icontains=q))
-    elif onglet in ("a_trier", "go"):
-        qs = _ouverts(qs)
-    if onglet == "a_trier" and not q:
-        qs = qs.order_by("-score", "date_limite")
+
+    if onglet == "filtre" and not q:
+        qs = _ecartes_par_filtre().order_by("-date_publication", "date_limite")
     else:
-        qs = qs.order_by("date_limite", "-score")
+        statuts = dict((k, s) for k, _, s in ONGLETS).get(onglet, ONGLETS[0][2])
+        qs = base.filter(statut__in=statuts).select_related("profil")
+        if q:
+            # la recherche porte sur tous les avis retenus, quel que soit l'onglet
+            qs = base.filter(Q(objet__icontains=q) | Q(acheteur__icontains=q) | Q(texte__icontains=q))
+        elif onglet in ("a_trier", "go"):
+            qs = _ouverts(qs)
+        if onglet == "a_trier" and not q:
+            qs = qs.order_by("-score", "date_limite")
+        else:
+            qs = qs.order_by("date_limite", "-score")
 
     compteurs = {}
     for cle, _, sts in ONGLETS:
         c = base.filter(statut__in=sts)
         compteurs[cle] = (_ouverts(c) if cle in ("a_trier", "go") else c).count()
+    onglets = [(k, l, compteurs[k]) for k, l, _ in ONGLETS] + [("filtre", "Écartés par le filtre", _ecartes_par_filtre().count())]
 
+    a_renoter = scoring.notes_par_regles().count() if scoring.ia_disponible() else 0
     hier = timezone.now() - timezone.timedelta(days=1)
     return render(
         request,
         "veille/tableau.html",
         {
             "avis": qs[:300],
-            "onglets": [(k, l, compteurs[k]) for k, l, _ in ONGLETS],
+            "onglets": onglets,
             "onglet": onglet,
+            "jours_filtre": JOURS_FILTRE,
+            "a_renoter": a_renoter,
+            "cout_renoter": couts.estimer_euros("SCORE", nombre=a_renoter) if a_renoter else 0,
             "q": q,
             "nouveaux": base.filter(cree_le__gte=hier).count(),
             "echeances": echeances_proches(),
@@ -123,6 +141,23 @@ def collecter_maintenant(request):
         lancer(_collecter_et_scorer)
         messages.success(request, "Collecte lancée : les nouveaux avis arrivent d'ici quelques minutes.")
     return redirect("tableau")
+
+
+@login_required
+@require_POST
+def renoter_regles(request):
+    """Fait noter par l'IA, en arrière-plan, les avis notés par règles (IA absente ou budget atteint)."""
+    n = scoring.notes_par_regles().count()
+    if not scoring.ia_disponible():
+        messages.error(request, "IA inactive : ajoutez la clé API dans le fichier .env.")
+    elif couts.budget_atteint():
+        messages.error(request, scoring.MESSAGE_BUDGET)
+    elif not n:
+        messages.info(request, "Aucun avis à re-noter.")
+    else:
+        lancer(call_command, "scorer", refaire_regles=True)
+        messages.success(request, f"{n} avis en cours de notation par l'IA : rechargez la page dans une minute ou deux.")
+    return _retour(request, "tableau")
 
 
 @login_required
@@ -186,7 +221,14 @@ def detail(request, pk):
             if avis.statut == "ECARTE":
                 avis.statut = "A_QUALIFIER"
             avis.save()
-            messages.success(request, "Avis remis dans la veille.")
+            try:
+                scoring.scorer(avis)
+                messages.success(request, f"Avis remis dans la veille et évalué par l'IA : {avis.score}/100.")
+            except scoring.ScoringIndisponible as e:
+                scoring.enregistrer(avis, scoring.score_regles(avis), modele="règles")
+                messages.success(request, f"Avis remis dans la veille ({e} Score provisoire par règles.)")
+            except Exception:  # réseau : l'avis est remis, le score pourra être relancé
+                messages.success(request, "Avis remis dans la veille. Score à relancer depuis cette page.")
             return redirect("detail", pk=pk)
         form = SuiviForm(request.POST, instance=avis)
         if form.is_valid():
@@ -367,15 +409,22 @@ def reponse(request, pk):
             a.lots_vises = request.POST.get("lots_vises", "")[:200]
             a.save(update_fields=["lots_vises"])
             messages.success(request, "Lots enregistrés : ils apparaissent dans le DC1 et le DC2.")
-        elif action == "analyser":
-            AnalyseDCE.objects.update_or_create(avis=a, defaults={"statut": "EN_COURS", "erreur": ""})
-            lancer(dce_service.analyser, a)
-            messages.success(request, "Analyse lancée : comptez 1 à 3 minutes.")
-        elif action == "rediger":
-            consignes = request.POST.get("consignes", "")
-            m = Memoire.objects.create(avis=a, consignes=consignes, statut="EN_COURS")
-            lancer(memoire_service.rediger, a, consignes, None, m)
-            messages.success(request, "Rédaction lancée : comptez 3 à 8 minutes.")
+        elif action in ("analyser", "rediger"):
+            forcer = request.POST.get("depasser_budget") == "1"
+            if couts.budget_atteint() and not forcer:
+                messages.error(
+                    request,
+                    f"{scoring.MESSAGE_BUDGET} Cochez « Lancer quand même » pour dépasser le budget cette fois-ci.",
+                )
+            elif action == "analyser":
+                AnalyseDCE.objects.update_or_create(avis=a, defaults={"statut": "EN_COURS", "erreur": ""})
+                lancer(dce_service.analyser, a, forcer_budget=forcer)
+                messages.success(request, "Analyse lancée : comptez 1 à 3 minutes.")
+            else:
+                consignes = request.POST.get("consignes", "")
+                m = Memoire.objects.create(avis=a, consignes=consignes, statut="EN_COURS")
+                lancer(memoire_service.rediger, a, consignes, None, m, forcer_budget=forcer)
+                messages.success(request, "Rédaction lancée : comptez 3 à 8 minutes.")
         return redirect("reponse", pk=pk)
 
     analyse = getattr(a, "analyse", None)
@@ -400,6 +449,9 @@ def reponse(request, pk):
             "profil_manquants": [
                 c["libelle"] for c in annuaire.completude(Entreprise.get()) if c["obligatoire"] and not c["rempli"]
             ],
+            "cout_analyse": couts.estimer_euros("ANALYSE", a),
+            "cout_memoire": couts.estimer_euros("MEMOIRE", a),
+            "cout_avis": couts.en_euros(sum(c.cout_usd for c in a.consommations.all())),
         },
     )
 
@@ -558,3 +610,91 @@ def annuler_ecart(request):
     n = AvisMarche.objects.filter(pk__in=ids, statut="NO_GO").update(statut="A_QUALIFIER", decision_motif="")
     messages.success(request, f"{n} avis remis dans « À trier ».")
     return _retour(request, "tableau")
+
+
+# ---------------------------------------------------------------------------
+# Paramètres : affichage, veille automatique, notifications, budget IA
+# ---------------------------------------------------------------------------
+
+
+class ParametresForm(forms.ModelForm):
+    class Meta:
+        model = Parametres
+        fields = [
+            "collecte_auto", "heure_collecte", "notif_macos", "notif_email",
+            "budget_mensuel", "seuil_alerte_budget", "max_avis_par_collecte", "taux_usd_eur",
+        ]
+        widgets = {"heure_collecte": forms.TimeInput(attrs={"type": "time"}, format="%H:%M")}
+
+    def clean_seuil_alerte_budget(self):
+        v = self.cleaned_data["seuil_alerte_budget"]
+        if not 1 <= v <= 100:
+            raise forms.ValidationError("Entre 1 et 100 %.")
+        return v
+
+
+def _email_configure() -> bool:
+    return "console" not in settings.EMAIL_BACKEND and "locmem" not in settings.EMAIL_BACKEND and bool(
+        getattr(settings, "EMAIL_HOST", "")
+    )
+
+
+@login_required
+def parametres(request):
+    p = Parametres.get()
+    prefs, _ = PreferencesUtilisateur.objects.get_or_create(utilisateur=request.user)
+    if request.method == "POST" and request.POST.get("action") == "theme":
+        theme = request.POST.get("theme")
+        if theme in dict(PreferencesUtilisateur.THEMES):
+            prefs.theme = theme
+            prefs.save(update_fields=["theme"])
+        return _retour(request, "parametres")
+    form = ParametresForm(request.POST or None, instance=p)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Paramètres enregistrés.")
+        return redirect("parametres")
+    return render(
+        request,
+        "veille/parametres.html",
+        {
+            "form": form,
+            "p": p,
+            "themes": PreferencesUtilisateur.THEMES,
+            "theme_choisi": prefs.theme,
+            "budget": couts.etat_budget(),
+            "par_usage": couts.depense_par_usage(),
+            "historique": couts.historique_mensuel(),
+            "estimation_avis": couts.estimer_euros("SCORE"),
+            "prochaine": planification.prochaine_execution(p),
+            "automatisation": planification.automatisation_installee(),
+            "derniere": planification.derniere_collecte(),
+            "notif_possible": notifications.disponible(),
+            "email_configure": _email_configure(),
+            "destinataires": [d for pr in ProfilVeille.objects.filter(actif=True) for d in pr.liste_destinataires],
+            "modele": settings.CLAUDE_MODEL,
+        },
+    )
+
+
+@login_required
+@require_POST
+def changer_theme(request):
+    """Bouton du rail : passe au thème suivant (système → clair → sombre)."""
+    prefs, _ = PreferencesUtilisateur.objects.get_or_create(utilisateur=request.user)
+    ordre = [t for t, _ in PreferencesUtilisateur.THEMES]
+    demande = request.POST.get("theme")
+    prefs.theme = demande if demande in ordre else ordre[(ordre.index(prefs.theme) + 1) % len(ordre)]
+    prefs.save(update_fields=["theme"])
+    return _retour(request, "accueil")
+
+
+@login_required
+@require_POST
+def tester_notification(request):
+    titre, texte, sous_titre = notifications.message_collecte(notifications.resume_collecte(), couts.etat_budget())
+    if notifications.notifier(f"Test – {titre}", texte, sous_titre):
+        messages.success(request, "Notification envoyée : elle apparaît en haut à droite de l'écran du Mac.")
+    else:
+        messages.error(request, "Notification impossible : elle ne fonctionne que sur le Mac qui fait tourner FORM'AO.")
+    return redirect("parametres")
