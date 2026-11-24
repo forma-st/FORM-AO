@@ -10,7 +10,36 @@
 
   {# 1. Dossier de consultation #}
   <li class="etape {% if documents_dce %}faite{% else %}active{% endif %}">
-    <h2>Déposer le dossier de consultation</h2>
+    <h2>Dossier de consultation</h2>
+    {% if a.dce_en_cours %}
+      <div class="attente">Récupération du dossier sur la plateforme de l'acheteur… la page se met à jour toute seule.</div>
+    {% elif a.dce_statut == "OK" %}
+      <p class="signal reussi">{{ a.dce_message }} <span class="doux">({{ a.dce_recupere_le|date:"j F à H\hi" }}, retrait anonyme : relancez la récupération avant le dépôt pour avoir les éventuelles modifications.)</span></p>
+    {% elif a.dce_statut == "MANUEL" or a.dce_statut == "ERREUR" %}
+      <div class="signal attention">
+        <p><strong>Récupération automatique impossible.</strong> {{ a.dce_message }}</p>
+        {% if a.dce_lien %}<p><a class="btn secondaire petit" href="{{ a.dce_lien }}" target="_blank" rel="noopener">Ouvrir la plateforme</a>
+        <span class="doux">Téléchargez le ZIP, puis déposez-le ci-dessous.</span></p>{% endif %}
+      </div>
+    {% endif %}
+
+    {% if not a.dce_en_cours %}
+    <form method="post" class="recuperer-dce">{% csrf_token %}
+      <label for="url_dce">Lien de la consultation</label>
+      <div class="ligne-champ">
+        <input type="url" id="url_dce" name="url_dce" value="{{ lien_propose }}" placeholder="https://www.marches-publics.gouv.fr/entreprise/consultation/…" inputmode="url">
+        <button name="action" value="recuperer" class="btn {% if documents_dce %}secondaire {% endif %}">{% if documents_dce %}Récupérer à nouveau{% else %}Récupérer le DCE{% endif %}</button>
+      </div>
+      {% if ia_active and not r %}<p class="interrupteur"><input type="checkbox" id="analyser_apres" name="analyser" value="1" {% if not documents_dce %}checked{% endif %}>
+        <label for="analyser_apres">Puis lancer l'analyse par l'IA</label> <span class="cout">≈ {{ cout_analyse|floatformat:2 }} €</span></p>
+        {% include "veille/_depasser_budget.html" %}{% endif %}
+      <div class="aide">{% if lien_propose %}Lien trouvé dans l'avis : vérifiez-le ou remplacez-le.{% else %}Collez le lien de la plateforme de l'acheteur ou celui reçu par mail.{% endif %}
+        <details class="repli"><summary>Plateformes prises en charge</summary>
+        Automatique : PLACE et plateformes Atexo (Maximilien, Mégalis, demat-ampa, plateformes régionales…), liens directs vers des fichiers, Dropbox.
+        Manuel (captcha ou compte exigé) : AWS marches-publics.info, achatpublic, marches-securises, e-marchespublics, WeTransfer.</details></div>
+    </form>
+    {% endif %}
+
     {% if documents_dce %}
     <table class="tableau">
       <thead><tr><th>Document</th><th>Type</th><th>Pages</th><th><span class="sr">Retirer</span></th></tr></thead>
@@ -20,11 +49,9 @@
         <td><form method="post" action="{% url 'supprimer_document' d.pk %}">{% csrf_token %}<button class="lien-btn" aria-label="Retirer {{ d.nom }}">Retirer</button></form></td></tr>
       {% endfor %}</tbody>
     </table>
-    {% else %}
-    <p class="doux">Téléchargez le DCE sur la plateforme de l'acheteur (souvent un ZIP) et déposez-le ici. Sans document, l'analyse se fait sur le texte de l'avis.</p>
     {% endif %}
     <form method="post" enctype="multipart/form-data" class="depot actions">{% csrf_token %}
-      <label class="sr" for="fichiers">Fichiers du DCE</label>
+      <label class="doux" for="fichiers">Ou déposez les fichiers vous-même (ZIP, PDF, Word, Excel) :</label>
       <input type="file" id="fichiers" name="fichiers" multiple accept=".zip,.pdf,.docx,.xlsx,.xlsm,.txt,.csv,.doc,.xls,.odt">
       <button name="action" value="deposer" class="btn secondaire petit">Ajouter les fichiers</button>
     </form>

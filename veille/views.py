@@ -28,6 +28,7 @@ from .services import accueil as accueil_service
 from .services import annuaire, couts, documents, notifications, planification, prefiltre, scoring
 from .services import dce as dce_service
 from .services import memoire as memoire_service
+from .services import recuperation
 from .services.digest import echeances_proches, pieces_a_renouveler
 from .services.taches import lancer
 
@@ -182,6 +183,8 @@ def decider(request, pk):
         texte = f"Décision annulée : « {a.objet[:70]} » revient à l'étape « {a.get_statut_display()} »."
     # « annuler:<pk>:<statut précédent> » permet d'afficher un bouton Annuler dans le message
     tags = "" if request.POST.get("annulation") else f"annuler:{a.pk}:{precedent}"
+    if decision == "GO" and _lancer_recuperation(a, auto=True):
+        texte += " Récupération du dossier de consultation lancée."
     messages.success(request, texte, extra_tags=tags)
     return _retour(request, "tableau")
 
@@ -394,12 +397,46 @@ def dossier_zip(request, pk):
 # ---------------------------------------------------------------------------
 
 
+def _lancer_recuperation(
+    a: AvisMarche, url: str | None = None, analyser: bool = False, forcer: bool = False, auto: bool = False
+) -> bool:
+    """Lance la récupération du DCE en arrière-plan (au Go, ou depuis la page Réponse)."""
+    if a.dce_en_cours or (auto and (a.documents.exists() or a.dce_statut)):
+        return False
+    AvisMarche.objects.filter(pk=a.pk).update(dce_statut="EN_COURS", dce_message="", dce_recupere_le=timezone.now())
+    if analyser:
+        lancer(recuperation.recuperer_puis_analyser, a, url, forcer_budget=forcer)
+    else:
+        lancer(recuperation.recuperer, a, url)
+    return True
+
+
 @login_required
 def reponse(request, pk):
     a = get_object_or_404(AvisMarche, pk=pk)
     if request.method == "POST":
         action = request.POST.get("action")
-        if action == "deposer":
+        if action == "recuperer":
+            url = request.POST.get("url_dce", "").strip()
+            if url and not url.startswith(("http://", "https://")):
+                url = "https://" + url
+            try:
+                if url:
+                    forms.URLField().clean(url)
+            except forms.ValidationError:
+                messages.error(request, "Ce lien n'est pas une adresse web valide.")
+                return redirect("reponse", pk=pk)
+            if url != a.url_dce:
+                a.url_dce = url[:500]
+                a.save(update_fields=["url_dce"])
+            analyser = request.POST.get("analyser") == "1"
+            forcer = request.POST.get("depasser_budget") == "1"
+            if analyser and couts.budget_atteint() and not forcer:
+                analyser = False
+                messages.warning(request, "Budget IA atteint : le dossier sera récupéré, sans analyse automatique.")
+            if _lancer_recuperation(a, url or None, analyser=analyser, forcer=forcer) or a.dce_en_cours:
+                messages.success(request, "Récupération du dossier lancée" + (", puis analyse." if analyser else "."))
+        elif action == "deposer":
             ajoutes = dce_service.ajouter_fichiers(a, request.FILES.getlist("fichiers"))
             if ajoutes:
                 messages.success(request, f"{len(ajoutes)} document(s) ajouté(s) au dossier de consultation.")
@@ -429,7 +466,13 @@ def reponse(request, pk):
 
     analyse = getattr(a, "analyse", None)
     memoires = a.memoires.all()
-    en_cours = bool(analyse and analyse.statut == "EN_COURS") or memoires.filter(statut="EN_COURS").exists()
+    en_cours = (
+        a.dce_en_cours
+        or bool(analyse and analyse.statut == "EN_COURS")
+        or memoires.filter(statut="EN_COURS").exists()
+    )
+    documents_dce = a.documents.all()
+    lien_propose = a.url_dce or next(iter(recuperation.liens_candidats(a, distant=False)), "")
     controles = documents.controler_pieces(a)
     return render(
         request,
@@ -437,7 +480,8 @@ def reponse(request, pk):
         {
             "a": a,
             "page": "reponse",
-            "documents_dce": a.documents.all(),
+            "documents_dce": documents_dce,
+            "lien_propose": lien_propose,
             "analyse": analyse,
             "r": (analyse.resultat or {}) if analyse else {},
             "pieces_demandees": dce_service.rapprocher_pieces(analyse) if analyse and analyse.statut == "OK" else [],

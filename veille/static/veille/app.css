@@ -425,3 +425,14 @@ code { overflow-wrap: anywhere; font-size: .9em; background: var(--surface-2); b
   h1 { font-size: 25px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* Récupération automatique du DCE */
+.signal.reussi { border-left-color: var(--vert); margin: 0 0 12px; }
+.signal p { margin: 0 0 6px; } .signal p:last-child { margin-bottom: 0; }
+.recuperer-dce { margin: 0 0 14px; }
+.recuperer-dce > label { display: block; font-weight: 600; margin-bottom: 6px; }
+.recuperer-dce .ligne-champ { display: flex; gap: 8px; flex-wrap: wrap; }
+.recuperer-dce .ligne-champ input { flex: 1 1 280px; min-width: 0; }
+.recuperer-dce .interrupteur { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; flex-wrap: wrap; }
+.recuperer-dce .interrupteur label { margin: 0; }
+.recuperer-dce .aide { display: block; margin-top: 8px; }

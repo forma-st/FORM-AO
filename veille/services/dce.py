@@ -120,14 +120,34 @@ def ajouter_fichiers(avis: AvisMarche, fichiers) -> list[DocumentDCE]:
     return ajoutes
 
 
-def _depuis_zip(avis: AvisMarche, contenu: bytes, profondeur: int = 0) -> list[DocumentDCE]:
+def ajouter_contenu(avis: AvisMarche, nom: str, contenu: bytes, ignorer: set[str] | None = None) -> list[DocumentDCE]:
+    """Ajoute un fichier téléchargé (ZIP décompressé). ``ignorer`` : noms déjà présents, non repris."""
+    if nom.lower().endswith(".zip") or contenu[:4] == b"PK\x03\x04" and not nom.lower().endswith((".docx", ".xlsx", ".xlsm", ".odt", ".ods")):
+        try:
+            return _depuis_zip(avis, contenu, ignorer=ignorer)
+        except zipfile.BadZipFile:
+            log.warning("Archive illisible : %s", nom)
+            return []
+    if ignorer and nom in ignorer:
+        return []
+    d = _enregistrer(avis, nom, contenu)
+    return [d] if d else []
+
+
+def _depuis_zip(avis: AvisMarche, contenu: bytes, profondeur: int = 0, ignorer: set[str] | None = None) -> list[DocumentDCE]:
     ajoutes = []
     with zipfile.ZipFile(io.BytesIO(contenu)) as z:
         total = 0
         for info in z.infolist():
             if info.is_dir():
                 continue
-            chemin = PurePosixPath(info.filename.replace("\\", "/"))
+            nom_zip = info.filename
+            if not info.flag_bits & 0x800:  # noms en UTF-8 sans le drapeau (archives Windows)
+                try:
+                    nom_zip = nom_zip.encode("cp437").decode("utf-8")
+                except (UnicodeEncodeError, UnicodeDecodeError):
+                    pass
+            chemin = PurePosixPath(nom_zip.replace("\\", "/"))
             if ".." in chemin.parts or chemin.name.startswith(".") or "__MACOSX" in chemin.parts:
                 continue
             total += info.file_size
@@ -136,7 +156,9 @@ def _depuis_zip(avis: AvisMarche, contenu: bytes, profondeur: int = 0) -> list[D
                 break
             data = z.read(info)
             if chemin.suffix.lower() == ".zip" and profondeur < 2:
-                ajoutes += _depuis_zip(avis, data, profondeur + 1)
+                ajoutes += _depuis_zip(avis, data, profondeur + 1, ignorer)
+                continue
+            if ignorer and chemin.name in ignorer:
                 continue
             d = _enregistrer(avis, chemin.name, data)
             if d:

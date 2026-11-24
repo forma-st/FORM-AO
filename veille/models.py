@@ -1,4 +1,4 @@
-from datetime import time
+from datetime import time, timedelta
 from decimal import Decimal
 
 from django.db import models
@@ -375,6 +375,17 @@ class AvisMarche(models.Model):
         "Lots visés", max_length=200, blank=True, help_text="Ex. « 2, 5 ». Vide = marché global."
     )
 
+    # Récupération automatique du dossier de consultation
+    STATUTS_DCE = [("EN_COURS", "En cours"), ("OK", "Récupéré"), ("MANUEL", "Retrait manuel"), ("ERREUR", "Erreur")]
+    url_dce = models.URLField(
+        "Lien du dossier de consultation", max_length=500, blank=True,
+        help_text="Page de la consultation sur la plateforme de l'acheteur, ou lien reçu par mail.",
+    )
+    dce_statut = models.CharField(max_length=10, choices=STATUTS_DCE, blank=True)
+    dce_message = models.TextField(blank=True)
+    dce_lien = models.URLField(max_length=500, blank=True)
+    dce_recupere_le = models.DateTimeField(null=True, blank=True)
+
     cree_le = models.DateTimeField(auto_now_add=True)
     modifie_le = models.DateTimeField(auto_now=True)
 
@@ -394,6 +405,13 @@ class AvisMarche(models.Model):
         if not self.date_limite:
             return None
         return (self.date_limite.date() - timezone.localdate()).days
+
+    @property
+    def dce_en_cours(self) -> bool:
+        """Récupération en cours (au-delà de 15 minutes, on la considère interrompue)."""
+        return self.dce_statut == "EN_COURS" and bool(
+            self.dce_recupere_le and timezone.now() - self.dce_recupere_le < timedelta(minutes=15)
+        )
 
     @property
     def liste_cpv(self):

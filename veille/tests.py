@@ -1081,3 +1081,129 @@ class RepriseTests(TestCase):
         nouveau = AvisMarche.objects.get(source_id="2")
         self.assertEqual((nouveau.statut, nouveau.profil), ("NO_GO", p))
         self.assertEqual(AnalyseDCE.objects.get().avis, ici)
+
+
+# ---------------------------------------------------------------------------
+# Récupération automatique du DCE
+# ---------------------------------------------------------------------------
+
+import httpx  # noqa: E402
+
+from .services import recuperation  # noqa: E402
+
+
+def _zip_bytes(fichiers: dict) -> bytes:
+    buf = _io.BytesIO()
+    with _zipfile.ZipFile(buf, "w") as z:
+        for nom, contenu in fichiers.items():
+            z.writestr(nom, contenu)
+    return buf.getvalue()
+
+
+@override_settings(MEDIA_ROOT=MEDIA_TEST)
+class RecuperationDCETests(TestCase):
+    def setUp(self):
+        self.a = avis(objet="Formations SST", acheteur="Ville")
+        self.a.save()
+        # pas de résolution DNS pendant les tests
+        p = mock.patch("veille.services.recuperation._verifier_hote")
+        p.start()
+        self.addCleanup(p.stop)
+
+    def test_liens_eforms_fns_et_texte(self):
+        self.a.brut = {"donnees": {"EFORMS": {"cac:CallForTendersDocumentReference": {"cac:Attachment": {
+            "cac:ExternalReference": {"cbc:URI": "https://demat.exemple.fr/entreprise/consultation/42?orgAcronyme=x&amp;a=1"}}}},
+            "FNSimple": {"initial": {"communication": {"urlProfilAch": "https://www.boamp.fr"}}}}}
+        self.a.texte = "Dossier : www.exemple.org/dce.zip. Recours : https://paris.tribunal-administratif.fr"
+        liens = recuperation.liens_candidats(self.a, distant=False)
+        self.assertEqual(liens, ["https://demat.exemple.fr/entreprise/consultation/42?orgAcronyme=x&a=1",
+                                 "https://www.exemple.org/dce.zip"])
+
+    def test_detection_atexo(self):
+        self.assertEqual(recuperation._atexo("https://www.marches-publics.gouv.fr/entreprise/consultation/3102522?orgAcronyme=a4n"),
+                         ("https://www.marches-publics.gouv.fr", "3102522", "a4n"))
+        self.assertEqual(recuperation._atexo("https://x.fr/?page=Entreprise.EntrepriseAdvancedSearch&AllCons&id=99&orgAcronyme=f2h")[1:],
+                         ("99", "f2h"))
+        self.assertIsNone(recuperation._atexo("https://www.exemple.org/dce.zip"))
+
+    def test_plateforme_manuelle_et_page_accueil(self):
+        with self.assertRaisesMessage(recuperation.RecuperationImpossible, "captcha"):
+            recuperation.telecharger_depuis("https://www.marches-publics.info/mpiaws/index.cfm?IDM=1")
+        with self.assertRaisesMessage(recuperation.RecuperationImpossible, "accueil"):
+            recuperation.telecharger_depuis("https://www.plateforme.fr/")
+
+    def _transport(self, routes):
+        def repondre(req):
+            for motif, reponse in routes.items():
+                if motif in str(req.url):
+                    return reponse()
+            return httpx.Response(404)
+        vrai = httpx.Client
+        return mock.patch("veille.services.recuperation._client",
+                          lambda: vrai(transport=httpx.MockTransport(repondre), follow_redirects=True))
+
+    def test_lien_direct_et_page_listant_les_fichiers(self):
+        zip_ = _zip_bytes({"RC.pdf": b"%PDF-1.4", "CCTP.docx": _docx_bytes("Former 120 agents")})
+        routes = {
+            "/dce.zip": lambda: httpx.Response(200, content=zip_, headers={"content-type": "application/zip"}),
+            "/page": lambda: httpx.Response(200, html='<a href="pieces/cctp.pdf">CCTP</a><a href="/x.html">x</a>'),
+            "/pieces/cctp.pdf": lambda: httpx.Response(200, content=b"%PDF", headers={"content-type": "application/pdf"}),
+        }
+        with self._transport(routes):
+            self.assertEqual([f.nom for f in recuperation.telecharger_depuis("https://ex.fr/dce.zip")], ["dce.zip"])
+            self.assertEqual([f.nom for f in recuperation.telecharger_depuis("https://ex.fr/page")], ["cctp.pdf"])
+
+    def test_recuperer_ajoute_les_documents_sans_doublon(self):
+        zip_ = _zip_bytes({"RC_consultation.pdf": b"%PDF-1.4", "CCTP.docx": _docx_bytes("Former 120 agents")})
+        self.a.url_dce = "https://ex.fr/consultation/1"
+        self.a.save()
+        with mock.patch.object(recuperation, "telecharger_depuis", return_value=[recuperation.Fichier("dce.zip", zip_)]):
+            a = recuperation.recuperer(self.a)
+            self.assertEqual(a.dce_statut, "OK")
+            self.assertEqual(sorted(a.documents.values_list("type", flat=True)), ["CCTP", "RC"])
+            a = recuperation.recuperer(self.a)
+        self.assertEqual(a.documents.count(), 2)
+        self.assertIn("aucun document nouveau", a.dce_message)
+
+    def test_recuperer_sans_lien_ou_plateforme_manuelle(self):
+        a = recuperation.recuperer(self.a)
+        self.assertEqual(a.dce_statut, "MANUEL")
+        self.assertIn("Aucun lien", a.dce_message)
+        a = recuperation.recuperer(self.a, "https://www.achatpublic.com/sdm/ent/gen/ent_detail.do?PCSLID=X")
+        self.assertEqual((a.dce_statut, a.dce_lien), ("MANUEL", "https://www.achatpublic.com/sdm/ent/gen/ent_detail.do?PCSLID=X"))
+
+
+class RecuperationVuesTests(TestCase):
+    def setUp(self):
+        self.client.force_login(User.objects.create_superuser("admin", "a@example.com", "x"))
+        Entreprise.objects.create(raison_sociale="FORMA'ST")
+        self.a = avis(objet="Formations SST", acheteur="Ville", statut="A_QUALIFIER")
+        self.a.save()
+
+    def test_go_lance_la_recuperation_une_seule_fois(self):
+        with mock.patch("veille.views.lancer") as lancer:
+            self.client.post(f"/avis/{self.a.pk}/decider/", {"decision": "GO"})
+            self.a.refresh_from_db()
+            self.assertEqual(self.a.dce_statut, "EN_COURS")
+            self.assertTrue(self.a.dce_en_cours)
+            self.client.post(f"/avis/{self.a.pk}/decider/", {"decision": "GO"})
+        lancer.assert_called_once()
+
+    def test_bouton_recuperer_avec_lien_colle(self):
+        with mock.patch("veille.views.lancer") as lancer:
+            r = self.client.post(f"/avis/{self.a.pk}/reponse/",
+                                 {"action": "recuperer", "url_dce": "www.ex.fr/consultation/1"})
+        self.assertEqual(r.status_code, 302)
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.url_dce, "https://www.ex.fr/consultation/1")
+        self.assertEqual(lancer.call_args.args[2], "https://www.ex.fr/consultation/1")
+        page = self.client.get(f"/avis/{self.a.pk}/reponse/")
+        self.assertContains(page, "Récupération du dossier sur la plateforme")
+        self.assertContains(page, 'http-equiv="refresh"')
+
+    def test_echec_affiche_le_lien_de_la_plateforme(self):
+        AvisMarche.objects.filter(pk=self.a.pk).update(
+            dce_statut="MANUEL", dce_message="Retrait manuel : captcha.", dce_lien="https://www.marches-publics.info/x")
+        page = self.client.get(f"/avis/{self.a.pk}/reponse/")
+        self.assertContains(page, "Ouvrir la plateforme")
+        self.assertContains(page, "Récupérer le DCE")
