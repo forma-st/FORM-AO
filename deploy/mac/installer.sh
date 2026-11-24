@@ -69,6 +69,12 @@ EOF
   echo ".env créé."
 else
   echo ".env déjà présent : conservé."
+  # .env d'un essai en développement : on le passe en réglages de production
+  sed -i '' -e 's/^DJANGO_DEBUG=1$/DJANGO_DEBUG=0/' .env
+  if grep -q "^DJANGO_ALLOWED_HOSTS=" .env && ! grep -q "^DJANGO_ALLOWED_HOSTS=.*\.ts\.net" .env; then
+    sed -i '' -e 's/^\(DJANGO_ALLOWED_HOSTS=.*\)$/\1,.ts.net/' .env
+  fi
+  grep -q "^DJANGO_CSRF_TRUSTED_ORIGINS=" .env || echo "DJANGO_CSRF_TRUSTED_ORIGINS=https://*.ts.net" >> .env
   MAIL_DEST=""
 fi
 
