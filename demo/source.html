@@ -1,0 +1,782 @@
+<title>FORM'AO – démo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/*APP_CSS*/
+
+/* ---------- Ajouts propres à la démo ---------- */
+.bandeau-demo { display:flex; gap:8px 14px; align-items:center; flex-wrap:wrap; font-size:14px; padding:9px 14px; margin-bottom:18px; border-radius:8px; background:var(--surface); border:1px dashed var(--trait-fort); color:var(--encre-douce); }
+.bandeau-demo strong { font-family:var(--titre); color:var(--encre); }
+.bandeau-demo .lien-btn { margin-left:auto; }
+dialog.apercu { border:1px solid var(--trait-fort); border-radius:12px; padding:0; background:var(--surface); color:var(--encre); width:min(880px, calc(100vw - 32px)); max-height:calc(100vh - 48px); }
+dialog.apercu::backdrop { background:rgba(10,17,14,.55); }
+.apercu-tete { display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; padding:12px 18px; border-bottom:1px solid var(--trait); position:sticky; top:0; background:var(--surface); }
+.apercu-corps { padding:18px 22px; overflow:auto; font-size:15px; }
+.apercu-corps table { border-collapse:collapse; margin:8px 0; width:100%; }
+.apercu-corps td { border:1px solid var(--trait); padding:5px 8px; font-size:14px; vertical-align:top; }
+.apercu-corps h3 { font-size:20px; margin:16px 0 6px; } .apercu-corps h4 { font-family:var(--titre); font-size:16px; margin:14px 0 4px; }
+mark { background:var(--surlignage); color:var(--encre); padding:0 3px; border-radius:3px; }
+.rendu { font-size:15px; line-height:1.6; }
+.rendu h2 { font-size:20px; margin:22px 0 8px; } .rendu h3 { font-size:17px; margin:16px 0 6px; }
+.rendu .tw { overflow-x:auto; margin:8px 0; }
+.rendu table { border-collapse:collapse; width:100%; font-size:14px; }
+.rendu th, .rendu td { border:1px solid var(--trait); padding:6px 8px; text-align:left; vertical-align:top; }
+.flux-ia { border:1px solid var(--trait); border-radius:8px; padding:14px 16px; background:var(--surface-2); max-height:520px; overflow:auto; margin-top:10px; }
+.lien-btn[disabled] { opacity:.5; cursor:default; }
+.chargement { display:flex; gap:10px; align-items:center; padding:60px 0; justify-content:center; color:var(--encre-douce); }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<a class="evitement" href="#contenu">Aller au contenu</a>
+<div class="app">
+  <nav class="rail" aria-label="Navigation principale">
+    <a class="marque" href="#accueil">
+      <span class="marque-signe" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 8.5l4 4 8-9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span class="marque-nom">FORM'AO<small>Appels d'offres FORMA'ST</small></span>
+    </a>
+    <a class="nav" href="#accueil" data-nav="accueil"><span data-icone="accueil"></span><span class="nav-libelle">Accueil</span></a>
+    <a class="nav" href="#ao" data-nav="ao"><span data-icone="ao"></span><span class="nav-libelle">Appels d'offres</span><span class="compteur vif" id="nav-a-trier" hidden></span></a>
+    <a class="nav" href="#reponses" data-nav="reponses"><span data-icone="reponses"></span><span class="nav-libelle">Réponses</span><span class="compteur" id="nav-en-cours" hidden></span></a>
+    <a class="nav" href="#coffre" data-nav="coffre"><span data-icone="coffre"></span><span class="nav-libelle">Coffre-fort</span></a>
+    <a class="nav" href="#profil" data-nav="profil"><span data-icone="profil"></span><span class="nav-libelle">Profil</span></a>
+    <div class="rail-bas">
+      <div class="ia" id="ia-etat">IA : vérification…</div>
+      <button class="lien-btn" type="button" id="reset">Réinitialiser la démo</button>
+    </div>
+  </nav>
+  <div class="principal">
+    <header class="barre-haut">
+      <form class="recherche-globale" role="search" id="form-recherche">
+        <label class="sr" for="recherche">Rechercher un appel d'offres</label>
+        <span data-icone="recherche"></span>
+        <input type="search" id="recherche" placeholder="Rechercher un appel d'offres, un acheteur…" autocomplete="off">
+        <kbd class="raccourci" title="Raccourci clavier">/</kbd>
+      </form>
+      <a class="btn" href="#ajouter"><span data-icone="plus"></span><span class="masque-mobile">Consultation privée</span></a>
+      <span class="utilisateur masque-mobile">Démo</span>
+    </header>
+    <main class="contenu" id="contenu" tabindex="-1">
+      <ul class="messages" role="status" id="messages"></ul>
+      <div id="vue"><div class="chargement"><span class="attente" style="background:none;padding:0">Chargement des données…</span></div></div>
+    </main>
+  </div>
+</div>
+<dialog class="apercu" id="apercu"><div class="apercu-tete"><strong id="apercu-titre"></strong><div class="actions" style="margin:0" id="apercu-actions"></div></div><div class="apercu-corps" id="apercu-corps"></div></dialog>
+
+<script>
+"use strict";
+/* ================= Constantes ================= */
+const CLE = "formao-demo-v2";
+const STATUTS = [["DETECTE","Détecté"],["A_QUALIFIER","À qualifier"],["GO","Go"],["NO_GO","No-Go"],["REDACTION","En rédaction"],["DEPOSE","Déposé"],["GAGNE","Gagné"],["PERDU","Perdu"],["SANS_SUITE","Sans suite"],["ECARTE","Écarté (hors cible)"]];
+const ONGLETS = [["a-trier","À trier",["DETECTE","A_QUALIFIER"]],["go","Go",["GO"]],["en-cours","En cours",["REDACTION","DEPOSE"]],["resultats","Résultats",["GAGNE","PERDU","SANS_SUITE"]],["nogo","No-Go",["NO_GO"]]];
+const PIPELINE = ["A_QUALIFIER","GO","REDACTION","DEPOSE","GAGNE","PERDU"];
+const SOURCES = {BOAMP:"BOAMP", TED:"TED (JOUE)", PROFIL:"Profil acheteur", PRIVE:"Consultation privée", MANUEL:"Saisie manuelle"};
+const ICONES = {
+  accueil:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  ao:'<path d="M4 6h16M4 12h16M4 18h10"/>',
+  reponses:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+  coffre:'<rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M12 9.5V8M3 9h2M3 16h2"/>',
+  profil:'<path d="M3 21V9l9-5 9 5v12"/><path d="M9 21v-6h6v6"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  recherche:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  reglages:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>'
+};
+const icone = n => `<svg class="icone" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[n] || ""}</svg>`;
+
+let BASE = null, S = null, sample = null, downloads = null;
+let recherche = "", persoOuvert = false;
+
+/* ================= Utilitaires ================= */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const trunc = (s, n) => { s = String(s ?? ""); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
+function lisible(t) { t = String(t || "").split(/\s+/).join(" ").trim(); const l = [...t].filter(c => /\p{L}/u.test(c)); if (l.length && l.filter(c => c === c.toUpperCase() && c !== c.toLowerCase()).length / l.length > .8) { t = t.toLowerCase(); t = t.charAt(0).toUpperCase() + t.slice(1); } return t; }
+function joursRestants(iso) { if (!iso) return null; const d = new Date(iso); d.setHours(0,0,0,0); const a = new Date(); a.setHours(0,0,0,0); return Math.round((d - a) / 864e5); }
+function jMoins(j) { if (j == null) return ""; if (j < 0) return "Clos"; if (j === 0) return "Auj."; return "J-" + j; }
+const ouvert = a => !a.date_limite || new Date(a.date_limite) >= new Date();
+const couleur = s => s == null ? "gris" : s >= 70 ? "vert" : s >= 45 ? "orange" : "rouge";
+const libReco = r => ({GO:"Go recommandé", A_ETUDIER:"À étudier", NO_GO:"No-Go recommandé"})[r] || "Non évalué";
+const libStatut = c => (STATUTS.find(s => s[0] === c) || [c, c])[1];
+function euros(v) { if (v == null || v === "") return ""; v = Number(v); if (v >= 1e6) return (v / 1e6).toFixed(1).replace(".", ",") + " M€ HT"; if (v >= 1000) return Math.round(v / 1000) + " k€ HT"; return Math.round(v) + " € HT"; }
+function deps(c) { c = String(c || "").split(",").filter(Boolean); if (!c.length) return ""; return c.length > 4 ? c.length + " départements" : "dép. " + c.join(", "); }
+const fdate = (iso, opt) => iso ? new Date(iso).toLocaleDateString("fr-FR", opt || {}) : "";
+const fdh = iso => iso ? new Date(iso).toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"}) + ", " + new Date(iso).toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"}).replace(":", "h") : "";
+const plaque = (s, cls = "") => `<div class="plaque ${cls} ${couleur(s)}" title="Score ${s ?? "non calculé"}/100">${s ?? "?"}</div>`;
+function md(t) { const h = window.marked ? marked.parse(t || "") : "<pre>" + esc(t) + "</pre>"; const s = window.DOMPurify ? DOMPurify.sanitize(h) : esc(t); return s.replace(/<table/g, '<div class="tw"><table').replace(/<\/table>/g, "</table></div>").replace(/\[À COMPLÉTER[^\]]*\]/g, m => `<mark>${m}</mark>`); }
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const nbACompleter = t => (String(t || "").match(/\[À COMPLÉTER/g) || []).length;
+
+/* ================= État ================= */
+function etatInitial() {
+  const memoires = {};
+  for (const [id, m] of Object.entries(BASE.memoires)) memoires[id] = { contenu: m.contenu, cree_le: m.cree_le, consignes: m.consignes, original: true };
+  const analyses = {};
+  for (const [id, x] of Object.entries(BASE.analyses)) analyses[id] = { resultat: x.resultat, original: true };
+  return {
+    avis: BASE.avis.map(a => { const c = { ...a }; delete c.documents; return c; }),
+    entreprise: structuredClone(BASE.entreprise), pieces: [], analyses, memoires, dce: {},
+    widgets: BASE.widgets.map(w => ({ cle: w.cle, visible: true, large: w.large })), prochainId: 900000
+  };
+}
+function charger() { try { const s = JSON.parse(localStorage.getItem(CLE) || "null"); if (s && s.avis) return s; } catch (e) {} return etatInitial(); }
+function sauver() { try { localStorage.setItem(CLE, JSON.stringify(S)); } catch (e) { message("Le navigateur n'a plus de place : cette modification ne sera pas gardée au prochain chargement.", "warning"); } }
+const avisPar = id => S.avis.find(a => String(a.id) === String(id));
+const docsDe = a => (BASE.avis.find(b => b.id === a.id) || {}).documents || {};
+
+/* ================= Messages (avec Annuler) ================= */
+function message(texte, niveau = "success", annuler = null) {
+  const li = document.createElement("li"); li.className = niveau;
+  li.innerHTML = `<span>${esc(texte)}</span>${annuler ? '<button class="lien-btn" type="button">Annuler</button>' : ""}<button class="fermer" type="button" aria-label="Fermer le message">×</button>`;
+  const fermer = () => { li.classList.add("sort"); setTimeout(() => li.remove(), 250); };
+  li.querySelector(".fermer").onclick = fermer;
+  if (annuler) li.querySelector(".lien-btn").onclick = () => { fermer(); annuler(); };
+  else setTimeout(fermer, 6000);
+  $("#messages").prepend(li);
+  while ($("#messages").children.length > 3) $("#messages").lastElementChild.remove();
+}
+
+/* ================= Capacités claude.ai ================= */
+function capacites() {
+  if (window.claude && claude.use) {
+    claude.use("sample").then(s => { sample = s; majIA(); }).catch(majIA);
+    claude.use("downloads").then(d => { downloads = d; }).catch(() => {});
+  }
+  setTimeout(majIA, 11000); majIA();
+}
+function majIA() { const el = $("#ia-etat"); el.classList.toggle("on", !!sample); el.textContent = sample ? "IA active (Claude)" : "IA inactive : score par règles"; }
+function erreurIA(e) {
+  const c = e && e.code;
+  if (c === "not_granted" || c === "sampling_disabled") { sample = null; majIA(); return "L'IA n'a pas été autorisée pour cette page. Le reste de la démo fonctionne sans elle."; }
+  if (c === "rate_limited") return "Trop de demandes à l'IA pour l'instant. Réessayez dans un moment.";
+  if (c === "cancelled") return "Arrêté.";
+  if (c === "invalid_json") return "La réponse de l'IA n'était pas au bon format. Relancez.";
+  return "L'IA n'a pas répondu. Relancez dans un instant.";
+}
+async function telecharger(nom, data) {
+  if (!downloads) { message("Le téléchargement n'est pas disponible dans cette vue : ouvrez la démo sur claude.ai.", "warning"); return; }
+  try { await downloads.save({ filename: nom, data }); message("Fichier enregistré : " + nom); }
+  catch (e) { if (e && e.code !== "declined") message("Téléchargement impossible (" + (e.code || "erreur") + ").", "error"); }
+}
+
+/* ================= Navigation ================= */
+function route() {
+  const h = (location.hash || "#accueil").slice(1);
+  const m = h.match(/^([a-z]+)(?:-(.+))?$/) || ["", "accueil"];
+  const v = m[1], arg = m[2];
+  const actif = { accueil:"accueil", ao:"ao", recherche:"ao", avis:"ao", reponses:"reponses", reponse:"reponses", memoire:"reponses", coffre:"coffre", profil:"profil" }[v];
+  $$(".rail a.nav").forEach(a => a.dataset.nav === actif ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
+  const vues = { accueil: () => vueAccueil(arg === "perso"), ao: () => vueTableau(arg || "a-trier"), recherche: () => vueTableau("a-trier", true),
+    avis: () => vueAvis(arg), reponse: () => vueReponse(arg), memoire: () => vueMemoire(arg), reponses: vuePipeline, coffre: vueCoffre, profil: vueProfil, ajouter: vueAjouter };
+  (vues[v] || vues.accueil)();
+  compteursNav();
+  if (!(v === "accueil" && arg === "perso")) window.scrollTo(0, 0);
+}
+function compteursNav() {
+  const t = S.avis.filter(a => ["DETECTE","A_QUALIFIER"].includes(a.statut) && ouvert(a)).length;
+  const c = S.avis.filter(a => ["GO","REDACTION","DEPOSE"].includes(a.statut)).length;
+  const n1 = $("#nav-a-trier"), n2 = $("#nav-en-cours");
+  n1.hidden = !t; n1.textContent = t; n1.title = t + " à trier"; n2.hidden = !c; n2.textContent = c;
+}
+const vue = html => { $("#vue").innerHTML = html; activerDecisions(); };
+
+/* ================= Décision Go / No-Go ================= */
+function decision(a) {
+  return `<div class="decision" data-id="${a.id}">
+    ${a.statut !== "GO" ? `<button class="btn petit" type="button" data-dec="GO">Go</button>` : ""}
+    ${a.statut !== "NO_GO" ? `<details class="nogo-motif"><summary class="btn nogo petit">No-Go</summary><div class="pop"><form data-nogo>
+      <label for="motif-${a.id}">Pourquoi ? (aide à mieux trier ensuite)</label>
+      <input id="motif-${a.id}" name="motif" placeholder="ex. hors métier, trop gros, délai trop court">
+      <button class="btn nogo petit">Classer No-Go</button></form></div></details>` : ""}
+    ${a.statut === "GO" || a.statut === "NO_GO" ? `<button class="btn secondaire petit" type="button" data-dec="A_QUALIFIER" title="Remettre dans « À trier »">Annuler</button>` : ""}
+  </div>`;
+}
+function decider(id, dec, motif, annulation) {
+  const a = avisPar(id); if (!a) return;
+  const prec = a.statut; a.statut = dec; if (motif) a.decision_motif = motif; sauver();
+  const lib = { GO: "Go", NO_GO: "No-Go", A_QUALIFIER: "à trier" }[dec] || libStatut(dec);
+  if (annulation) message(`Décision annulée : « ${trunc(a.objet, 70)} » revient à l'étape « ${libStatut(dec)} ».`);
+  else message(`« ${trunc(a.objet, 70)} » classé ${lib}.`, "success", () => decider(id, prec, null, true));
+  route();
+}
+function activerDecisions() {
+  $$("#vue .decision").forEach(d => {
+    const id = d.dataset.id;
+    $$("[data-dec]", d).forEach(b => b.onclick = () => decider(id, b.dataset.dec));
+    const f = $("[data-nogo]", d); if (f) f.onsubmit = e => { e.preventDefault(); decider(id, "NO_GO", f.motif.value.trim()); };
+    const det = $("details.nogo-motif", d);
+    if (det) det.addEventListener("toggle", () => { if (det.open) { $$("details.nogo-motif[open]").forEach(x => { if (x !== det) x.open = false; }); setTimeout(() => $("input", det).focus(), 0); } });
+  });
+}
+document.addEventListener("click", e => $$("details.nogo-motif[open]").forEach(d => { if (!d.contains(e.target)) d.open = false; }));
+
+/* ================= Accueil ================= */
+const W = {};
+W.a_trier = () => {
+  const qs = S.avis.filter(a => ["DETECTE","A_QUALIFIER"].includes(a.statut) && ouvert(a));
+  const liste = qs.filter(a => a.recommandation !== "NO_GO").sort((x, y) => (y.score ?? -1) - (x.score ?? -1)).slice(0, 5);
+  const go = qs.filter(a => a.recommandation === "GO").length, ng = qs.filter(a => a.recommandation === "NO_GO" && a.score_modele !== "règles").length;
+  return { lien: `<a href="#ao">Tout voir (${qs.length})</a>`, html: liste.length ? `
+    <div class="resume-tri"><p class="doux">${qs.length} avis en attente de décision, dont ${go} Go recommandé${go > 1 ? "s" : ""} par l'IA${ng ? ` et ${ng} que l'IA propose d'écarter` : ""}.</p>
+    ${ng ? `<button class="btn secondaire petit" type="button" data-ecarter>Écarter les ${ng} No-Go recommandés</button>` : ""}</div>
+    <ul class="mini-liste">${liste.map(a => { const j = joursRestants(a.date_limite); return `<li>${plaque(a.score, "petite")}
+      <div class="mini-texte"><a class="mini-titre" href="#avis-${a.id}">${esc(trunc(lisible(a.objet), 95))}</a><span class="doux">${esc(trunc(a.acheteur, 45))}${a.date_limite ? `, <span class="${j < 10 ? "urgent" : ""}">${jMoins(j)}</span>` : ""}</span></div>
+      ${decision(a)}</li>`; }).join("")}</ul>` : `<div class="vide-widget"><strong>Tout est trié</strong>Les nouveaux avis arrivent chaque matin, ou tout de suite avec « Collecter maintenant ».</div>` };
+};
+W.echeances = () => {
+  const l = S.avis.filter(a => ["GO","REDACTION","DEPOSE"].includes(a.statut) && a.date_limite && ouvert(a)).sort((x, y) => new Date(x.date_limite) - new Date(y.date_limite)).slice(0, 6);
+  return { lien: `<a href="#reponses">Toutes les réponses</a>`, html: l.length ? `<ol class="frise">${l.map(a => { const j = joursRestants(a.date_limite); return `<li class="${j < 7 ? "proche" : ""}"><span class="frise-j">${jMoins(j)}</span><div><a href="#reponse-${a.id}">${esc(trunc(lisible(a.objet), 70))}</a><span class="doux">${new Date(a.date_limite).toLocaleDateString("fr-FR", {weekday:"long", day:"numeric", month:"long"})}, ${new Date(a.date_limite).toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"}).replace(":", "h")} – ${libStatut(a.statut)}</span></div></li>`; }).join("")}</ol>`
+    : `<div class="vide-widget"><strong>Aucune échéance</strong>Classez un appel d'offres en Go pour suivre sa date limite ici.</div>` };
+};
+W.reponses = () => {
+  const et = [["GO","Go"],["REDACTION","En rédaction"],["DEPOSE","Déposé"]].map(([c, l]) => ({ c, l, n: S.avis.filter(a => a.statut === c).length }));
+  const tot = et.reduce((s, e) => s + e.n, 0);
+  const l = S.avis.filter(a => ["GO","REDACTION","DEPOSE"].includes(a.statut)).sort((x, y) => new Date(x.date_limite || "2999") - new Date(y.date_limite || "2999")).slice(0, 4);
+  return { lien: `<a href="#reponses">Toutes les réponses</a>`, html: tot ? `
+    <div class="barre-etapes" role="img" aria-label="${et.map(e => e.l + " : " + e.n).join(", ")}">${et.filter(e => e.n).map(e => `<span class="seg seg-${e.c}" style="flex:${e.n}"></span>`).join("")}</div>
+    <ul class="legende">${et.map(e => `<li><span class="pastille-c seg-${e.c}"></span>${e.l} <b>${e.n}</b></li>`).join("")}</ul>
+    <ul class="mini-liste compacte">${l.map(a => `<li><div class="mini-texte"><a class="mini-titre" href="#reponse-${a.id}">${esc(trunc(lisible(a.objet), 70))}</a><span class="doux">${libStatut(a.statut)}${a.date_limite ? ", " + jMoins(joursRestants(a.date_limite)) : ""}${a.responsable ? ", " + esc(a.responsable) : ""}</span></div></li>`).join("")}</ul>`
+    : `<div class="vide-widget"><strong>Aucune réponse en cours</strong>Les dossiers en Go apparaîtront ici jusqu'au dépôt.</div>` };
+};
+W.activite = () => {
+  const jours = 14, fin = new Date(BASE.exporte_le); fin.setHours(0,0,0,0);
+  const debut = new Date(fin); debut.setDate(debut.getDate() - jours + 1);
+  const serie = [];
+  for (let i = 0; i < jours; i++) { const d = new Date(debut); d.setDate(d.getDate() + i); const k = d.toISOString().slice(0, 10);
+    const l = S.avis.filter(a => (a.date_publication || "").slice(0, 10) === k); serie.push({ d, retenus: l.length, go: l.filter(a => a.recommandation === "GO").length }); }
+  const maxi = Math.max(1, ...serie.map(s => s.retenus)), L = 560, H = 130, M = 18, pas = L / jours;
+  const lus = BASE.collectes.reduce((s, c) => s + (c.nb_lus || 0), 0);
+  const barres = serie.map((s, i) => { const h = (H - M) * s.retenus / maxi, hg = (H - M) * s.go / maxi, x = (i * pas + 2).toFixed(1), l = (pas - 4).toFixed(1), we = [0, 6].includes(s.d.getDay());
+    return `<rect x="${x}" y="${(H - M - h).toFixed(1)}" width="${l}" height="${h.toFixed(1)}" rx="2" class="barre-retenus ${we ? "weekend" : ""}"><title>${s.d.toLocaleDateString("fr-FR", {weekday:"long", day:"numeric", month:"long"})} : ${s.retenus} retenu${s.retenus > 1 ? "s" : ""}, ${s.go} Go</title></rect>${hg ? `<rect x="${x}" y="${(H - M - hg).toFixed(1)}" width="${l}" height="${hg.toFixed(1)}" rx="2" class="barre-go"/>` : ""}`; }).join("");
+  return { html: `<dl class="indicateurs"><div><dt>Avis lus</dt><dd>${lus.toLocaleString("fr-FR")}</dd></div><div><dt>Retenus</dt><dd>${serie.reduce((s, x) => s + x.retenus, 0)}</dd></div><div><dt>Go recommandés</dt><dd>${serie.reduce((s, x) => s + x.go, 0)}</dd></div></dl>
+    <figure class="graphique"><svg viewBox="0 0 ${L} ${H}" role="img" aria-label="Avis retenus par jour"><line x1="0" x2="${L}" y1="${H - M}" y2="${H - M}" class="axe"/>${barres}
+      <text x="0" y="${H}" class="etiquette">${serie[0].d.toLocaleDateString("fr-FR", {day:"numeric", month:"short"})}</text><text x="${L}" y="${H}" text-anchor="end" class="etiquette">${serie[jours - 1].d.toLocaleDateString("fr-FR", {day:"numeric", month:"short"})}</text></svg>
+    <figcaption class="legende"><span><span class="pastille-c barre-retenus"></span>Retenus par la veille</span> <span><span class="pastille-c barre-go"></span>dont Go recommandés</span> <span class="doux">Maximum ${maxi} par jour</span></figcaption></figure>` };
+};
+W.resultats = () => {
+  const g = S.avis.filter(a => a.statut === "GAGNE").length, p = S.avis.filter(a => a.statut === "PERDU").length, d = S.avis.filter(a => a.statut === "DEPOSE").length;
+  return { html: g || p || d ? `<dl class="indicateurs"><div><dt>Gagnés</dt><dd class="ok">${g}</dd></div><div><dt>Perdus</dt><dd>${p}</dd></div><div><dt>En attente</dt><dd>${d}</dd></div></dl>${g + p ? `<p>Taux de réussite : <b>${Math.round(100 * g / (g + p))} %</b></p>` : ""}`
+    : `<div class="vide-widget"><strong>Pas encore de résultat</strong>Marquez un dossier « Déposé » puis « Gagné » ou « Perdu » pour suivre votre taux de réussite.</div>` };
+};
+W.coffre = () => {
+  const att = BASE.pieces_attendues, auj = new Date().toISOString().slice(0, 10);
+  const valides = new Set(S.pieces.filter(p => !p.date_expiration || p.date_expiration >= auj).map(p => p.type));
+  const ok = att.filter(([t]) => valides.has(t)).length, manq = att.filter(([t]) => !valides.has(t)).map(x => x[1]);
+  const proch = S.pieces.filter(p => p.date_expiration && p.date_expiration >= auj).sort((a, b) => a.date_expiration < b.date_expiration ? -1 : 1)[0];
+  return { lien: `<a href="#coffre">Ouvrir</a>`, html: `<div class="jauge" role="img" aria-label="${ok} pièces valides sur ${att.length}"><span style="width:${Math.round(100 * ok / att.length)}%"></span></div>
+    <p><b>${ok} pièce${ok > 1 ? "s" : ""} valide${ok > 1 ? "s" : ""} sur ${att.length}</b>${proch ? `, prochaine expiration : ${esc(libPiece(proch))} le ${fdate(proch.date_expiration)}` : ""}.</p>
+    ${manq.length ? `<p class="doux">À déposer : ${esc(manq.slice(0, 4).join(", "))}${manq.length > 4 ? "…" : ""}</p>` : ""}` };
+};
+W.profil = () => {
+  const c = completude(), obl = c.filter(x => x.obligatoire), r = obl.filter(x => x.rempli).length, part = obl.length ? Math.round(100 * r / obl.length) : 100;
+  const manq = obl.filter(x => !x.rempli).map(x => x.libelle);
+  return { lien: `<a href="#profil">Compléter</a>`, html: `<div class="jauge" role="img" aria-label="Profil complet à ${part} %"><span style="width:${part}%"></span></div><p><b>Complet à ${part} %</b></p>
+    ${manq.length ? `<p class="doux">Manque : ${esc(manq.join(", "))}. Ces champs sortent « à compléter » dans les documents.</p>` : `<p class="doux">Les documents générés sont complets.</p>`}` };
+};
+W.veille = () => {
+  const der = BASE.collectes.map(c => c.fin).filter(Boolean).sort().pop();
+  return { html: `<ul class="etat-veille"><li><span class="point ok"></span>Dernière collecte le ${der ? new Date(der).toLocaleDateString("fr-FR", {day:"numeric", month:"long"}) + " à " + new Date(der).toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"}).replace(":", "h") : "–"}</li>
+    <li><span class="point ${sample ? "ok" : "ko"}"></span>${sample ? "IA active : chaque avis retenu est évalué" : "IA inactive : score par règles"}</li>
+    <li><span class="point neutre"></span>${S.avis.length} avis retenus en base</li></ul>
+    <button class="btn secondaire petit" type="button" data-collecter>Collecter maintenant</button>` };
+};
+function vueAccueil(perso) {
+  persoOuvert = perso;
+  const h = new Date().getHours();
+  const visibles = S.widgets.filter(w => w.visible);
+  const titre = cle => BASE.widgets.find(w => w.cle === cle);
+  vue(`${bandeauDemo()}
+  <div class="entete-page"><div><h1>${h >= 18 ? "Bonsoir" : "Bonjour"}</h1><p class="doux">${new Date().toLocaleDateString("fr-FR", {weekday:"long", day:"numeric", month:"long", year:"numeric"})}. Voici où en est la veille de FORMA'ST.</p></div>
+    <a class="btn secondaire" href="#accueil-perso">${icone("reglages")}Personnaliser l'accueil</a></div>
+  ${perso ? `<section class="panneau personnaliser" id="personnaliser" aria-labelledby="titre-perso"><h2 id="titre-perso">Personnaliser l'accueil</h2>
+    <p class="doux">Cochez les widgets à afficher, faites-les glisser (ou utilisez les flèches) pour les réordonner, et choisissez ceux qui prennent deux colonnes.</p>
+    <form id="form-perso"><ol class="liste-widgets" id="liste-widgets">${S.widgets.map(w => { const t = titre(w.cle); return `<li class="choix-widget" draggable="true" data-cle="${w.cle}"><span class="poignee" aria-hidden="true">⠿</span>
+      <label class="choix-titre"><input type="checkbox" name="visible" value="${w.cle}" ${w.visible ? "checked" : ""}> <strong>${esc(t.titre)}</strong><span class="doux">${esc(t.description)}</span></label>
+      <label class="choix-large"><input type="checkbox" name="large" value="${w.cle}" ${w.large ? "checked" : ""}> Large</label>
+      <span class="fleches"><button type="button" class="btn secondaire petit monter" aria-label="Monter ${esc(t.titre)}">↑</button><button type="button" class="btn secondaire petit descendre" aria-label="Descendre ${esc(t.titre)}">↓</button></span></li>`; }).join("")}</ol>
+    <div class="actions"><button class="btn">Enregistrer l'accueil</button><a class="btn secondaire" href="#accueil">Annuler</a><button class="lien-btn" type="button" id="perso-reinit">Revenir à la disposition d'origine</button></div></form></section>` : ""}
+  <div class="widgets">${visibles.length ? visibles.map(w => { const t = titre(w.cle), d = W[w.cle](); return `<section class="widget ${w.large ? "large" : ""}" aria-labelledby="w-${w.cle}"><header class="widget-entete"><h2 id="w-${w.cle}">${esc(t.titre)}</h2>${d.lien || ""}</header>${d.html}</section>`; }).join("")
+    : `<div class="vide"><strong>Votre accueil est vide</strong><a href="#accueil-perso">Choisir des widgets à afficher</a></div>`}</div>`);
+  $$("[data-ecarter]").forEach(b => b.onclick = ecarterNoGo);
+  $$("[data-collecter]").forEach(b => b.onclick = collecter);
+  if (perso) activerPerso();
+}
+function activerPerso() {
+  const liste = $("#liste-widgets"); let tire = null;
+  liste.addEventListener("dragstart", e => { tire = e.target.closest(".choix-widget"); if (tire) { tire.classList.add("tire"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", tire.dataset.cle); } });
+  liste.addEventListener("dragend", () => { if (tire) tire.classList.remove("tire"); tire = null; });
+  liste.addEventListener("dragover", e => { if (!tire) return; e.preventDefault(); const c = e.target.closest(".choix-widget"); if (!c || c === tire) return; const r = c.getBoundingClientRect(); liste.insertBefore(tire, e.clientY > r.top + r.height / 2 ? c.nextSibling : c); });
+  liste.addEventListener("click", e => { const li = e.target.closest(".choix-widget"); if (!li) return;
+    if (e.target.closest(".monter") && li.previousElementSibling) { liste.insertBefore(li, li.previousElementSibling); $(".monter", li).focus(); }
+    if (e.target.closest(".descendre") && li.nextElementSibling) { liste.insertBefore(li.nextElementSibling, li); $(".descendre", li).focus(); } });
+  $("#form-perso").onsubmit = e => { e.preventDefault();
+    S.widgets = $$(".choix-widget", liste).map(li => ({ cle: li.dataset.cle, visible: $('input[name=visible]', li).checked, large: $('input[name=large]', li).checked }));
+    sauver(); message("Accueil enregistré."); location.hash = "accueil"; };
+  $("#perso-reinit").onclick = () => { S.widgets = BASE.widgets.map(w => ({ cle: w.cle, visible: true, large: w.large })); sauver(); message("Disposition d'origine rétablie."); location.hash = "accueil"; };
+  $("#personnaliser").scrollIntoView({ block: "start" });
+}
+function ecarterNoGo() {
+  const l = S.avis.filter(a => ["DETECTE","A_QUALIFIER"].includes(a.statut) && ouvert(a) && a.recommandation === "NO_GO" && a.score_modele !== "règles");
+  const avant = l.map(a => [a.id, a.statut]);
+  l.forEach(a => { a.statut = "NO_GO"; if (!a.decision_motif) a.decision_motif = "No-Go recommandé par l'IA"; });
+  sauver();
+  message(`${l.length} avis classés No-Go (recommandation de l'IA).`, "success", () => { avant.forEach(([id, st]) => { avisPar(id).statut = st; }); sauver(); message("Écart annulé."); route(); });
+  route();
+}
+function collecter() { message(`Dans la démo, la collecte est simulée : les avis viennent de la collecte du ${new Date(BASE.exporte_le).toLocaleDateString("fr-FR")} (BOAMP et TED). La vraie application va les chercher chaque matin.`, "info"); }
+function bandeauDemo() { return `<div class="bandeau-demo"><strong>Démo</strong><span>Données réelles de la phase de test, modifiables. Vos changements restent dans ce navigateur.</span>${sample ? "" : "<span>L'IA s'active sur claude.ai après votre accord.</span>"}</div>`; }
+
+/* ================= Appels d'offres ================= */
+function vueTableau(onglet, avecRecherche) {
+  const q = avecRecherche ? recherche.trim() : "";
+  const st = (ONGLETS.find(o => o[0] === onglet) || ONGLETS[0])[2];
+  let liste;
+  if (q) { const n = q.toLowerCase(); liste = S.avis.filter(a => (a.objet + " " + a.acheteur + " " + (a.texte || "")).toLowerCase().includes(n)); }
+  else { liste = S.avis.filter(a => st.includes(a.statut)); if (["a-trier","go"].includes(onglet)) liste = liste.filter(ouvert); }
+  liste.sort((x, y) => onglet === "a-trier" && !q ? ((y.score ?? -1) - (x.score ?? -1) || new Date(x.date_limite || "2999") - new Date(y.date_limite || "2999")) : new Date(y.date_publication || 0) - new Date(x.date_publication || 0));
+  const compte = o => { let l = S.avis.filter(a => o[2].includes(a.statut)); if (["a-trier","go"].includes(o[0])) l = l.filter(ouvert); return l.length; };
+  const ech = S.avis.filter(a => ["GO","REDACTION"].includes(a.statut) && a.date_limite && ouvert(a) && joursRestants(a.date_limite) <= 10).sort((x, y) => new Date(x.date_limite) - new Date(y.date_limite));
+  const lim = new Date(); lim.setDate(lim.getDate() + 30);
+  const pieces = S.pieces.filter(p => p.date_expiration && new Date(p.date_expiration) <= lim);
+  const ng = S.avis.filter(a => ["DETECTE","A_QUALIFIER"].includes(a.statut) && ouvert(a) && a.recommandation === "NO_GO" && a.score_modele !== "règles").length;
+  const der = BASE.collectes.map(c => c.fin).filter(Boolean).sort().pop();
+  vue(`<div class="entete-page"><div><h1>Appels d'offres</h1><p class="doux">${der ? "Mis à jour le " + new Date(der).toLocaleDateString("fr-FR", {day:"numeric", month:"long"}) + " à " + new Date(der).toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"}).replace(":", "h") : ""}</p></div>
+    <div class="actions" style="margin:0"><button class="btn secondaire" type="button" data-collecter>Collecter maintenant</button></div></div>
+  ${ech.length || pieces.length ? `<div class="aujourdhui">
+    ${ech.length ? `<div class="signal urgent"><strong>Dates limites dans moins de 10 jours</strong><ul>${ech.map(e => `<li><a href="#reponse-${e.id}">${esc(trunc(lisible(e.objet), 60))}</a> – ${fdate(e.date_limite, {day:"2-digit", month:"2-digit"})} ${new Date(e.date_limite).toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"}).replace(":", "h")}</li>`).join("")}</ul></div>` : ""}
+    ${pieces.length ? `<div class="signal attention"><strong>Pièces à renouveler</strong><ul>${pieces.map(p => `<li>${esc(libPiece(p))} – ${fdate(p.date_expiration)}</li>`).join("")}</ul><a class="petit" href="#coffre">Ouvrir le coffre-fort</a></div>` : ""}</div>` : ""}
+  <div class="barre"><nav class="onglets" aria-label="Filtrer par statut">${ONGLETS.map(o => `<a href="#ao-${o[0]}" ${o[0] === onglet && !q ? 'aria-current="page"' : ""}>${o[1]}<span>${compte(o)}</span></a>`).join("")}</nav>
+    <p class="aide-clavier">Clavier : <kbd>j</kbd><kbd>k</kbd> se déplacer, <kbd>g</kbd> Go, <kbd>n</kbd> No-Go, <kbd>Entrée</kbd> ouvrir, <kbd>/</kbd> rechercher</p></div>
+  ${onglet === "a-trier" && !q && ng ? `<div class="resume-tri" style="margin-top:12px"><p class="doux">L'IA propose d'écarter ${ng} de ces avis (hors métier, exigences bloquantes…).</p><button class="btn secondaire petit" type="button" data-ecarter>Écarter les ${ng} No-Go recommandés</button></div>` : ""}
+  ${q ? `<p class="doux" style="margin-top:10px">${liste.length} résultat${liste.length > 1 ? "s" : ""} pour « ${esc(q)} » dans tous les avis retenus. <a href="#ao" id="effacer">Effacer la recherche</a></p>` : ""}
+  <ul class="liste">${liste.length ? liste.map(ligne).join("") : `<li class="vide">${q ? `<strong>Aucun avis ne correspond à « ${esc(q)} »</strong>Essayez un autre mot, ou ajoutez la consultation à la main.` : onglet === "a-trier" ? `<strong>Tout est trié</strong>Les nouveaux avis arriveront avec la collecte de demain matin.` : onglet === "go" ? `<strong>Aucun appel d'offres en Go</strong>Classez un avis en Go depuis l'onglet « À trier » pour préparer sa réponse.` : `<strong>Rien ici pour l'instant</strong>`}</li>`}</ul>`);
+  $$("[data-ecarter]").forEach(b => b.onclick = ecarterNoGo);
+  $$("[data-collecter]").forEach(b => b.onclick = collecter);
+  const ef = $("#effacer"); if (ef) ef.onclick = () => { recherche = ""; $("#recherche").value = ""; };
+  choisie = -1;
+}
+function ligne(a) {
+  const d = a.score_details || {}, j = joursRestants(a.date_limite), eb = (d.exigences_bloquantes || []).length;
+  return `<li class="ligne">${plaque(a.score)}
+    <div><a class="ligne-titre" href="#avis-${a.id}">${esc(trunc(lisible(a.objet), 150))}</a>
+      <div class="ligne-meta">${esc(a.acheteur || "Acheteur non précisé")}${a.departements ? ", " + esc(deps(a.departements)) : ""}</div>
+      ${a.resume ? `<p class="ligne-resume">${esc(trunc(a.resume, 240))}</p>` : ""}
+      <div class="faits"><span class="fait verdict ${a.recommandation}">${libReco(a.recommandation)}</span>
+        ${d.concurrence_estimee === "faible" ? '<span class="fait bon">Concurrence faible</span>' : d.concurrence_estimee === "forte" ? '<span class="fait mauvais">Concurrence forte</span>' : ""}
+        ${eb ? `<span class="fait mauvais">${eb} exigence${eb > 1 ? "s" : ""} bloquante${eb > 1 ? "s" : ""}</span>` : ""}
+        ${a.montant_estime ? `<span class="fait">${euros(a.montant_estime)}</span>` : ""}<span class="fait">${SOURCES[a.source] || a.source}</span>
+        ${!["DETECTE","A_QUALIFIER"].includes(a.statut) ? `<span class="fait">${libStatut(a.statut)}</span>` : ""}</div></div>
+    <div class="echeance ${j != null && j < 10 ? "urgent" : ""}">${a.date_limite ? `<b>${jMoins(j)}</b><span>${fdate(a.date_limite, {day:"numeric", month:"short"})}</span>` : "<span>Date limite non précisée</span>"}</div>
+    ${decision(a)}</li>`;
+}
+let choisie = -1;
+document.addEventListener("keydown", e => {
+  const ae = document.activeElement;
+  if (e.metaKey || e.ctrlKey || e.altKey || (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)))) return;
+  if (e.key === "/") { e.preventDefault(); $("#recherche").focus(); $("#recherche").select(); return; }
+  const lignes = $$(".liste .ligne"); if (!lignes.length) return;
+  const choisir = n => { choisie = Math.max(0, Math.min(lignes.length - 1, n)); lignes.forEach(l => l.classList.remove("choisie")); lignes[choisie].classList.add("choisie"); lignes[choisie].scrollIntoView({ block: "nearest" }); };
+  if (e.key === "j") { e.preventDefault(); choisir(choisie + 1); }
+  else if (e.key === "k") { e.preventDefault(); choisir(choisie - 1); }
+  else if (choisie >= 0 && e.key === "g") { const b = $('[data-dec="GO"]', lignes[choisie]); if (b) b.click(); }
+  else if (choisie >= 0 && e.key === "n") { const d = $("details.nogo-motif", lignes[choisie]); if (d) { e.preventDefault(); d.open = true; } }
+  else if (choisie >= 0 && e.key === "Enter") { const a = $(".ligne-titre", lignes[choisie]); if (a) a.click(); }
+  else if (e.key === "Escape") $$("details.nogo-motif[open]").forEach(d => d.open = false);
+});
+
+/* ================= Fiche avis ================= */
+function enteteAvis(a, page) {
+  return `<p class="fil"><a href="#ao">Appels d'offres</a></p>
+  <div class="entete-page" style="margin-bottom:0"><div style="max-width:80ch"><h1>${esc(lisible(a.objet))}</h1>
+    <p class="doux">${esc(a.acheteur || "Acheteur non précisé")} – ${SOURCES[a.source] || a.source}${["BOAMP","TED"].includes(a.source) ? " n° " + esc(a.source_id) : ""}${a.url ? ` – <a href="${esc(a.url)}" target="_blank" rel="noopener">avis officiel</a>` : ""}</p></div>
+    ${decision(a)}</div>
+  <nav class="onglets onglets-avis" aria-label="Sections de l'avis"><a href="#avis-${a.id}" ${page === "evaluation" ? 'aria-current="page"' : ""}>Évaluation</a><a href="#reponse-${a.id}" ${page === "reponse" ? 'aria-current="page"' : ""}>Préparer la réponse</a></nav>`;
+}
+const PICTO_EV = { favorable: "✓", eliminatoire: "✕", defavorable: "!", neutre: "–" };
+function vueAvis(id) {
+  const a = avisPar(id); if (!a) return introuvable();
+  const d = a.score_details || {}, j = joursRestants(a.date_limite);
+  const liste = (t, l) => l && l.length ? `<h3>${t}</h3><ul class="simple">${l.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  vue(`${enteteAvis(a, "evaluation")}
+  <div class="colonnes"><div>
+    <section class="panneau">
+      <div class="avis-verdict">${plaque(a.score, "grande")}<div><span class="verdict ${a.recommandation}">${libReco(a.recommandation)}</span>
+        ${d.pourquoi ? `<p style="margin:4px 0 0">${esc(d.pourquoi)}</p>` : ""}${a.score_modele === "règles" ? `<p class="doux" style="margin:4px 0 0">Score provisoire calculé par règles : relancez-le pour l'avis de l'IA.</p>` : ""}</div></div>
+      ${a.resume ? `<h3>Le besoin</h3><p>${esc(a.resume)}</p>` : ""}
+      ${(d.criteres || []).length ? `<h3>Critères de décision</h3><ul class="criteres">${d.criteres.map(c => `<li><span class="picto ${c.evaluation}" aria-hidden="true">${PICTO_EV[c.evaluation] || "–"}</span><div><strong>${esc(c.critere)}</strong> <span class="doux">(${esc(c.evaluation)})</span><br>${esc(c.commentaire)}</div></li>`).join("")}</ul>` : ""}
+      ${liste("Exigences bloquantes", d.exigences_bloquantes)}
+      ${(d.prestations_concernees || []).length ? liste("Nos prestations concernées", d.prestations_concernees) + `<p class="doux">Part du besoin couverte : ${esc(d.part_du_besoin_couverte)}</p>` : ""}
+      ${liste("Lots à viser", d.lots_a_viser)}${liste("Points de vigilance", d.points_de_vigilance)}${liste("À vérifier dans le dossier de consultation", d.questions_a_verifier)}
+      <div class="actions"><button class="btn secondaire petit" type="button" id="rescorer">${a.score == null ? "Calculer le score" : "Recalculer le score"}</button>
+        ${a.score_le ? `<span class="doux">Évalué le ${fdate(a.score_le, {day:"2-digit", month:"2-digit"})} à ${new Date(a.score_le).toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"}).replace(":", "h")}${a.score_modele && a.score_modele !== "règles" ? " par l'IA" : ""}</span>` : ""}</div>
+      <div id="score-etat"></div>
+    </section>
+    <section><h2>Texte de l'avis</h2><pre class="texte">${esc(a.texte || "Pas de texte détaillé : consultez l'avis officiel.")}</pre></section>
+  </div>
+  <aside class="collant">
+    <section class="panneau"><dl class="donnees">
+      <dt>Date limite</dt><dd>${a.date_limite ? `<strong>${fdh(a.date_limite)}</strong> (${jMoins(j)})` : "non précisée"}</dd>
+      <dt>Procédure</dt><dd>${esc(a.procedure || "—")}</dd><dt>Montant</dt><dd>${euros(a.montant_estime) || "non précisé"}</dd>
+      <dt>Lieu</dt><dd>${esc(a.lieu_execution || a.departements || "—")}</dd><dt>Concurrence</dt><dd>${esc(d.concurrence_estimee || "—")}</dd>
+      <dt>Veille</dt><dd class="petit">${esc(a.mots_cles_trouves || "retenu")}</dd></dl>
+      <p style="margin:16px 0 0"><a class="btn" href="#reponse-${a.id}" style="width:100%">Préparer la réponse</a></p></section>
+    <section class="panneau"><h3>Suivi</h3><form class="formulaire" id="suivi">
+      <p><label for="s-statut">Statut</label><select id="s-statut">${STATUTS.map(([k, v]) => `<option value="${k}" ${a.statut === k ? "selected" : ""}>${v}</option>`).join("")}</select></p>
+      <p><label for="s-resp">Responsable</label><input id="s-resp" value="${esc(a.responsable)}"></p>
+      <p><label for="s-motif">Motif de la décision</label><textarea id="s-motif" rows="2">${esc(a.decision_motif)}</textarea></p>
+      <p><label for="s-notes">Notes</label><textarea id="s-notes" rows="4">${esc(a.notes)}</textarea></p>
+      <button class="btn secondaire">Enregistrer le suivi</button></form></section>
+  </aside></div>`);
+  $("#suivi").onsubmit = e => { e.preventDefault(); Object.assign(a, { statut: $("#s-statut").value, responsable: $("#s-resp").value.trim(), decision_motif: $("#s-motif").value, notes: $("#s-notes").value }); sauver(); message("Suivi enregistré."); route(); };
+  $("#rescorer").onclick = async () => { $("#rescorer").disabled = true; await noter(a, $("#score-etat")); route(); };
+}
+function introuvable() { vue(`<div class="vide"><strong>Cet appel d'offres n'existe pas</strong><a href="#ao">Retour aux appels d'offres</a></div>`); }
+
+/* ================= Notation ================= */
+const SCHEMA_SCORE = `{"score": entier 0-100, "recommandation": "GO"|"A_ETUDIER"|"NO_GO", "resume": "ce que l'acheteur veut, 2-3 phrases", "pourquoi": "1-2 phrases", "criteres": [{"critere": "Adéquation métier", "evaluation": "favorable"|"neutre"|"defavorable"|"eliminatoire", "commentaire": "une phrase"}] (les 7 critères du barème), "prestations_concernees": ["intitulés exacts de NOTRE catalogue"], "part_du_besoin_couverte": "totale"|"majoritaire"|"partielle"|"marginale"|"aucune", "lots_a_viser": [], "exigences_bloquantes": [], "concurrence_estimee": "faible"|"moyenne"|"forte"|"inconnue", "points_de_vigilance": [], "questions_a_verifier": []}`;
+function texteAvis(a) {
+  return `Objet : ${a.objet}\nAcheteur : ${a.acheteur} (${a.acheteur_type || "type non précisé"})\nSource : ${SOURCES[a.source] || a.source}\nDate limite : ${a.date_limite ? fdh(a.date_limite) : "non précisée"}\nLieu : ${a.lieu_execution || a.departements || "non précisé"}\nMontant estimé : ${a.montant_estime || "non précisé"}\nProcédure : ${a.procedure || "non précisée"}\n\nTexte :\n${(a.texte || "").slice(0, 30000)}\n\n(Nous sommes le ${new Date().toLocaleDateString("fr-FR")}.)`;
+}
+function scoreRegles(a) {
+  const norm = s => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[’'\-]/g, " ");
+  const v = BASE.veille[0] || {}, txt = norm(a.objet + " " + a.texte);
+  const mots = s => [...new Set((s || "").split(/[\n,]/).map(x => norm(x.trim().replace(/\*$/, ""))).filter(x => x.length > 2))];
+  const forts = mots(v.mots_cles_forts).filter(m => txt.includes(m)), gen = mots(v.mots_cles).filter(m => txt.includes(m));
+  const ctx = mots(v.mots_contexte).filter(m => txt.includes(m)), exclus = mots(v.mots_cles_exclus).filter(m => norm(a.objet).includes(m));
+  let s = Math.min(70, forts.length * 25 + (ctx.length ? gen.length * 12 + 10 : 0)); if (exclus.length) s = Math.min(s, 20);
+  return { score: s, recommandation: s >= 45 ? "A_ETUDIER" : "NO_GO", resume: "", modele: "règles",
+    pourquoi: forts.length || gen.length ? `Mots-clés trouvés : ${[...forts, ...gen].join(", ")}. Score plafonné à 70 sans IA.` : "Aucun mot-clé du profil de veille trouvé.",
+    criteres: [{ critere: "Mots-clés forts", evaluation: forts.length ? "favorable" : "neutre", commentaire: forts.join(", ") || "aucun" },
+      { critere: "Mots-clés avec contexte de formation", evaluation: gen.length && ctx.length ? "favorable" : "neutre", commentaire: (gen.join(", ") || "aucun") + (ctx.length ? " · contexte : " + ctx.join(", ") : "") },
+      { critere: "Exclusions", evaluation: exclus.length ? "eliminatoire" : "favorable", commentaire: exclus.join(", ") || "aucune" }],
+    prestations_concernees: [], part_du_besoin_couverte: "partielle", lots_a_viser: [], exigences_bloquantes: [], concurrence_estimee: "inconnue",
+    points_de_vigilance: ["Score calculé sans IA : à confirmer en lisant l'avis."], questions_a_verifier: [] };
+}
+async function noter(a, zone) {
+  let d = null, modele = "règles";
+  if (sample) {
+    zone.innerHTML = `<div class="attente" style="margin-top:12px">L'IA lit l'avis et le compare au profil FORMA'ST (20 à 60 secondes)…</div>`;
+    try { d = await sample.json(`${BASE.prompts.profil}\n\n${BASE.prompts.regles}\n\nÉvalue cet avis de marché :\n\n${texteAvis(a)}\n\nRéponds uniquement avec un objet JSON de cette forme :\n${SCHEMA_SCORE}`, { cache: false });
+      if (typeof d?.score !== "number") throw { code: "invalid_json" }; modele = "claude"; }
+    catch (e) { message(erreurIA(e) + " Score calculé par règles.", "warning"); d = null; }
+  }
+  if (!d) d = scoreRegles(a);
+  Object.assign(a, { score: Math.max(0, Math.min(100, Math.round(d.score))), recommandation: d.recommandation, resume: d.resume || a.resume, score_details: d, score_modele: modele, score_le: new Date().toISOString() });
+  if (a.statut === "DETECTE") a.statut = "A_QUALIFIER";
+  sauver(); message(`Score : ${a.score}/100 – ${libReco(a.recommandation)}${modele === "règles" ? " (par règles)" : ""}.`);
+}
+
+/* ================= Ajouter une consultation privée ================= */
+function vueAjouter() {
+  vue(`<div class="entete-page"><div><h1>Ajouter une consultation privée</h1><p class="doux">Pour une demande reçue par mail ou repérée hors BOAMP et TED. Elle est évaluée dès l'enregistrement.</p></div></div>
+  <div style="max-width:760px"><form class="panneau formulaire" id="f-aj">
+    <p><label for="a-objet">Intitulé de la consultation</label><input id="a-objet" required></p>
+    <p><label for="a-ach">Client</label><input id="a-ach" required></p>
+    <p><label for="a-dl">Date limite de réponse</label><input id="a-dl" type="datetime-local"></p>
+    <p><label for="a-lieu">Lieu(x)</label><input id="a-lieu"></p>
+    <p><label for="a-mt">Budget estimé (€ HT, si connu)</label><input id="a-mt" type="number" min="0" step="100"></p>
+    <p><label for="a-url">Lien (si la consultation est en ligne)</label><input id="a-url" type="url"></p>
+    <p><label for="a-txt">Texte de la consultation</label><textarea id="a-txt" rows="10"></textarea></p>
+    <div class="actions"><button class="btn">Ajouter et évaluer</button><button class="btn secondaire" type="button" id="a-ex">Remplir avec un exemple</button>
+      <span class="doux">${sample ? "L'évaluation est faite par l'IA." : "Sans IA, la note est calculée par règles (70 au maximum)."}</span></div>
+    <div id="a-etat"></div></form></div>`);
+  $("#a-ex").onclick = () => {
+    $("#a-objet").value = "Formation Sauveteur Secouriste du Travail (SST) et MAC SST – 3 entrepôts";
+    $("#a-ach").value = "Logidis Île-de-France (exemple fictif)";
+    const d = new Date(); d.setDate(d.getDate() + 24); d.setHours(12, 0, 0, 0); $("#a-dl").value = new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
+    $("#a-lieu").value = "Gonesse (95), Bonneuil (94), Lisses (91)"; $("#a-mt").value = 18000;
+    $("#a-txt").value = "Nous recherchons un organisme habilité INRS pour former nos préparateurs de commandes au SST (formation initiale, 14 h) et assurer le MAC SST (7 h) des sauveteurs existants.\nVolumes 2027 : 6 sessions SST initiales de 10 stagiaires et 8 sessions MAC de 10 stagiaires, réparties sur 3 entrepôts.\nLes sessions ont lieu en intra, sur site, en horaires décalés possibles (5 h – 13 h).\nAttendus : programme conforme au référentiel INRS, mises en situation adaptées à la logistique (chariots, quais, chambres froides), suivi des certificats et relances des recyclages.\nCritères : valeur technique 60 % (pédagogie, adaptation au contexte, formateurs), prix 40 %.\nRéponse par e-mail avec proposition technique et financière.";
+  };
+  $("#f-aj").onsubmit = async e => {
+    e.preventDefault(); const b = e.submitter; if (b) b.disabled = true;
+    const a = { id: S.prochainId++, source: "PRIVE", source_id: "PRIVE-" + Date.now(), procedure_id: "", url: $("#a-url").value.trim(), nature: "AVIS", objet: $("#a-objet").value.trim(), acheteur: $("#a-ach").value.trim(), acheteur_type: "privé",
+      departements: "", lieu_execution: $("#a-lieu").value.trim(), date_publication: new Date().toISOString().slice(0, 10), date_limite: $("#a-dl").value ? new Date($("#a-dl").value).toISOString() : null,
+      type_marche: "SERVICES", procedure: "", cpv: "", montant_estime: $("#a-mt").value ? Number($("#a-mt").value) : null, texte: $("#a-txt").value.trim(), prefiltre_ok: true, mots_cles_trouves: "saisie manuelle",
+      score: null, recommandation: "", resume: "", score_details: null, score_modele: "", score_le: null, statut: "A_QUALIFIER", responsable: "", decision_motif: "", notes: "", lots_vises: "", cree_le: new Date().toISOString() };
+    S.avis.push(a); sauver();
+    await noter(a, $("#a-etat"));
+    message("Consultation ajoutée et évaluée.");
+    location.hash = "avis-" + a.id;
+  };
+}
+
+/* ================= Réponses (pipeline) ================= */
+function vuePipeline() {
+  vue(`<div class="entete-page"><div><h1>Réponses en cours</h1><p class="doux">De la qualification au résultat. Changez l'étape d'un dossier avec le menu de sa carte.</p></div></div>
+  <div class="kanban">${PIPELINE.map(c => { const l = S.avis.filter(a => a.statut === c).sort((x, y) => new Date(x.date_limite || "2999") - new Date(y.date_limite || "2999")).slice(0, 100);
+    return `<section class="colonne" aria-label="${libStatut(c)}"><h2>${libStatut(c)} <span class="doux">${l.length}</span></h2>
+    ${l.length ? l.map(a => `<article class="ticket">${plaque(a.score, "mini")}<div><a href="#reponse-${a.id}">${esc(trunc(lisible(a.objet), 80))}</a>
+      <div class="doux">${esc(trunc(a.acheteur, 40))}${a.date_limite ? ", " + jMoins(joursRestants(a.date_limite)) : ""}${a.responsable ? ", " + esc(a.responsable) : ""}</div>
+      <label class="sr" for="st-${a.id}">Étape</label><select id="st-${a.id}" data-id="${a.id}">${STATUTS.filter(s => !["DETECTE","ECARTE"].includes(s[0])).map(([k, v]) => `<option value="${k}" ${k === a.statut ? "selected" : ""}>${v}</option>`).join("")}</select></div></article>`).join("")
+      : '<p class="doux" style="padding:4px">Aucun dossier.</p>'}</section>`; }).join("")}</div>`);
+  $$(".ticket select").forEach(s => s.onchange = () => { const a = avisPar(s.dataset.id), prec = a.statut; a.statut = s.value; sauver();
+    message(`« ${trunc(a.objet, 60)} » passe à l'étape « ${libStatut(s.value)} ».`, "success", () => { a.statut = prec; sauver(); route(); }); route(); });
+}
+
+/* ================= Coffre-fort ================= */
+const libPiece = p => p.libelle || (BASE.pieces_types.find(t => t[0] === p.type) || [p.type, p.type])[1];
+function statutPiece(p) { if (!p.nom_fichier) return "manquant"; const j = joursRestants(p.date_expiration); if (j == null) return "valide"; if (j < 0) return "expire"; if (j <= 30) return "a_renouveler"; return "valide"; }
+function vueCoffre() {
+  const auj = new Date().toISOString().slice(0, 10);
+  const presentes = new Set(S.pieces.filter(p => p.nom_fichier && (!p.date_expiration || p.date_expiration >= auj)).map(p => p.type));
+  vue(`<div class="entete-page"><div><h1>Coffre-fort</h1><p class="doux">Les pièces valides à la date limite sont jointes automatiquement aux dossiers. Le digest vous prévient 30 jours avant une expiration.</p></div></div>
+  <div class="colonnes"><div>
+    <section class="panneau"><h2>Pièces attendues dans un dossier</h2><ul class="criteres">${BASE.pieces_attendues.map(([t, l]) => { const ok = presentes.has(t); return `<li><span class="picto ${ok ? "ok" : "manquante"}" aria-hidden="true">${ok ? "✓" : "✕"}</span><div>${esc(l)}${ok ? "" : ` <a class="petit" href="#coffre" data-type="${t}">ajouter</a>`}</div></li>`; }).join("")}</ul>
+      <div class="actions"><button class="btn secondaire petit" type="button" id="p-ex">Ajouter des pièces d'exemple</button></div></section>
+    <h2>Pièces déposées</h2>
+    ${S.pieces.length ? `<table class="tableau panneau"><thead><tr><th>Pièce</th><th>Émise le</th><th>Expire le</th><th>État</th><th><span class="sr">Supprimer</span></th></tr></thead><tbody>
+      ${S.pieces.map((p, i) => { const s = statutPiece(p); return `<tr><td>${esc(libPiece(p))}<br><span class="doux">${esc(p.nom_fichier || "")}</span></td><td>${fdate(p.date_emission) || "—"}</td><td>${fdate(p.date_expiration) || "—"}</td>
+        <td><span class="picto ${s}" style="display:inline-grid;vertical-align:middle" aria-hidden="true">${s === "valide" ? "✓" : "!"}</span> ${s === "valide" ? "Valide" : s === "a_renouveler" ? `À renouveler dans ${joursRestants(p.date_expiration)} j` : s === "expire" ? "Expirée" : "Fichier manquant"}</td>
+        <td><button class="lien-btn" type="button" data-sup="${i}">Supprimer</button></td></tr>`; }).join("")}</tbody></table>`
+      : `<p class="vide" style="padding:24px"><strong>Aucune pièce pour l'instant</strong>Les dossiers se génèrent quand même : les pièces y sont signalées manquantes.</p>`}
+  </div>
+  <aside class="collant" id="ajout"><form class="panneau formulaire" id="f-piece"><h2>Ajouter une pièce</h2>
+    <p><label for="p-type">Type</label><select id="p-type">${BASE.pieces_types.map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("")}</select></p>
+    <p><label for="p-lib">Libellé (facultatif)</label><input id="p-lib"></p>
+    <p><label for="p-fic">Fichier</label><input id="p-fic" type="file" required></p>
+    <p><label for="p-em">Émise le</label><input id="p-em" type="date"></p>
+    <p><label for="p-exp">Expire le</label><input id="p-exp" type="date"></p>
+    <button class="btn">Ajouter au coffre-fort</button>
+    <p class="doux" style="margin-top:12px">Durées usuelles : Kbis moins de 3 mois, attestation URSSAF 6 mois, attestation fiscale pour l'année en cours. Dans la démo, les fichiers de moins de 800 Ko sont gardés dans ce navigateur et joints au ZIP.</p></form></aside></div>`);
+  $$("[data-type]").forEach(a => a.onclick = e => { e.preventDefault(); $("#p-type").value = a.dataset.type; $("#p-fic").focus(); });
+  $$("[data-sup]").forEach(b => b.onclick = () => { const [p] = S.pieces.splice(+b.dataset.sup, 1); sauver(); message("Pièce supprimée.", "success", () => { S.pieces.push(p); sauver(); route(); }); route(); });
+  $("#f-piece").onsubmit = async e => { e.preventDefault(); const f = $("#p-fic").files[0]; let data = null;
+    if (f && f.size < 800000) data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(String(fr.result).split(",")[1]); fr.readAsDataURL(f); });
+    S.pieces.push({ type: $("#p-type").value, libelle: $("#p-lib").value.trim(), nom_fichier: f ? f.name : "", data, date_emission: $("#p-em").value || null, date_expiration: $("#p-exp").value || null });
+    sauver(); message("Pièce ajoutée au coffre-fort."); route(); };
+  $("#p-ex").onclick = () => { const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+    [["KBIS", 70, "Kbis_exemple.pdf"], ["URSSAF", 20, "Attestation_URSSAF_exemple.pdf"], ["RCPRO", 200, "RC_Pro_exemple.pdf"], ["QUALIOPI", 500, "Certificat_Qualiopi_exemple.pdf"], ["NDA", null, "Declaration_activite_exemple.pdf"]]
+      .forEach(([t, n, f]) => S.pieces.push({ type: t, libelle: "", nom_fichier: f, data: null, date_emission: d(-10), date_expiration: n == null ? null : d(n), exemple: true }));
+    sauver(); message("5 pièces d'exemple ajoutées (sans vrai fichier). L'attestation fiscale, l'habilitation INRS et le RIB restent à déposer."); route(); };
+}
+
+/* ================= Profil ================= */
+function completude() { const e = S.entreprise; return BASE.completude.map(c => ({ ...c, rempli: e[c.champ] != null && e[c.champ] !== "" })); }
+const CHAMPS_PROFIL = [["email","Adresse électronique","email"],["telephone","Téléphone","tel"],["site_web","Site web","url"],["capital","Capital social (€)","number"],["effectif","Effectif exact","number"],["ca_n1","Chiffre d'affaires N-1 (€)","number"],["ca_n2","Chiffre d'affaires N-2 (€)","number"],["ca_n3","Chiffre d'affaires N-3 (€)","number"],["qualiopi_expiration","Qualiopi valable jusqu'au","date"],["habilitation_inrs_sst_expiration","Habilitation INRS SST valable jusqu'au","date"],["etablissements","Autres établissements","textarea"]];
+function vueProfil() {
+  const e = S.entreprise;
+  vue(`<div class="entete-page"><div><h1>Profil ${esc(e.nom_commercial || e.raison_sociale)}</h1><p class="doux">Tous les documents (DC1, DC2, présentation, DUME, mémoire) sont générés à partir de ce profil. Dans la démo, les documents Word ont été générés lors de l'export des données : vos changements ici mettent à jour la complétude et les consignes de l'IA.</p></div></div>
+  <div class="colonnes"><form class="panneau formulaire" id="f-prof"><h2>Informations à compléter</h2>
+    ${CHAMPS_PROFIL.map(([k, l, t]) => `<p><label for="e-${k}">${l}</label>${t === "textarea" ? `<textarea id="e-${k}" rows="2">${esc(e[k] ?? "")}</textarea>` : `<input id="e-${k}" type="${t}" value="${esc(e[k] ?? "")}">`}</p>`).join("")}
+    <button class="btn">Enregistrer le profil</button></form>
+  <aside class="collant"><section class="panneau"><h2>Identité légale</h2><dl class="donnees">
+    <dt>Société</dt><dd>${esc(e.raison_sociale)}, ${esc(e.forme_juridique)}</dd><dt>Siège</dt><dd>${esc(e.adresse)}, ${esc(e.code_postal)} ${esc(e.ville)}</dd>
+    <dt>SIRET</dt><dd>${esc(e.siret)}</dd><dt>TVA</dt><dd>${esc(e.tva_intracommunautaire || "—")}</dd>
+    <dt>Activité</dt><dd>NAF ${esc(e.code_naf || "—")}, déclaration n° ${esc(e.numero_declaration_activite || "—")}</dd>
+    <dt>Qualité</dt><dd>${e.qualiopi ? "Qualiopi" : ""}${e.habilitation_inrs_sst ? ", habilitation INRS SST" : ""}</dd>
+    <dt>Dirigeant</dt><dd>${esc(e.representant_nom)}, ${esc(e.representant_qualite)}</dd><dt>Effectif</dt><dd>${esc(e.effectif || e.tranche_effectif || "—")}</dd></dl>
+    <div class="actions"><button class="btn secondaire petit" type="button" id="annuaire">Mettre à jour depuis l'annuaire officiel</button></div>
+    <p class="doux" style="margin-top:8px">Source INSEE / RNE. Vos saisies ne sont jamais effacées.</p></section>
+  <section class="panneau"><h2>Complétude des documents</h2><ul class="criteres">${completude().map(c => `<li><span class="picto ${c.rempli ? "ok" : c.obligatoire ? "manquante" : "neutre"}" aria-hidden="true">${c.rempli ? "✓" : c.obligatoire ? "✕" : "–"}</span><div>${esc(c.libelle)}${c.obligatoire ? "" : ' <span class="doux">(facultatif)</span>'}</div></li>`).join("")}</ul>
+    <p class="doux">Une information manquante sort surlignée « [À COMPLÉTER] » dans les documents.</p></section>
+  <section class="panneau"><h2>Catalogue et équipe</h2><p class="petit">${BASE.prestations.length} prestations, ${BASE.formateurs.length} formateurs, ${BASE.references.length} référence, ${BASE.nb_blocs} blocs de contenu réutilisables pour le mémoire.</p>
+    <details class="repli"><summary>Voir le catalogue</summary><ul class="simple">${BASE.prestations.map(p => `<li>${esc(p.intitule)}${p.prix_intra_ht != null ? ` <span class="doux">– ${Number(p.prix_intra_ht).toLocaleString("fr-FR")} € HT intra</span>` : ""}</li>`).join("")}</ul></details></section></aside></div>`);
+  $("#f-prof").onsubmit = ev => { ev.preventDefault(); CHAMPS_PROFIL.forEach(([k]) => { const v = $("#e-" + k).value.trim(); e[k] = v === "" ? null : v; }); sauver(); message("Profil enregistré."); route(); };
+  $("#annuaire").onclick = () => message("Dans la démo, l'annuaire officiel n'est pas interrogé. L'identité affichée vient de la dernière mise à jour faite par l'application.", "info");
+}
+
+/* ================= Préparer la réponse ================= */
+function controles(a) {
+  const jour = a.date_limite ? a.date_limite.slice(0, 10) : new Date().toISOString().slice(0, 10);
+  return BASE.pieces_attendues.filter(([t]) => !(t === "INRS" && !S.entreprise.habilitation_inrs_sst)).map(([t, l]) => {
+    const p = S.pieces.filter(x => x.type === t && x.nom_fichier).sort((x, y) => (y.date_expiration || "9999") < (x.date_expiration || "9999") ? -1 : 1)[0];
+    if (!p) return { type: t, libelle: l, statut: "manquante", detail: "Pas de fichier dans le coffre-fort" };
+    if (p.date_expiration && p.date_expiration < jour) return { type: t, libelle: l, statut: "expiree", detail: "Expirée ou expirant le " + fdate(p.date_expiration), piece: p };
+    return { type: t, libelle: l, statut: "ok", detail: p.date_expiration ? "valable jusqu'au " + fdate(p.date_expiration) : "sans date d'expiration", piece: p };
+  });
+}
+function piecesDemandees(r, ctr, a) {
+  const genere = /dc1|dc2|dume|lettre de candidature|déclaration (sur l'honneur|du candidat)|m[ée]moire|présentation|offre technique/i;
+  const corres = [["KBIS", /kbis|registre du commerce/i], ["URSSAF", /urssaf|vigilance/i], ["FISCAL", /fiscal|impôts/i], ["RCPRO", /assurance|responsabilit/i], ["QUALIOPI", /qualiopi/i], ["INRS", /inrs/i], ["NDA", /déclaration d'activit|nda/i], ["RIB", /\brib\b|relevé d'identité/i]];
+  return (r.pieces_a_fournir || []).map(p => {
+    const c = corres.find(([, re]) => re.test(p.piece));
+    if (c) { const x = ctr.find(k => k.type === c[0]); return { ...p, etat: x && x.statut === "ok" ? "ok" : "manquant", detail: x ? x.detail : "à fournir" }; }
+    if (genere.test(p.piece)) return { ...p, etat: "genere", detail: /m[ée]moire|offre technique/i.test(p.piece) ? (S.memoires[a.id] ? "brouillon rédigé" : "à rédiger (étape 3)") : "généré par FORM'AO" };
+    return { ...p, etat: "a_faire", detail: "à préparer" };
+  });
+}
+function vueReponse(id) {
+  const a = avisPar(id); if (!a) return introuvable();
+  const docs = docsDe(a), ctr = controles(a), nbOk = ctr.filter(c => c.statut === "ok").length;
+  const dce = S.dce[a.id] || { fichiers: [], texte: "" }, an = S.analyses[a.id], r = an && an.resultat, m = S.memoires[a.id];
+  const manq = completude().filter(c => c.obligatoire && !c.rempli).map(c => c.libelle);
+  const pd = r ? piecesDemandees(r, ctr, a) : [];
+  vue(`${enteteAvis(a, "reponse")}
+  <div class="colonnes"><ol class="etapes">
+    <li class="etape ${dce.fichiers.length ? "faite" : "active"}"><h2>Déposer le dossier de consultation</h2>
+      ${dce.fichiers.length ? `<table class="tableau"><thead><tr><th>Document</th><th>Type</th><th>Pages</th><th><span class="sr">Retirer</span></th></tr></thead><tbody>${dce.fichiers.map((f, i) => `<tr><td>${esc(f.nom)}</td><td>${esc(f.type)}</td><td>${f.pages || "—"}</td><td><button class="lien-btn" type="button" data-retirer="${i}">Retirer</button></td></tr>`).join("")}</tbody></table>`
+        : `<p class="doux">Téléchargez le DCE sur la plateforme de l'acheteur et déposez-le ici (PDF ou texte dans la démo). Sans document, l'analyse se fait sur le texte de l'avis.</p>`}
+      <div class="depot actions"><label class="sr" for="fichiers">Fichiers du DCE</label><input type="file" id="fichiers" multiple accept=".pdf,.txt,.md,.csv"><button class="btn secondaire petit" type="button" id="deposer">Ajouter les fichiers</button></div>
+      <div id="depot-etat"></div></li>
+    <li class="etape ${r ? "faite" : dce.fichiers.length ? "active" : ""}"><h2>Analyser le dossier</h2>
+      <div id="analyse-etat"></div>
+      ${r ? rendreAnalyse(r, a) : `<p class="doux">L'IA relève les critères de notation, toutes les pièces à fournir, les exigences, les pièges et le plan attendu du mémoire. Comptez 1 à 3 minutes.</p>`}
+      <div class="actions"><button class="btn ${r ? "secondaire petit" : ""}" type="button" id="analyser" ${sample ? "" : "disabled"}>${r ? "Relancer l'analyse" : "Analyser le dossier"}</button><button class="btn secondaire petit" type="button" id="analyse-stop" hidden>Arrêter</button>${sample ? "" : '<span class="doux">Nécessite l\'IA : ouvrez la démo sur claude.ai et autorisez Claude.</span>'}</div></li>
+    <li class="etape ${m ? "faite" : r ? "active" : ""}"><h2>Rédiger le mémoire technique</h2>
+      <p class="doux">Brouillon qui suit ${r ? "le plan attendu par l'acheteur" : "un plan standard (lancez l'analyse pour coller aux critères)"}, à partir du profil, de la bibliothèque de contenus et du dossier. Tout ce qui manque est signalé « [À COMPLÉTER] ».</p>
+      ${m ? `<p>Brouillon du ${fdate(m.cree_le, {day:"2-digit", month:"2-digit"})} à ${new Date(m.cree_le).toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"}).replace(":", "h")} – ${nbACompleter(m.contenu)} point${nbACompleter(m.contenu) > 1 ? "s" : ""} à compléter – <a href="#memoire-${a.id}">relire et modifier</a> · <button class="lien-btn" type="button" id="mem-word">Word</button></p>` : ""}
+      <div id="mem-etat"></div><div class="flux-ia rendu" id="mem-flux" hidden></div>
+      <div class="formulaire" style="margin-top:10px"><p><label for="consignes">Consignes pour la rédaction (facultatif)</label><textarea id="consignes" rows="3" placeholder="ex. insister sur l'unité mobile incendie, proposer une session pilote, deux intervenants"></textarea></p>
+      <div class="actions" style="margin-top:0"><button class="btn ${m ? "secondaire" : ""}" type="button" id="rediger" ${sample ? "" : "disabled"}>${m ? "Rédiger un nouveau brouillon" : "Rédiger le brouillon"}</button><button class="btn secondaire petit" type="button" id="mem-stop" hidden>Arrêter</button></div></div></li>
+    <li class="etape ${nbOk === ctr.length && ctr.length ? "faite" : m ? "active" : ""}"><h2>Assembler le dossier</h2>
+      ${a.source === "PRIVE" ? `<p class="doux">Consultation privée : pas de DC1, DC2 ni DUME (formulaires des marchés publics).</p>`
+        : `<form class="actions" style="margin-top:0" id="f-lots"><label for="lots">Lots visés</label><input id="lots" value="${esc(a.lots_vises)}" placeholder="vide = tout le marché" size="14"><button class="btn secondaire petit">Enregistrer</button></form>`}
+      <p style="margin-top:12px">Documents pré-remplis : ${Object.keys(docs).length ? Object.entries(docs).map(([k, d]) => `<button class="lien-btn" type="button" data-doc="${k}">${esc(d.nom.replace(/\.docx$/, "").replace(/_/g, " "))}</button>`).join(", ") + "." : `<span class="doux">générés par l'application réelle ; dans la démo, ils sont inclus pour les avis Go et À étudier.</span>`}</p>
+      ${manq.length ? `<p class="doux">Profil incomplet (${esc(manq.join(", "))}) : ces champs sortent « [À COMPLÉTER] ». <a href="#profil">Compléter le profil</a></p>` : ""}
+      <details class="repli" ${nbOk && nbOk !== ctr.length ? "open" : ""}><summary>Pièces administratives à la date limite : ${nbOk} sur ${ctr.length} ${nbOk ? "" : '<span class="doux">(coffre-fort vide, le dossier se génère quand même)</span>'}</summary>
+        <ul class="criteres">${ctr.map(c => `<li><span class="picto ${c.statut}" aria-hidden="true">${c.statut === "ok" ? "✓" : "✕"}</span><div>${esc(c.libelle)} <span class="doux">– ${esc(c.detail)}</span>${c.statut !== "ok" ? ' <a class="petit" href="#coffre">ajouter</a>' : ""}</div></li>`).join("")}</ul></details>
+      ${pd.length ? `<h3>Pièces demandées par l'acheteur</h3><ul class="criteres">${pd.map(p => `<li><span class="picto ${p.etat}" aria-hidden="true">${p.etat === "ok" ? "✓" : p.etat === "genere" ? "⚙" : "✕"}</span><div>${esc(p.piece)} <span class="doux">(${esc(p.etape)}, ${esc(p.source)}) – ${esc(p.detail)}</span></div></li>`).join("")}</ul>` : ""}
+      <div class="actions"><button class="btn" type="button" id="zip">Télécharger le dossier complet</button><span class="doux">ZIP : documents, pièces valides, dernier mémoire, check-list.</span></div></li>
+  </ol>
+  <aside class="collant"><section class="panneau"><dl class="donnees">
+    <dt>Date limite</dt><dd>${a.date_limite ? `<strong>${new Date(a.date_limite).toLocaleDateString("fr-FR", {day:"numeric", month:"long"})}, ${new Date(a.date_limite).toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"}).replace(":", "h")}</strong> (${jMoins(joursRestants(a.date_limite))})` : "non précisée"}</dd>
+    <dt>Score</dt><dd>${a.score ?? "—"}/100 – ${libReco(a.recommandation)}</dd><dt>Statut</dt><dd>${libStatut(a.statut)}</dd>${a.responsable ? `<dt>Responsable</dt><dd>${esc(a.responsable)}</dd>` : ""}</dl>
+    ${a.statut === "GO" ? `<div class="actions"><button class="btn secondaire petit" type="button" data-statut="REDACTION">Passer en rédaction</button></div>` : ""}
+    ${a.statut === "REDACTION" ? `<div class="actions"><button class="btn secondaire petit" type="button" data-statut="DEPOSE">Marquer comme déposé</button></div>` : ""}
+    ${a.statut === "DEPOSE" ? `<div class="actions"><button class="btn petit" type="button" data-statut="GAGNE">Gagné</button><button class="btn nogo petit" type="button" data-statut="PERDU">Perdu</button></div>` : ""}
+  </section></aside></div>`);
+  $$("[data-statut]").forEach(b => b.onclick = () => { const prec = a.statut; a.statut = b.dataset.statut; sauver(); message(`Statut : ${libStatut(a.statut)}.`, "success", () => { a.statut = prec; sauver(); route(); }); route(); });
+  $$("[data-doc]").forEach(b => b.onclick = () => apercu(docs[b.dataset.doc]));
+  $$("[data-retirer]").forEach(b => b.onclick = () => { dce.fichiers.splice(+b.dataset.retirer, 1); dce.texte = dce.fichiers.map(f => f.texte).join("\n\n"); S.dce[a.id] = dce; sauver(); route(); });
+  $("#deposer").onclick = () => deposer(a);
+  $("#analyser").onclick = () => analyser(a);
+  $("#rediger").onclick = () => rediger(a);
+  const fl = $("#f-lots"); if (fl) fl.onsubmit = e => { e.preventDefault(); a.lots_vises = $("#lots").value.trim(); sauver(); message("Lots visés enregistrés."); };
+  const mw = $("#mem-word"); if (mw) mw.onclick = () => telechargerMemoire(a);
+  const gr = $("#grille"); if (gr) gr.onclick = () => telecharger(`Grille_conformite_${a.id}.xlsx`, b64(BASE.analyses[a.id].grille_b64));
+  $("#zip").onclick = () => dossierZip(a, docs, ctr);
+}
+function rendreAnalyse(r, a) {
+  const PICTO_EX = { remplie: "✓", non_remplie: "✕" };
+  const liste = (t, l) => l && l.length ? `<h3>${t}</h3><ul class="simple">${l.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  const grille = S.analyses[a.id] && S.analyses[a.id].original && BASE.analyses[a.id] && BASE.analyses[a.id].grille_b64;
+  return `<div class="panneau"><div class="avis-verdict">${plaque(r.score)}<div><span class="verdict ${r.recommandation}">${libReco(r.recommandation)}</span><p style="margin:2px 0 0">${esc(r.justification)}</p></div></div>
+    <p>${esc(r.synthese)}</p><dl class="donnees"><dt>Durée, volumes</dt><dd>${esc(r.duree_et_volumes)}</dd><dt>Lieux</dt><dd>${esc(r.lieux_et_organisation)}</dd><dt>Prix</dt><dd>${esc(r.forme_du_prix)}</dd>
+    <dt>Remise des offres</dt><dd>${esc(r.date_limite_offres)}</dd><dt>Questions jusqu'au</dt><dd>${esc(r.date_limite_questions)}</dd><dt>Visite, soutenance</dt><dd>${esc(r.visite_ou_soutenance)}</dd></dl></div>
+    ${(r.lots || []).length ? `<h3>Lots</h3><ul class="criteres">${r.lots.map(l => `<li><span class="picto ${l.pertinent_pour_nous ? "favorable" : "neutre"}" aria-hidden="true">${l.pertinent_pour_nous ? "✓" : "–"}</span><div><strong>Lot ${esc(l.numero)} – ${esc(l.intitule)}</strong><br><span class="doux">${esc(l.commentaire)}</span></div></li>`).join("")}</ul>` : ""}
+    <h3>Comment l'offre sera notée</h3><table class="tableau"><thead><tr><th>Critère</th><th>Poids</th><th>Sous-critères</th><th>Source</th></tr></thead><tbody>${(r.criteres_jugement || []).map(c => `<tr><td><strong>${esc(c.nom)}</strong></td><td>${esc(c.ponderation)}</td><td>${esc((c.sous_criteres || []).join(" ; "))}</td><td class="doux">${esc(c.source)}</td></tr>`).join("")}</tbody></table>
+    <h3>Exigences</h3><ul class="criteres">${(r.exigences || []).map(x => `<li><span class="picto ${x.statut}" aria-hidden="true">${PICTO_EX[x.statut] || "?"}</span><div>${esc(x.exigence)} <span class="doux">– ${esc(x.source)}</span>${x.commentaire ? `<br><span class="doux">${esc(x.commentaire)}</span>` : ""}</div></li>`).join("")}</ul>
+    ${liste("Pièges et clauses sensibles", r.pieges_et_clauses_sensibles)}${liste("Questions à poser à l'acheteur", r.questions_a_poser)}${liste("À chiffrer", r.prix_a_chiffrer)}
+    ${grille ? `<div class="actions"><button class="btn secondaire petit" type="button" id="grille">Télécharger la grille de conformité (Excel)</button></div>` : ""}`;
+}
+function apercu(d) {
+  $("#apercu-titre").textContent = d.nom.replace(/\.docx$/, "").replace(/_/g, " ");
+  $("#apercu-corps").innerHTML = d.html || `<p>${esc(d.erreur || "Aperçu indisponible.")}</p>`;
+  $("#apercu-actions").innerHTML = (d.b64 ? `<button class="btn petit" type="button" id="ap-dl">Télécharger (.docx)</button>` : "") + `<button class="btn secondaire petit" type="button" id="ap-x">Fermer</button>`;
+  if (d.b64) $("#ap-dl").onclick = () => telecharger(d.nom, b64(d.b64));
+  $("#ap-x").onclick = () => $("#apercu").close();
+  $("#apercu").showModal();
+}
+async function lireFichier(f) {
+  if (/\.pdf$/i.test(f.name)) {
+    if (!window.pdfjsLib) await new Promise((ok, ko) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"; s.onload = ok; s.onerror = ko; document.head.appendChild(s); });
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise; let out = "";
+    for (let i = 1; i <= Math.min(pdf.numPages, 120); i++) { const c = await (await pdf.getPage(i)).getTextContent(); out += `\n\n[${f.name} – page ${i}]\n` + c.items.map(x => x.str).join(" "); }
+    return { texte: out.trim(), pages: pdf.numPages };
+  }
+  return { texte: await f.text(), pages: null };
+}
+function typeDoc(n) { n = n.toLowerCase(); return /\brc\b|r[eè]glement/.test(n) ? "Règlement de consultation" : /cctp|cahier des clauses techniques|cdc|cahier des charges/.test(n) ? "CCTP / cahier des charges" : /ccap/.test(n) ? "CCAP" : /\bae\b|acte d'engagement/.test(n) ? "Acte d'engagement" : /bpu|dpgf|dqe/.test(n) ? "BPU / DPGF" : "Autre"; }
+async function deposer(a) {
+  const fs = [...$("#fichiers").files]; if (!fs.length) { message("Choisissez d'abord un ou plusieurs fichiers.", "warning"); return; }
+  const dce = S.dce[a.id] || { fichiers: [], texte: "" };
+  $("#depot-etat").innerHTML = `<div class="attente" style="margin-top:10px">Lecture des fichiers…</div>`;
+  for (const f of fs) { try { const r = await lireFichier(f); dce.fichiers.push({ nom: f.name, type: typeDoc(f.name), pages: r.pages, texte: r.texte.slice(0, 150000) }); }
+    catch (e) { message(`${f.name} n'a pas pu être lu dans la démo. Enregistrez-le en PDF ou en texte.`, "error"); } }
+  dce.texte = dce.fichiers.map(f => f.texte).join("\n\n"); S.dce[a.id] = dce; sauver();
+  message(`${dce.fichiers.length} document${dce.fichiers.length > 1 ? "s" : ""} dans le dossier de consultation.`); route();
+}
+
+/* ================= Analyse du DCE ================= */
+const SCHEMA_ANALYSE = `{"synthese": "le besoin en une dizaine de lignes", "objet": "", "lots": [{"numero": "", "intitule": "", "pertinent_pour_nous": true, "commentaire": ""}], "duree_et_volumes": "", "lieux_et_organisation": "", "forme_du_prix": "", "date_limite_offres": "", "date_limite_questions": "", "visite_ou_soutenance": "", "criteres_jugement": [{"nom": "", "ponderation": "ex. 60 % ou non précisée", "sous_criteres": [], "source": "document et page"}], "pieces_a_fournir": [{"piece": "", "etape": "candidature"|"offre", "source": ""}], "exigences": [{"exigence": "", "source": "", "statut": "remplie"|"non_remplie"|"a_verifier", "commentaire": ""}], "pieges_et_clauses_sensibles": [], "questions_a_poser": [], "plan_memoire": [{"titre": "", "critere_lie": "", "attendus": [], "longueur_conseillee": ""}], "prix_a_chiffrer": [], "score": 0, "recommandation": "GO"|"A_ETUDIER"|"NO_GO", "justification": ""}`;
+const enCours = {};
+async function analyser(a) {
+  const dce = S.dce[a.id], dossier = dce && dce.texte ? dce.texte : `Pas de DCE déposé : voici le texte de l'avis.\n\n${texteAvis(a)}`;
+  const ctl = new AbortController(); enCours["an" + a.id] = ctl;
+  const go = $("#analyser"), st = $("#analyse-stop"); go.disabled = true; st.hidden = false; st.onclick = () => ctl.abort();
+  $("#analyse-etat").innerHTML = `<div class="attente">L'IA lit le dossier… comptez 1 à 3 minutes.</div>`;
+  try {
+    const r = await sample.json(`${BASE.prompts.profil}\n\n${BASE.prompts.analyse}\n\n# Avis\n${a.objet} – ${a.acheteur}\n\n# Dossier de consultation\n${dossier.slice(0, 180000)}\n\nRéponds uniquement avec un objet JSON de cette forme :\n${SCHEMA_ANALYSE}`, { signal: ctl.signal, cache: false, modelTier: "complex" });
+    if (!r || !r.synthese) throw { code: "invalid_json" };
+    S.analyses[a.id] = { resultat: r, original: false }; sauver(); message("Analyse du dossier terminée.");
+  } catch (e) { message("L'analyse a échoué : " + erreurIA(e), e && e.code === "cancelled" ? "info" : "error"); }
+  delete enCours["an" + a.id];
+  if (location.hash === "#reponse-" + a.id) route();
+}
+
+/* ================= Mémoire ================= */
+function planMemoire(a) {
+  const r = S.analyses[a.id] && S.analyses[a.id].resultat;
+  if (!r || !(r.plan_memoire || []).length) return "Plan (par défaut, aucun cadre de réponse imposé connu) :\n" + BASE.prompts.plan_defaut.map((t, i) => `${i + 1}. ${t}`).join("\n");
+  return "Plan imposé (issu de l'analyse du DCE) :\n" + r.plan_memoire.map((s, i) => `${i + 1}. ${s.titre} — critère : ${s.critere_lie} — longueur : ${s.longueur_conseillee}\n` + (s.attendus || []).map(x => `   - attendu : ${x}`).join("\n")).join("\n");
+}
+async function rediger(a) {
+  const ctl = new AbortController(), go = $("#rediger"), st = $("#mem-stop"), flux = $("#mem-flux"), consignes = $("#consignes").value.trim();
+  go.disabled = true; st.hidden = false; st.onclick = () => ctl.abort(); flux.hidden = false; flux.innerHTML = "";
+  $("#mem-etat").innerHTML = `<div class="attente">Rédaction en cours… le texte s'affiche au fur et à mesure (3 à 8 minutes au total).</div>`;
+  const dce = S.dce[a.id], dossier = dce && dce.texte ? dce.texte : `${a.objet}\n${a.acheteur}\n\n${a.texte}`;
+  const prompt = `${BASE.prompts.profil}\n\n${BASE.prompts.biblio}\n\n${BASE.prompts.memoire}\n\n# Consultation\n${a.objet} – ${a.acheteur} – date limite ${a.date_limite ? fdh(a.date_limite) : "non précisée"}\n\n# Dossier\n${dossier.slice(0, 120000)}\n\n${planMemoire(a)}\n\nConsignes complémentaires : ${consignes || "aucune"}\n\nRéponds en Markdown, en commençant directement par la première section.`;
+  let der = 0;
+  try {
+    const r = await sample(prompt, { signal: ctl.signal, cache: false, onText: ({ text }) => { const n = Date.now(); if (n - der > 400) { der = n; const z = $("#mem-flux"); if (z) { z.innerHTML = md(text); z.scrollTop = z.scrollHeight; } } } });
+    S.memoires[a.id] = { contenu: r.text, cree_le: new Date().toISOString(), consignes, original: false }; sauver();
+    message(r.truncated ? "Brouillon coupé avant la fin : relancez avec moins de consignes." : "Brouillon du mémoire prêt.", r.truncated ? "warning" : "success");
+  } catch (e) {
+    if (e && e.text) { S.memoires[a.id] = { contenu: e.text + "\n\n*(Rédaction interrompue.)*", cree_le: new Date().toISOString(), consignes, original: false }; sauver(); }
+    message("La rédaction a échoué : " + erreurIA(e), e && e.code === "cancelled" ? "info" : "error");
+  }
+  if (location.hash === "#reponse-" + a.id) route();
+}
+function htmlMemoire(a, t) {
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Mémoire technique – ${esc(a.objet)}</title><style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;max-width:800px;margin:2cm auto;line-height:1.45}h1,h2{color:#0A7F4F}table{border-collapse:collapse}td,th{border:1px solid #999;padding:4px 6px}mark{background:#fff176}</style></head><body><h1>Mémoire technique</h1><p><strong>${esc(S.entreprise.raison_sociale)}</strong> – réponse à : ${esc(a.objet)} (${esc(a.acheteur)})</p>${md(t)}</body></html>`;
+}
+function telechargerMemoire(a) {
+  const m = S.memoires[a.id]; if (!m) return;
+  if (m.original && BASE.memoires[a.id]) telecharger(`Memoire_technique_FORMAST_${a.id}.docx`, b64(BASE.memoires[a.id].docx_b64));
+  else telecharger(`Memoire_technique_FORMAST_${a.id}.html`, htmlMemoire(a, m.contenu));
+}
+function vueMemoire(id) {
+  const a = avisPar(id), m = a && S.memoires[a.id]; if (!a) return introuvable();
+  if (!m) { location.hash = "reponse-" + a.id; return; }
+  const n = nbACompleter(m.contenu);
+  vue(`${enteteAvis(a, "reponse")}
+  <div class="entete-page"><div><h2 style="margin:0">Mémoire technique, brouillon du ${new Date(m.cree_le).toLocaleDateString("fr-FR", {day:"numeric", month:"long"})} à ${new Date(m.cree_le).toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"}).replace(":", "h")}</h2>
+    <p class="doux">${n} point${n > 1 ? "s" : ""} à compléter, surlignés en jaune.${m.consignes ? ` Consignes données : « ${esc(trunc(m.consignes, 120))} »` : ""}</p></div>
+    <div class="actions" style="margin:0"><button class="btn secondaire" type="button" id="m-voir">Aperçu</button><button class="btn" type="button" id="m-word">Télécharger ${m.original ? "en Word" : "(.html pour Word)"}</button></div></div>
+  <form class="formulaire" id="f-mem"><p><label for="contenu">Texte du mémoire</label><span class="helptext">« ## » marque un titre de section, « - » une liste, « | » un tableau.${m.original ? " Le fichier Word d'origine est remplacé par une version .html dès que vous modifiez le texte." : ""}</span>
+    <textarea id="contenu" class="editeur">${esc(m.contenu)}</textarea></p>
+    <div class="actions"><button class="btn">Enregistrer les modifications</button><a href="#reponse-${a.id}">Retour à la réponse</a></div></form>`);
+  $("#f-mem").onsubmit = e => { e.preventDefault(); const t = $("#contenu").value; if (t !== m.contenu) { m.contenu = t; m.original = false; sauver(); } message("Mémoire enregistré."); route(); };
+  $("#m-word").onclick = () => telechargerMemoire(a);
+  $("#m-voir").onclick = () => apercu({ nom: "Mémoire technique", html: md($("#contenu").value) });
+}
+
+/* ================= Dossier ZIP ================= */
+async function dossierZip(a, docs, ctr) {
+  if (!window.JSZip) { message("La création du ZIP n'est pas disponible dans cette vue.", "error"); return; }
+  const z = new JSZip(); let i = 1;
+  for (const d of Object.values(docs)) if (d.b64) z.file(`1_Candidature/${String(i++).padStart(2, "0")}_${d.nom}`, b64(d.b64));
+  ctr.filter(c => c.statut === "ok" && c.piece && c.piece.data).forEach(c => z.file(`1_Candidature/${String(i++).padStart(2, "0")}_${c.type}_${c.piece.nom_fichier}`, b64(c.piece.data)));
+  const m = S.memoires[a.id];
+  if (m) { if (m.original && BASE.memoires[a.id]) z.file("2_Offre/Memoire_technique.docx", b64(BASE.memoires[a.id].docx_b64)); else z.file("2_Offre/Memoire_technique.html", htmlMemoire(a, m.contenu)); }
+  const l = ["CHECK-LIST DU DOSSIER", `${a.objet} – ${a.acheteur}`, `Date limite : ${a.date_limite ? fdh(a.date_limite) : "non précisée"}`, "",
+    ...ctr.map(c => `[${c.statut === "ok" ? "OK" : c.statut === "expiree" ? "EXPIRÉE" : "MANQUANTE"}] ${c.libelle} – ${c.detail}${c.statut === "ok" && !c.piece.data ? " (pièce d'exemple, sans fichier)" : ""}`), "",
+    m ? `[OK] Mémoire technique (brouillon, ${nbACompleter(m.contenu)} point(s) à compléter)` : "[MANQUANT] Mémoire technique"];
+  z.file("00_Check-list.txt", l.join("\r\n"));
+  telecharger(`Dossier_FORMAST_${a.id}.zip`, await z.generateAsync({ type: "blob" }));
+}
+
+/* ================= Démarrage ================= */
+$$("[data-icone]").forEach(s => s.outerHTML = icone(s.dataset.icone));
+$("#form-recherche").onsubmit = e => { e.preventDefault(); recherche = $("#recherche").value; if (location.hash === "#recherche") route(); else location.hash = "recherche"; };
+$("#reset").onclick = () => { const b = $("#reset");
+  if (b.dataset.conf) { try { localStorage.removeItem(CLE); } catch (e) {} S = etatInitial(); delete b.dataset.conf; b.textContent = "Réinitialiser la démo"; message("Démo remise à zéro."); route(); return; }
+  b.dataset.conf = "1"; b.textContent = "Confirmer la remise à zéro ?"; setTimeout(() => { delete b.dataset.conf; b.textContent = "Réinitialiser la démo"; }, 4000); };
+window.addEventListener("hashchange", route);
+fetch("data.json").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d => { BASE = d; S = charger(); route(); })
+  .catch(() => { $("#vue").innerHTML = `<div class="vide"><strong>Les données de la démo n'ont pas pu être chargées</strong>Rechargez la page.</div>`; });
+capacites();
+</script>

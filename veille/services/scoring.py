@@ -213,7 +213,7 @@ def _client() -> anthropic.Anthropic:
     cle = cle_api()
     if not cle:
         raise ScoringIndisponible(
-            "Aucune clé API Anthropic : renseignez ANTHROPIC_API_KEY dans le fichier .env."
+            "Aucune clé API Anthropic : renseignez VEILLE_ANTHROPIC_API_KEY (ou ANTHROPIC_API_KEY) dans le fichier .env."
         )
     return anthropic.Anthropic(api_key=cle, max_retries=3)
 
